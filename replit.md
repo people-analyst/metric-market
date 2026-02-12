@@ -26,6 +26,14 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 ## Spoke Applications
 - **Card Viewer** (`client/src/pages/MetricMarketPage.tsx`) - HR metrics dashboard with ticker cards, mini sparklines, screener panel (checkbox filter picker), and watchlist. Uses deterministic mock data generation. 6 metric categories: Workforce Composition, Compensation & Value, Popular Filters, Attrition & Movement, Performance & Development, Engagement & Culture. Sidebar label: "Card Viewer".
 
+## Menu / Landing Page
+- **Menu** (`client/src/pages/MenuPage.tsx`) - Yahoo Finance screeners landing page adapted for People Analytics. Contains 5 generalizable sections:
+  1. **TickerTape** - Horizontal scrolling metric strip with sparklines and % changes
+  2. **SavedScreenersSection** - Empty/auth state for saved dashboards with CTA
+  3. **FeaturedCardsSection** - Horizontal scrollable preview cards with data rows (e.g. "High Flight Risk Teams", "Top Performing Departments")
+  4. **CreateNewSection** - Category picker grid (Workforce, Compensation, Performance, Attrition, Engagement screeners)
+  5. **PremiumSection** - Gated content cards with P+ branding and trial CTA
+
 ## Structure
 ```
 client/           - React frontend
