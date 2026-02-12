@@ -92,7 +92,7 @@ export function FilterChooser({
             </h3>
             {category.hasIcon && (
               <div className="w-4 h-4 rounded-full bg-[#6c2bd9] flex items-center justify-center">
-                <span className="text-white text-[8px] font-bold">Y</span>
+                <span className="text-white text-[8px] font-bold">P</span>
               </div>
             )}
           </div>

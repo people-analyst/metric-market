@@ -267,7 +267,7 @@ export function StockScreenerFilters({
                         data-testid={`icon-info-${filter.id}`}
                       >
                         <span className="text-white text-[8px] font-bold">
-                          Y
+                          P
                         </span>
                       </div>
                     )}
