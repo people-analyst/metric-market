@@ -32,7 +32,22 @@ Bundles are stored in `card_bundles` table and auto-seeded on server startup fro
 ### No Live Drill-down
 Since charts are pre-rendered from stored data, drill-downs are **database references** to other cards (not constructed on the fly). A card can reference sub-measure cards via `card_relations` with `relationType: "drilldown"`. The API at `GET /api/cards/:id/drilldowns` returns linked cards.
 
+## Hub-and-Spoke Integration
+This app (slug: `metric-market`) connects to a central Hub for cross-application coordination. The hub-client module (`server/hub-client.ts`) uses environment variables:
+- `HUB_URL` — The Hub's base URL
+- `HUB_APP_SLUG` — This app's registered slug (`metric-market`)
+- `HUB_API_KEY` — Secret API key for authentication (stored in Replit Secrets)
+
+### Hub API Endpoints (proxied through this server)
+- `GET /api/hub/status` — Check hub configuration status
+- `GET /api/hub/directives?status=pending` — Fetch directives from Hub
+- `PATCH /api/hub/directives/:id` — Update directive status (acknowledged/completed/rejected)
+- `POST /api/hub/documentation` — Push documentation to Hub
+- `GET /api/hub/registry` — Fetch spoke app registry
+- `GET /api/hub/architecture` — Fetch ecosystem architecture
+
 ## Recent Changes
+- 2026-02-12: Integrated hub-client module for Hub-and-Spoke communication (directives, registry, architecture, documentation push)
 - 2026-02-12: Built Card Bundle architecture — 20 self-contained bundle definitions with data/config/output schemas, documentation, and example data
 - 2026-02-12: Added card_bundles and card_relations tables; extended cards with refresh/scoring fields
 - 2026-02-12: Added Bundle Browser to Workbench with schema inspection, documentation, and live preview

@@ -11,6 +11,7 @@ import {
   CHART_TYPES,
   RELATION_TYPES,
 } from "@shared/schema";
+import * as hub from "./hub-client";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -216,6 +217,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/chart-types", async (_req, res) => {
     res.json(CHART_TYPES);
+  });
+
+  app.get("/api/hub/status", async (_req, res) => {
+    res.json({
+      configured: hub.isConfigured(),
+      hubUrl: hub.HUB_URL,
+      appSlug: hub.APP_SLUG,
+    });
+  });
+
+  app.get("/api/hub/directives", async (req, res) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const directives = await hub.fetchDirectives(status);
+      res.json(directives);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/hub/directives/:id", async (req, res) => {
+    try {
+      const { status, response } = req.body;
+      const result = await hub.updateDirective(req.params.id, status, response);
+      res.json(result);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/hub/documentation", async (req, res) => {
+    try {
+      const { content, version } = req.body;
+      const result = await hub.pushDocumentation(content, version);
+      res.json(result);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/hub/registry", async (_req, res) => {
+    try {
+      const registry = await hub.fetchRegistry();
+      res.json(registry);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.get("/api/hub/architecture", async (_req, res) => {
+    try {
+      const arch = await hub.fetchArchitecture();
+      res.json(arch);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
   });
 
   const httpServer = createServer(app);
