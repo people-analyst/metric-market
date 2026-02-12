@@ -78,7 +78,7 @@ export function FilterChooser({
             placeholder="Find Filters"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-xs border-[#e0e4e9] rounded-[3px]"
+            className="pl-8 h-7 text-xs border-[#e0e4e9] rounded-[3px]"
             data-testid="input-search-filters"
           />
         </div>

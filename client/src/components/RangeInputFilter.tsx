@@ -67,7 +67,7 @@ export function RangeInputFilter({
         type="text"
         value={value}
         onChange={(e) => handleValueChange(e.target.value)}
-        className="w-20 text-xs border-[#e0e4e9] rounded-[3px]"
+        className="w-20 h-7 text-xs border-[#e0e4e9] rounded-[3px]"
         data-testid={`input-${label.replace(/\s+/g, "-").toLowerCase()}`}
       />
     </div>

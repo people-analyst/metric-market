@@ -200,14 +200,13 @@ export function StockScreenerFilters({
                             <XIcon className="w-3 h-3 ml-1" />
                           </Badge>
                         ))}
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <button
                           onClick={() => onAddBadge?.(filter.id)}
+                          className="w-5 h-5 flex items-center justify-center text-[#5b636a] rounded-[3px] hover:bg-[#f0f0f0]"
                           data-testid={`button-add-badge-${filter.id}`}
                         >
                           <PlusIcon className="w-3 h-3" />
-                        </Button>
+                        </button>
                       </div>
                     )}
 
@@ -218,14 +217,14 @@ export function StockScreenerFilters({
                         onValueChange={(vals) =>
                           handleToggleChange(filter.id, vals)
                         }
-                        className="border border-[#e0e4e9] rounded-[3px] p-0"
+                        className="border border-[#e0e4e9] rounded-[3px] p-0 gap-0"
                         data-testid={`toggle-group-${filter.id}`}
                       >
                         {filter.options?.map((option) => (
                           <ToggleGroupItem
                             key={option}
                             value={option}
-                            className="font-normal text-[#5b636a] text-xs px-3 py-1 rounded-none border-r border-[#e0e4e9] last:border-r-0 data-[state=on]:bg-[#e0f0ff] data-[state=on]:text-[#232a31]"
+                            className="font-normal text-[#5b636a] text-xs px-3 py-1 rounded-none first:rounded-l-[3px] last:rounded-r-[3px] border-r border-[#e0e4e9] last:border-r-0 data-[state=on]:bg-[#e0f0ff] data-[state=on]:text-[#232a31] hover:bg-[#f5f8fa] hover:text-[#232a31] h-auto min-h-0 min-w-0"
                             data-testid={`toggle-${filter.id}-${option.replace(/\s+/g, "-").toLowerCase()}`}
                           >
                             {option}
@@ -254,7 +253,7 @@ export function StockScreenerFilters({
                         onChange={(e) =>
                           handleInputChange(filter.id, e.target.value)
                         }
-                        className="w-20 text-xs border-[#e0e4e9] rounded-[3px]"
+                        className="w-20 h-7 text-xs border-[#e0e4e9] rounded-[3px]"
                         data-testid={`input-value-${filter.id}`}
                       />
                     )}
@@ -263,7 +262,7 @@ export function StockScreenerFilters({
                   <div className="flex items-center gap-1.5">
                     {filter.hasIcon && (
                       <div
-                        className="w-5 h-5 rounded-full bg-[#6c2bd9] flex items-center justify-center flex-shrink-0"
+                        className="w-4 h-4 rounded-full bg-[#6c2bd9] flex items-center justify-center flex-shrink-0"
                         data-testid={`icon-info-${filter.id}`}
                       >
                         <span className="text-white text-[8px] font-bold">
@@ -272,15 +271,13 @@ export function StockScreenerFilters({
                       </div>
                     )}
                     {filter.hasRemove && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-[#5b636a] flex-shrink-0"
+                      <button
+                        className="w-5 h-5 flex items-center justify-center text-[#5b636a] flex-shrink-0 rounded-[3px] hover:bg-[#f0f0f0]"
                         onClick={() => handleRemoveFilter(filter.id)}
                         data-testid={`button-remove-filter-${filter.id}`}
                       >
                         <XIcon className="w-3.5 h-3.5" />
-                      </Button>
+                      </button>
                     )}
                   </div>
                 </div>
