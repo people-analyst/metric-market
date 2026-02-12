@@ -49,18 +49,13 @@ export function RadialBarChart({
         .outerRadius(r)
         .cornerRadius(barWidth / 2);
 
-      const midR = r - barWidth / 2;
-      const indicatorX = Math.cos(endAngle) * midR;
-      const indicatorY = Math.sin(endAngle) * midR;
-
       return {
         letter: LETTERS[i] ?? String(i + 1),
         label: d.label,
         color: d.color ?? defaultColors[i % defaultColors.length],
         valuePath: arcGen({ startAngle, endAngle, innerRadius: 0, outerRadius: 0 } as any) ?? "",
         trackPath: arcGen({ startAngle, endAngle: trackEnd, innerRadius: 0, outerRadius: 0 } as any) ?? "",
-        indicatorX,
-        indicatorY,
+        r,
         value: d.value,
       };
     });
@@ -73,25 +68,31 @@ export function RadialBarChart({
           <g key={a.letter}>
             <path d={a.trackPath} fill={trackColor} opacity={0.35} />
             <path d={a.valuePath} fill={a.color} />
-            <circle
-              cx={a.indicatorX}
-              cy={a.indicatorY}
-              r={barWidth * 0.42}
-              fill="#232a31"
-            />
-            <text
-              x={a.indicatorX}
-              y={a.indicatorY}
-              dy="0.35em"
-              textAnchor="middle"
-              fontSize={7}
-              fontWeight={700}
-              fill="#e0e4e9"
-            >
-              {a.letter}
-            </text>
           </g>
         ))}
+        {arcs.map((a, i) => {
+          const indicatorSize = barWidth * 0.42;
+          const spacing = indicatorSize * 2.6;
+          const totalW = arcs.length * spacing;
+          const ix = -totalW / 2 + i * spacing + spacing / 2;
+          const iy = -arcs[0].r + barWidth + indicatorSize + 6;
+          return (
+            <g key={`ind-${a.letter}`}>
+              <circle cx={ix} cy={iy} r={indicatorSize} fill={a.color} />
+              <text
+                x={ix}
+                y={iy}
+                dy="0.35em"
+                textAnchor="middle"
+                fontSize={7}
+                fontWeight={700}
+                fill="#e0e4e9"
+              >
+                {a.letter}
+              </text>
+            </g>
+          );
+        })}
       </g>
       <g transform={`translate(8,${height + 2})`}>
         {arcs.map((a, i) => (
