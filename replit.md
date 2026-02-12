@@ -4,6 +4,7 @@
 A People Analytics toolbox with reusable form elements inspired by Yahoo Finance and Google Finance designs. Built with React, Express, TypeScript, and Tailwind CSS. Components are designed to be attached to different database elements.
 
 ## Recent Changes
+- 2026-02-12: Added sidebar navigation with wouter routing to toggle between component pages
 - 2025-02-12: Built three reusable form components from Figma designs (StockScreenerFilters, FilterChooser, RangeInputFilter)
 - 2025-02-12: Initial Figma import and migration to Replit environment
 
@@ -29,7 +30,7 @@ client/           - React frontend
       StockScreenerFilters.tsx - Filter form (Input 1 & 3)
       FilterChooser.tsx       - Filter picker (Input 2)
       RangeInputFilter.tsx    - Range input with condition
-    pages/          - Page components (Frame.tsx is main page)
+    pages/          - Page components (ScreenerPage, ChooserPage, RangePage, MenuPage)
     lib/            - Utilities and query client
     hooks/          - Custom hooks
 server/           - Express backend
