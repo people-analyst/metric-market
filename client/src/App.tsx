@@ -13,6 +13,7 @@ import { MenuPage } from "@/pages/MenuPage";
 import { MetricMarketPage } from "@/pages/MetricMarketPage";
 import { DetailCardPage } from "@/pages/DetailCardPage";
 import { GoogleFinancePage } from "@/pages/GoogleFinancePage";
+import { CardTypesPage } from "@/pages/CardTypesPage";
 
 function Router() {
   return (
@@ -24,6 +25,7 @@ function Router() {
       <Route path="/metric-market" component={MetricMarketPage} />
       <Route path="/detail-card" component={DetailCardPage} />
       <Route path="/google-finance" component={GoogleFinancePage} />
+      <Route path="/card-types" component={CardTypesPage} />
       <Route component={NotFound} />
     </Switch>
   );

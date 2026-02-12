@@ -13,16 +13,12 @@ import {
   Calendar,
   Users,
   Eye,
-  FileText,
-  Target,
-  Shield,
-  BookOpen,
-  Lightbulb,
-  ExternalLink,
-  AlertTriangle,
-  CheckCircle2,
-  ClipboardList,
 } from "lucide-react";
+import { OrgMetricCard } from "@/components/OrgMetricCard";
+import { ResearchCard } from "@/components/ResearchCard";
+import { AnalysisSummaryCard } from "@/components/AnalysisSummaryCard";
+import { ActionPlanCard } from "@/components/ActionPlanCard";
+import { CompetitiveIntelCard } from "@/components/CompetitiveIntelCard";
 
 function seeded(key: string) {
   let s = 0;
@@ -308,116 +304,70 @@ function TickerBadge({ ticker, color }: { ticker: string; color: string }) {
   );
 }
 
-const FEED_TYPE_META: Record<FeedCardType, { icon: typeof BarChart3; label: string; accent: string }> = {
-  metric: { icon: BarChart3, label: "Org Metric", accent: "border-l-blue-500" },
-  research: { icon: BookOpen, label: "Research", accent: "border-l-emerald-500" },
-  analysis: { icon: Lightbulb, label: "Analysis", accent: "border-l-amber-500" },
-  action: { icon: ClipboardList, label: "Action Plan", accent: "border-l-violet-500" },
-  competitive: { icon: Shield, label: "Competitive Intel", accent: "border-l-cyan-500" },
-};
-
 function FeedCardRenderer({ card }: { card: FeedCard }) {
-  const meta = FEED_TYPE_META[card.type];
-  const Icon = meta.icon;
-
-  return (
-    <div
-      className="py-4 border-b border-border last:border-b-0"
-      data-testid={`feed-card-${card.type}`}
-    >
-      <div className="flex items-center gap-2 mb-2">
-        <div className="flex items-center gap-1.5 text-muted-foreground">
-          <Icon className="h-3.5 w-3.5" />
-          <span className="text-[10px] font-medium uppercase tracking-wider">{meta.label}</span>
-        </div>
-        <span className="text-[10px] text-muted-foreground">{card.source}</span>
-        <span className="text-[10px] text-muted-foreground">{card.time}</span>
-      </div>
-
-      <div className="flex items-start gap-2 mb-2">
-        {card.ticker && card.tickerColor && (
-          <TickerBadge ticker={card.ticker} color={card.tickerColor} />
-        )}
-        <p className="text-sm font-medium leading-snug">{card.headline}</p>
-      </div>
-
-      {card.tags && card.tags.length > 0 && (
-        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
-          {card.tags.map((tag) => (
-            <Badge key={tag} variant="outline" className="text-[10px]">
-              {tag}
-            </Badge>
-          ))}
-        </div>
-      )}
-
-      {card.type === "metric" && card.value && (
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-lg font-bold tabular-nums">{card.value}</span>
-          {card.changePct && (
-            <span className={`text-xs font-medium tabular-nums ${card.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-              {card.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-              {card.changePct}
-            </span>
-          )}
-        </div>
-      )}
-
-      {card.type === "analysis" && card.riskLevel && (
-        <div className="flex items-center gap-2 mb-2">
-          <AlertTriangle className={`h-3.5 w-3.5 ${
-            card.riskLevel === "high" ? "text-red-500" : card.riskLevel === "medium" ? "text-amber-500" : "text-green-500"
-          }`} />
-          <span className={`text-xs font-medium ${
-            card.riskLevel === "high" ? "text-red-600 dark:text-red-400" : card.riskLevel === "medium" ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
-          }`}>
-            {card.riskLevel === "high" ? "High Risk" : card.riskLevel === "medium" ? "Medium Risk" : "Low Risk"}
-          </span>
-        </div>
-      )}
-
-      {card.rows && card.rows.length > 0 && (
-        <div className="space-y-1 mb-2">
-          {card.rows.map((row) => (
-            <div key={row.label} className="flex items-center justify-between gap-2">
-              <span className="text-xs text-muted-foreground">{row.label}</span>
-              <span className="text-xs font-medium tabular-nums border-b border-dashed border-border flex-1 text-right pb-0.5">{row.value}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {card.type === "action" && card.actions && (
-        <div className="space-y-1.5 mb-2">
-          {card.actions.map((action, i) => (
-            <div key={i} className="flex items-start gap-2">
-              <CheckCircle2 className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${
-                card.score && i < Math.floor((card.score / 100) * card.actions!.length)
-                  ? "text-green-500"
-                  : "text-muted-foreground"
-              }`} />
-              <span className="text-xs">{action}</span>
-            </div>
-          ))}
-          {card.score !== undefined && (
-            <div className="flex items-center gap-2 mt-2">
-              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-[#0f69ff] rounded-full" style={{ width: `${card.score}%` }} />
-              </div>
-              <span className="text-[10px] text-muted-foreground tabular-nums">{card.score}%</span>
-            </div>
-          )}
-        </div>
-      )}
-
-      {card.citation && (
-        <div className="flex items-start gap-1.5 mt-1">
-          <FileText className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
-          <p className="text-[10px] text-muted-foreground italic leading-snug">{card.citation}</p>
-        </div>
-      )}
-    </div>
-  );
+  switch (card.type) {
+    case "metric":
+      return (
+        <OrgMetricCard
+          ticker={card.ticker!}
+          tickerColor={card.tickerColor!}
+          title={card.headline}
+          value={card.value!}
+          changePct={card.changePct!}
+          positive={card.positive!}
+          source={card.source}
+          time={card.time}
+          rows={card.rows}
+        />
+      );
+    case "research":
+      return (
+        <ResearchCard
+          title={card.headline}
+          source={card.source}
+          time={card.time}
+          citation={card.citation!}
+          tags={card.tags}
+          rows={card.rows}
+        />
+      );
+    case "analysis":
+      return (
+        <AnalysisSummaryCard
+          title={card.headline}
+          source={card.source}
+          time={card.time}
+          ticker={card.ticker}
+          tickerColor={card.tickerColor}
+          riskLevel={card.riskLevel!}
+          rows={card.rows}
+        />
+      );
+    case "action":
+      return (
+        <ActionPlanCard
+          title={card.headline}
+          source={card.source}
+          time={card.time}
+          tags={card.tags}
+          actions={card.actions!.map((label, i) => ({
+            label,
+            completed: card.score ? i < Math.floor((card.score / 100) * card.actions!.length) : false,
+          }))}
+          progressPct={card.score}
+        />
+      );
+    case "competitive":
+      return (
+        <CompetitiveIntelCard
+          title={card.headline}
+          source={card.source}
+          time={card.time}
+          tags={card.tags}
+          rows={card.rows}
+        />
+      );
+  }
 }
 
 export function GoogleFinancePage() {
@@ -548,7 +498,7 @@ export function GoogleFinancePage() {
                 </Badge>
               ))}
             </div>
-            <div>
+            <div className="space-y-3">
               {filteredFeed.map((card, i) => (
                 <FeedCardRenderer key={i} card={card} />
               ))}

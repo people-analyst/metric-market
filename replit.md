@@ -23,6 +23,11 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **FilterChooser** (`client/src/components/FilterChooser.tsx`) - Checkbox-based filter picker organized by categories with search.
 - **RangeInputFilter** (`client/src/components/RangeInputFilter.tsx`) - Standalone range input with condition dropdown (greater than, less than, etc).
 - **DetailCard** (`client/src/components/DetailCard.tsx`) - Fact-sheet card with optional tags (badges) at top, key-value rows separated by dashed borders, and optional footer with icon/score/external link. Props: tags, rows, footer.
+- **OrgMetricCard** (`client/src/components/OrgMetricCard.tsx`) - Organization metric card with ticker badge, headline, big value with trend arrow, and key-value breakdown rows. Props: ticker, tickerColor, title, value, changePct, positive, source, time, rows.
+- **ResearchCard** (`client/src/components/ResearchCard.tsx`) - Peer-reviewed research card with citation, tags, and statistical data rows. Props: title, source, time, citation, tags, rows, href.
+- **AnalysisSummaryCard** (`client/src/components/AnalysisSummaryCard.tsx`) - Analysis summary with risk-level indicator (low/medium/high), ticker badge, and key metric rows. Props: title, source, time, ticker, tickerColor, riskLevel, rows, summary.
+- **ActionPlanCard** (`client/src/components/ActionPlanCard.tsx`) - Action plan with checklist (completed/pending), progress bar, and tags. Props: title, source, time, tags, actions[], progressPct.
+- **CompetitiveIntelCard** (`client/src/components/CompetitiveIntelCard.tsx`) - Competitive intelligence card with benchmark data rows, tags, and optional summary. Props: title, source, time, tags, rows, summary.
 
 ## Spoke Applications
 - **Card Viewer** (`client/src/pages/MetricMarketPage.tsx`) - HR metrics dashboard with ticker cards, mini sparklines, screener panel (checkbox filter picker), and watchlist. Uses deterministic mock data generation. 6 metric categories: Workforce Composition, Compensation & Value, Popular Filters, Attrition & Movement, Performance & Development, Engagement & Culture. Sidebar label: "Card Viewer".

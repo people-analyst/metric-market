@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +41,11 @@ const items = [
     title: "Detail Card",
     url: "/detail-card",
     icon: FileText,
+  },
+  {
+    title: "Card Types",
+    url: "/card-types",
+    icon: Layers,
   },
   {
     title: "Google Finance",
