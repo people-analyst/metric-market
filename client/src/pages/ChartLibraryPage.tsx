@@ -24,6 +24,7 @@ import {
   StackedAreaChart,
   TILE_PRESETS,
 } from "@/components/charts";
+import type { TilePreset } from "@/components/charts";
 import type {
   ConfidenceBandDatum,
   AlluvialFlow,
@@ -508,7 +509,7 @@ const CHARTS = [
 
 function TileCartogramTabbed() {
   const allPresets = [
-    { key: "us", label: "US States", tiles: US_TILES },
+    { key: "us", label: "US States", tiles: US_TILES } as TilePreset,
     ...TILE_PRESETS,
   ];
   const [active, setActive] = useState("us");
@@ -530,7 +531,7 @@ function TileCartogramTabbed() {
         ))}
       </div>
       <div className="border border-border rounded-md p-2 bg-background" data-testid="tile-cartogram-display">
-        <TileCartogramChart tiles={preset.tiles} />
+        <TileCartogramChart tiles={preset.tiles} sectionLabels={preset.sectionLabels} />
       </div>
     </div>
   );

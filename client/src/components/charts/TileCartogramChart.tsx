@@ -13,12 +13,14 @@ export interface TileCartogramChartProps {
   tiles: TileCartogramDatum[];
   width?: number;
   colorRange?: [string, string];
+  sectionLabels?: Record<number, string>;
 }
 
 export function TileCartogramChart({
   tiles,
   width = 300,
   colorRange = ["#e0e4e9", "#0f69ff"],
+  sectionLabels,
 }: TileCartogramChartProps) {
   const maxCol = Math.max(...tiles.map((t) => t.col));
   const maxRow = Math.max(...tiles.map((t) => t.row));
@@ -26,7 +28,21 @@ export function TileCartogramChart({
   const rows = maxRow + 1;
   const gap = 2;
   const cellSize = Math.floor((width - gap * (cols - 1)) / cols);
-  const totalHeight = rows * (cellSize + gap) - gap;
+
+  const labelH = 14;
+  const labelRows = sectionLabels ? Object.keys(sectionLabels).map(Number).sort((a, b) => a - b) : [];
+
+  const rowY = (row: number) => {
+    if (!sectionLabels) return row * (cellSize + gap);
+    let offset = 0;
+    for (const lr of labelRows) {
+      if (lr <= row) offset += labelH;
+    }
+    return row * (cellSize + gap) + offset;
+  };
+
+  const lastRowY = rowY(maxRow) + cellSize;
+  const totalHeight = lastRowY;
 
   const colorScale = useMemo(() => {
     const vals = tiles.map((t) => t.value);
@@ -37,10 +53,28 @@ export function TileCartogramChart({
   }, [tiles, colorRange]);
 
   return (
-    <svg width={width} height={totalHeight} className="block">
+    <svg width={width} height={totalHeight} className="block" data-testid="chart-tile-cartogram">
+      {sectionLabels &&
+        Object.entries(sectionLabels).map(([rowStr, label]) => {
+          const row = Number(rowStr);
+          const y = rowY(row) - labelH + 3;
+          return (
+            <text
+              key={`section-${rowStr}`}
+              x={0}
+              y={y}
+              fontSize={8}
+              fontWeight={600}
+              fill="#5b636a"
+              dominantBaseline="hanging"
+            >
+              {label}
+            </text>
+          );
+        })}
       {tiles.map((tile) => {
         const x = tile.col * (cellSize + gap);
-        const y = tile.row * (cellSize + gap);
+        const y = rowY(tile.row);
         return (
           <g key={tile.id}>
             <rect
