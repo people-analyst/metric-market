@@ -16,6 +16,7 @@ import { GoogleFinancePage } from "@/pages/GoogleFinancePage";
 import { CardTypesPage } from "@/pages/CardTypesPage";
 import { MetricDetailPage } from "@/pages/MetricDetailPage";
 import { ChartLibraryPage } from "@/pages/ChartLibraryPage";
+import { WorkbenchPage } from "@/pages/WorkbenchPage";
 
 function Router() {
   return (
@@ -30,6 +31,7 @@ function Router() {
       <Route path="/card-types" component={CardTypesPage} />
       <Route path="/metric-detail" component={MetricDetailPage} />
       <Route path="/chart-library" component={ChartLibraryPage} />
+      <Route path="/workbench" component={WorkbenchPage} />
       <Route component={NotFound} />
     </Switch>
   );

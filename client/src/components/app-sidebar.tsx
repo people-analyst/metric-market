@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -11,7 +11,15 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
-const items = [
+const adminItems = [
+  {
+    title: "Workbench",
+    url: "/workbench",
+    icon: Wrench,
+  },
+];
+
+const componentItems = [
   {
     title: "Menu",
     url: "/menu",
@@ -71,10 +79,30 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent>
         <SidebarGroup>
+          <SidebarGroupLabel>Admin</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {adminItems.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={location === item.url}
+                  >
+                    <a href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, "-")}`}>
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+        <SidebarGroup>
           <SidebarGroupLabel>Components</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {componentItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
