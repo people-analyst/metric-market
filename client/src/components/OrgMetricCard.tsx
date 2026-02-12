@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { MiniSparkline } from "@/components/MiniSparkline";
 
 export interface OrgMetricCardRow {
   label: string;
@@ -16,6 +17,7 @@ export interface OrgMetricCardProps {
   source?: string;
   time?: string;
   rows?: OrgMetricCardRow[];
+  sparklineSeed?: string;
 }
 
 export function OrgMetricCard({
@@ -28,6 +30,7 @@ export function OrgMetricCard({
   source,
   time,
   rows,
+  sparklineSeed,
 }: OrgMetricCardProps) {
   return (
     <Card data-testid="card-org-metric">
@@ -52,16 +55,21 @@ export function OrgMetricCard({
         </div>
 
         <div className="flex items-center gap-3 mb-3">
-          <span className="text-xl font-bold tabular-nums" data-testid="text-value">{value}</span>
-          <span
-            className={`text-xs font-medium tabular-nums flex items-center gap-0.5 ${
-              positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-            }`}
-            data-testid="text-change"
-          >
-            {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-            {changePct}
-          </span>
+          <div className="flex items-center gap-3 flex-1">
+            <span className="text-xl font-bold tabular-nums" data-testid="text-value">{value}</span>
+            <span
+              className={`text-xs font-medium tabular-nums flex items-center gap-0.5 ${
+                positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+              }`}
+              data-testid="text-change"
+            >
+              {positive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              {changePct}
+            </span>
+          </div>
+          {sparklineSeed && (
+            <MiniSparkline seed={sparklineSeed} positive={positive} />
+          )}
         </div>
 
         {rows && rows.length > 0 && (

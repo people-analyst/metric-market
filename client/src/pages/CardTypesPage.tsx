@@ -18,6 +18,7 @@ export function CardTypesPage() {
           positive={true}
           source="HRIS"
           time="2 hours ago"
+          sparklineSeed="headcount-eng"
           rows={[
             { label: "Eng Headcount", value: "3,241" },
             { label: "Budget Target", value: "3,168" },

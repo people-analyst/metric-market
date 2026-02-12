@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { MiniSparkline } from "@/components/MiniSparkline";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -141,28 +142,6 @@ function generateMockValue(key: string): { value: number; change: number; unit: 
   if (unit === "FTE") return { value: Math.round(rand(400, 12000)), change: Math.round(rand(-2, 4) * 10) / 10, unit };
   if (unit === "per 100") return { value: Math.round(rand(5, 40) * 10) / 10, change: Math.round(rand(-3, 6) * 10) / 10, unit };
   return { value: Math.round(rand(10, 1000)), change: Math.round(rand(-5, 5) * 10) / 10, unit };
-}
-
-function MiniSparkline({ seed }: { seed: string }) {
-  let s = 0;
-  for (let i = 0; i < seed.length; i++) s += seed.charCodeAt(i);
-  const points: number[] = [];
-  for (let i = 0; i < 12; i++) {
-    s = (s * 9301 + 49297) % 233280;
-    points.push(30 + (s / 233280) * 40);
-  }
-  const w = 80;
-  const h = 32;
-  const stepX = w / (points.length - 1);
-  const path = points.map((p, i) => `${i === 0 ? "M" : "L"}${i * stepX},${h - (p / 100) * h}`).join(" ");
-  const trending = points[points.length - 1] > points[0];
-  const color = trending ? "#22c55e" : "#ef4444";
-
-  return (
-    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="shrink-0">
-      <path d={path} fill="none" stroke={color} strokeWidth="1.5" />
-    </svg>
-  );
 }
 
 function formatValue(value: number, unit: string): string {
