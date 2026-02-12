@@ -24,7 +24,7 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **RangeInputFilter** (`client/src/components/RangeInputFilter.tsx`) - Standalone range input with condition dropdown (greater than, less than, etc).
 
 ## Spoke Applications
-- **MetricMarket** (`client/src/pages/MetricMarketPage.tsx`) - Yahoo Finance-style HR metrics dashboard with ticker cards, mini sparklines, screener panel (checkbox filter picker), and watchlist. Uses deterministic mock data generation. 6 metric categories: Workforce Composition, Compensation & Value, Popular Filters, Attrition & Movement, Performance & Development, Engagement & Culture.
+- **Card Viewer** (`client/src/pages/MetricMarketPage.tsx`) - HR metrics dashboard with ticker cards, mini sparklines, screener panel (checkbox filter picker), and watchlist. Uses deterministic mock data generation. 6 metric categories: Workforce Composition, Compensation & Value, Popular Filters, Attrition & Movement, Performance & Development, Engagement & Culture. Sidebar label: "Card Viewer".
 
 ## Structure
 ```

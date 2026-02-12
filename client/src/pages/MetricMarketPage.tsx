@@ -312,10 +312,10 @@ export function MetricMarketPage() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-lg font-semibold tracking-tight" data-testid="text-metric-market-title">
-            MetricMarket
+            Card Viewer
           </h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Yahoo Finance-style HR metrics dashboard
+            HR metrics dashboard
           </p>
         </div>
         <div className="flex items-center gap-2">

@@ -13,7 +13,12 @@ import {
 
 const items = [
   {
-    title: "Stock Screener",
+    title: "Card Viewer",
+    url: "/metric-market",
+    icon: BarChart3,
+  },
+  {
+    title: "Screener",
     url: "/",
     icon: Filter,
   },
@@ -31,11 +36,6 @@ const items = [
     title: "Menu",
     url: "/menu",
     icon: Menu,
-  },
-  {
-    title: "MetricMarket",
-    url: "/metric-market",
-    icon: BarChart3,
   },
 ];
 
