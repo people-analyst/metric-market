@@ -6,6 +6,11 @@ import {
   BulletBarChart,
   SlopeComparisonChart,
   BubbleScatterChart,
+  BoxWhiskerChart,
+  StripTimelineChart,
+  WafflePercentChart,
+  HeatmapChart,
+  StripDotChart,
 } from "@/components/charts";
 import type {
   ConfidenceBandDatum,
@@ -14,6 +19,9 @@ import type {
   BulletBarDatum,
   SlopeItem,
   BubbleDatum,
+  BoxWhiskerDatum,
+  StripTimelineRow,
+  StripDotRow,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -100,6 +108,103 @@ const BUBBLE_DATA: BubbleDatum[] = [
   { x: 16, y: 14, size: 42, label: "HR", color: "#e0e4e9" },
 ];
 
+const BOX_WHISKER_DATA: BoxWhiskerDatum[] = [
+  { label: "Mon", min: 120, q1: 320, median: 520, q3: 680, max: 920 },
+  { label: "Tue", min: 180, q1: 380, median: 480, q3: 620, max: 780 },
+  { label: "Wed", min: 100, q1: 280, median: 420, q3: 560, max: 700 },
+  { label: "Thu", min: 150, q1: 300, median: 460, q3: 580, max: 820 },
+  { label: "Fri", min: 90, q1: 260, median: 380, q3: 520, max: 680 },
+];
+
+const STRIP_TIMELINE_ROWS: StripTimelineRow[] = [
+  {
+    label: "NO",
+    cells: [
+      {}, {}, {}, {}, {},
+      { value: 3, color: "#0f69ff" },
+      { value: 5, color: "#0f69ff" },
+      { value: 7, color: "#0f69ff" },
+      {}, {}, {}, {}, {}, {}, {}, {},
+    ],
+  },
+  {
+    label: "DK",
+    cells: [
+      {}, {},
+      { value: 1, color: "#5b636a" },
+      {},
+      { value: 4, color: "#5b636a" },
+      { value: 5, color: "#5b636a" },
+      {},
+      { value: 8, color: "#5b636a" },
+      { value: 12, color: "#5b636a" },
+      { value: 9, color: "#5b636a" },
+      {}, {}, {}, {}, {}, {},
+    ],
+  },
+  {
+    label: "SE",
+    cells: [
+      {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {},
+      { value: 4, color: "#a3adb8" },
+      { value: 6, color: "#a3adb8" },
+      {}, {},
+    ],
+  },
+];
+
+const HEATMAP_DATA = [
+  [6, 3, 7, 5],
+  [8, 2, 6, 4],
+  [5, 9, 5, 3],
+  [4, 7, 4, 2],
+  [3, 5, 3, 8],
+  [7, 4, 6, 1],
+  [9, 6, 2, 7],
+  [2, 8, 5, 4],
+];
+
+const STRIP_DOT_ROWS: StripDotRow[] = [
+  {
+    label: "A",
+    events: [
+      { position: 2, color: "#232a31" }, { position: 3, color: "#232a31" },
+      { position: 8, color: "#0f69ff" }, { position: 9, color: "#0f69ff" },
+      { position: 14, color: "#232a31" }, { position: 15, color: "#232a31" },
+      { position: 16, color: "#232a31" }, { position: 17, color: "#232a31" },
+      { position: 22, color: "#0f69ff" }, { position: 23, color: "#0f69ff" },
+    ],
+  },
+  {
+    label: "B",
+    events: [
+      { position: 1, color: "#232a31" }, { position: 2, color: "#232a31" },
+      { position: 6, color: "#0f69ff" }, { position: 7, color: "#0f69ff" },
+      { position: 12, color: "#232a31" },
+      { position: 18, color: "#0f69ff" },
+      { position: 24, color: "#232a31" }, { position: 25, color: "#232a31" },
+    ],
+  },
+  {
+    label: "C",
+    events: [
+      { position: 3, color: "#0f69ff" }, { position: 4, color: "#0f69ff" },
+      { position: 9, color: "#232a31" }, { position: 10, color: "#232a31" },
+      { position: 15, color: "#0f69ff" },
+      { position: 20, color: "#232a31" }, { position: 21, color: "#232a31" },
+    ],
+  },
+  {
+    label: "D",
+    events: [
+      { position: 5, color: "#232a31" },
+      { position: 10, color: "#0f69ff" }, { position: 11, color: "#0f69ff" },
+      { position: 16, color: "#232a31" },
+      { position: 22, color: "#0f69ff" }, { position: 23, color: "#0f69ff" },
+    ],
+  },
+];
+
 const CHARTS = [
   {
     title: "Confidence Band",
@@ -144,6 +249,31 @@ const CHARTS = [
       <BubbleScatterChart data={BUBBLE_DATA} xLabel="Tenure (years)" yLabel="Engagement" />
     ),
   },
+  {
+    title: "Box & Whisker",
+    description: "Distribution spread with quartiles, median, and outlier range",
+    component: <BoxWhiskerChart data={BOX_WHISKER_DATA} />,
+  },
+  {
+    title: "Strip Timeline",
+    description: "Sequential blocks with highlighted events and counts per row",
+    component: <StripTimelineChart rows={STRIP_TIMELINE_ROWS} />,
+  },
+  {
+    title: "Waffle Percentage",
+    description: "Single metric as filled grid cells for intuitive proportions",
+    component: <WafflePercentChart percent={32} />,
+  },
+  {
+    title: "Heatmap",
+    description: "Color-intensity matrix for cross-dimensional comparison",
+    component: <HeatmapChart data={HEATMAP_DATA} />,
+  },
+  {
+    title: "Strip Dot Plot",
+    description: "Categorical event positions across rows with color coding",
+    component: <StripDotChart rows={STRIP_DOT_ROWS} />,
+  },
 ];
 
 export function ChartLibraryPage() {
@@ -158,7 +288,7 @@ export function ChartLibraryPage() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {CHARTS.map((chart) => (
-          <Card key={chart.title} data-testid={`chart-card-${chart.title.toLowerCase().replace(/[\s/]+/g, "-")}`}>
+          <Card key={chart.title} data-testid={`chart-card-${chart.title.toLowerCase().replace(/[\s/&]+/g, "-")}`}>
             <CardContent className="p-4">
               <h3 className="text-sm font-semibold mb-0.5">{chart.title}</h3>
               <p className="text-[10px] text-muted-foreground mb-3">{chart.description}</p>

@@ -51,6 +51,11 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **BulletBarChart** (`client/src/components/charts/BulletBarChart.tsx`) - Horizontal bars with range backgrounds, value bar, and target marker. Props: data (label, ranges[], value, marker)[], rangeColors, valueColor, markerColor.
 - **SlopeComparisonChart** (`client/src/components/charts/SlopeComparisonChart.tsx`) - Period-over-period growth with filled slope area and percentage change. Props: items (label, startValue, endValue)[], accentColor, startYear, endYear.
 - **BubbleScatterChart** (`client/src/components/charts/BubbleScatterChart.tsx`) - Scatter plot with sized/colored bubbles for multi-dimensional comparison. Props: data (x,y,size,label,color)[], xLabel, yLabel, maxRadius.
+- **BoxWhiskerChart** (`client/src/components/charts/BoxWhiskerChart.tsx`) - Candlestick-style box and whisker chart showing distribution spread. Props: data (label, min, q1, median, q3, max)[], boxColor, whiskerColor, medianColor.
+- **StripTimelineChart** (`client/src/components/charts/StripTimelineChart.tsx`) - Horizontal strip of cells with highlighted colored blocks and counts per row. Props: rows (label, cells[])[], cellSize, gap, defaultColor.
+- **WafflePercentChart** (`client/src/components/charts/WafflePercentChart.tsx`) - Single 10x10 waffle grid showing a percentage as filled cells. Props: percent, rows, cols, cellSize, filledColor, emptyColor.
+- **HeatmapChart** (`client/src/components/charts/HeatmapChart.tsx`) - Color-intensity matrix for cross-dimensional comparison. Props: data (number[][]), rowLabels, colLabels, colorRange.
+- **StripDotChart** (`client/src/components/charts/StripDotChart.tsx`) - Scattered colored squares across categorical rows for event positioning. Props: rows (label, events[])[], dotSize, defaultColors.
 
 ## Structure
 ```
