@@ -1,43 +1,74 @@
-# People Analytics Toolbox
+# People Analytics Toolbox — Metric Market
 
 ## Overview
-This project is a People Analytics toolbox featuring reusable form elements and data visualization components. It's designed to function as a workbench for creating and configuring interactive data cards, inspired by financial dashboard UIs like Yahoo Finance and Google Finance. The primary goal is to provide a platform for developing, testing, and distributing standardized UI/UX components (card bundles) across an ecosystem of spoke applications (e.g., MetricMarket), thereby serving both administrative users/AI agents and end-user dashboards. The project aims to enable efficient analysis and visualization of people analytics metrics.
+
+Metric Market is the **card workbench** of the People Analytics Toolbox ecosystem. It provides a comprehensive platform for creating, configuring, testing, and distributing interactive data visualization components ("cards") for people analytics dashboards. It serves two main audiences: a **Workbench** for administrators and AI agents to author and manage card bundles, and a **Dashboard** for end-users to consume published analytics insights.
+
+The core value proposition lies in **standardized, machine-readable card bundles**. These self-contained definitions declare data schemas, configuration options, output representations, documentation, and example data. This approach ensures consistent UI/UX across the ecosystem and facilitates AI agent discovery and automated card assembly. Each bundle uses JSON Schema contracts, allowing spoke applications to discover data requirements, push conforming payloads, and render visualizations without manual integration.
+
+Key capabilities include:
+- 20 distinct D3-powered SVG chart types.
+- Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs.
+- Machine-readable data contracts (`dataSchema`, `configSchema`, `outputSchema`) for inter-application data exchange.
+- Hub-and-spoke integration for cross-application coordination, directive processing, and documentation management.
+- A scoring and prioritization system for cards.
+- Configurable refresh tracking with policies (`manual`, `scheduled`, `on_push`) and cadences.
 
 ## User Preferences
-- Yahoo Finance inspired design (colors #0f69ff, #e0f0ff, #232a31, #5b636a, #e0e4e9)
+
+- Yahoo Finance inspired design (colors `#0f69ff`, `#e0f0ff`, `#232a31`, `#5b636a`, `#e0e4e9`)
 - Components should be reusable form elements for People Analytics toolbox
 - Elements should be attachable to different database elements
 - All buttons should be refined and usable
 - "P" branding instead of Yahoo "Y" icons
-- Compact, minimal spacing design aesthetic (rounded-[3px], tight padding)
+- Compact, minimal spacing design aesthetic (`rounded-[3px]`, tight padding)
 - Charts should be minimal, toned down, use simple lines/greys/blacks/blues
 - Two-audience design: admin workbench for superusers/AI, consumer dashboard for end users
 - Self-contained card bundles: composable, machine-readable, agent-accessible
 - No live drill-down: use database references between cards
 
 ## System Architecture
-The application is built with a React frontend (TypeScript, Vite, Tailwind CSS, shadcn/ui) and an Express.js backend (TypeScript). It employs a hub-and-spoke architecture where this application (`metric-market`) acts as a spoke, creating shareable UI/UX components for other spoke applications within the ecosystem.
 
-**Core Design Principles:**
-- **Card Bundle Architecture:** Cards are built from self-contained, machine-readable bundles. Each bundle declares data, configuration, and output schemas (JSON Schema), default values, example data, documentation, and infrastructure notes. These bundles are stored in `card_bundles` and are discoverable via API.
-- **Card Instance Lifecycle:** The system supports a lifecycle for card instances including discovery, metric definition, chart configuration, card assembly, data pushing, rendering, refresh tracking, and drill-down linking.
-- **Data Model:** Key entities include `card_bundles` (chart definitions), `metric_definitions` (what is measured), `chart_configs` (display settings), `cards` (configured instances), `card_relations` (links between cards for drill-downs), and `card_data` (time-series data payloads).
-- **UI/UX:** The frontend includes a `CardWrapper` component for dynamic rendering of 20 D3-powered SVG chart components within a standard card frame. A `WorkbenchPage` provides an admin interface for managing bundles, metrics, chart configurations, and cards, including schema inspection and live previews.
-- **Data Contracts:** Explicit JSON Schema contracts within each card bundle define the shape of data payloads (`dataSchema`), configurable display options (`configSchema`), and rendered output representation (`outputSchema`).
+The application is built as a full-stack TypeScript monorepo with shared type definitions.
 
-**Technical Implementations:**
-- **Frontend:** React 18, Vite, Tailwind CSS, `shadcn/ui`, `wouter` for routing, `TanStack React Query` for state management.
-- **Backend:** Express.js, `esbuild` for server builds.
-- **Database:** PostgreSQL managed via Drizzle ORM (`node-postgres`/`pg`).
-- **Hub Integration:** A `hub-client` module handles communication with a central Hub for cross-application coordination, including health checks, webhook directives, documentation pushing, and registry/architecture fetching.
+**Frontend:**
+- **UI Framework:** React 18 with functional components and hooks.
+- **Styling:** Tailwind CSS 3 for utility-first styling and `shadcn/ui` for headless components.
+- **Charting:** D3.js v7 powers all 20 SVG chart components.
+- **Routing:** `wouter` for client-side SPA routing.
+- **State Management:** `TanStack React Query v5` for server-state, `react-hook-form` with Zod for form state and validation.
+
+**Backend:**
+- **Server:** Express.js 4 handling over 30 API endpoints.
+- **ORM:** Drizzle ORM for TypeScript-first PostgreSQL interaction.
+- **Database Driver:** `node-postgres (pg)`.
+- **Validation:** `drizzle-zod` for Zod schema generation from Drizzle table definitions.
+
+**Core Architectural Decisions & Features:**
+- **Card Bundles:** Self-contained JSON definitions (`dataSchema`, `configSchema`, `outputSchema`) for each chart type, enabling machine-readable contracts and consistent rendering.
+- **Hub-and-Spoke Model:** Metric Market operates as a "spoke" application, integrating with a central "Hub" for coordination, directive processing, and documentation.
+- **Two User Interfaces:** A "Workbench" for authoring and an "Dashboard" for consumption.
+- **Dynamic Chart Rendering:** `CardWrapper` component dynamically renders charts based on bundle definitions.
+- **Data Schemas:** Explicit JSON schemas define data contracts for inter-application data exchange, ensuring data integrity.
+- **Card Lifecycle Management:** Comprehensive API for managing the creation, configuration, and data flow of cards.
+- **UI/UX Design:** Inspired by Yahoo Finance, emphasizing compact design, refined components, and minimal chart aesthetics.
+- **Database Schema:** PostgreSQL 16 managed by Drizzle ORM, with tables for `card_bundles`, `metric_definitions`, `chart_configs`, `cards`, `card_relations`, and `card_data`. These tables define the relationships and store all application data.
 
 ## External Dependencies
-- **PostgreSQL:** Primary database for all application data, managed by Drizzle ORM.
-- **Central Hub:** A proprietary central service for ecosystem coordination, requiring `HUB_URL`, `HUB_APP_SLUG`, and `HUB_API_KEY` for integration.
-- **D3.js:** Used for powering the 20 distinct SVG chart components.
-- **Tailwind CSS:** For styling the frontend components.
-- **shadcn/ui:** Component library utilized for UI elements.
-- **Vite:** Frontend build tool.
-- **esbuild:** Backend build tool.
-- **TanStack React Query:** For data fetching and state management in the frontend.
-- **wouter:** Client-side router.
+
+- **PostgreSQL 16:** Primary relational database (Neon-backed via Replit).
+- **Hub SDK v2.0.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`).
+- **D3.js v7:** JavaScript library for producing dynamic, interactive data visualizations.
+- **Vite 5:** Frontend build tool.
+- **Tailwind CSS 3:** Utility-first CSS framework.
+- **shadcn/ui:** Headless component library.
+- **wouter:** Lightweight client-side router.
+- **TanStack React Query v5:** Data fetching and caching library.
+- **react-hook-form:** Form management library.
+- **lucide-react:** Icon library.
+- **Express.js 4:** Backend web application framework.
+- **Drizzle ORM:** TypeScript ORM for PostgreSQL.
+- **node-postgres (pg):** PostgreSQL client for Node.js.
+- **drizzle-zod:** Zod schema generation from Drizzle.
+- **esbuild:** Fast JavaScript bundler.
+- **tsx:** TypeScript execution for development.

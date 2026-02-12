@@ -1,7 +1,5 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import fs from "fs";
-import path from "path";
 import { storage } from "./storage";
 import {
   insertMetricDefinitionSchema,
@@ -16,40 +14,6 @@ import {
 import * as hub from "./hub-client";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-
-  app.get("/health", (_req, res) => {
-    res.json({
-      status: "ok",
-      app: "metric-market",
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  app.post("/api/hub-webhook", async (req, res) => {
-    const { event, directive } = req.body;
-
-    if (event === "directive.created" && directive) {
-      console.log(
-        `[Hub] ${directive.priority} ${directive.type}: ${directive.title}`
-      );
-      try {
-        await hub.acknowledgeDirective(directive.id);
-      } catch (err: any) {
-        console.error("[Hub] Failed to acknowledge:", err.message);
-      }
-    }
-
-    res.json({ received: true });
-  });
-
-  app.get("/api/specifications", (_req, res) => {
-    try {
-      const content = fs.readFileSync(path.resolve("replit.md"), "utf-8");
-      res.type("text/plain").send(content);
-    } catch {
-      res.status(404).json({ message: "No documentation found" });
-    }
-  });
 
   app.get("/api/bundles", async (_req, res) => {
     const bundles = await storage.listCardBundles();

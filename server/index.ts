@@ -1,4 +1,6 @@
 import express, { type Request, Response, NextFunction } from "express";
+import { createRequire } from "node:module";
+import { fileURLToPath } from "node:url";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
@@ -6,6 +8,10 @@ import { seedBundles } from "./seedBundles";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+const _require = createRequire(import.meta.url);
+const hubSdk = _require("../hub-sdk.cjs");
+hubSdk.init(app, { pollDirectives: false });
 
 app.use((req, res, next) => {
   const start = Date.now();
