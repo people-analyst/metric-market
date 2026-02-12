@@ -13,6 +13,11 @@ import {
 
 const items = [
   {
+    title: "Menu",
+    url: "/menu",
+    icon: Menu,
+  },
+  {
     title: "Card Viewer",
     url: "/metric-market",
     icon: BarChart3,
@@ -31,11 +36,6 @@ const items = [
     title: "Range Input",
     url: "/range",
     icon: SlidersHorizontal,
-  },
-  {
-    title: "Menu",
-    url: "/menu",
-    icon: Menu,
   },
 ];
 
