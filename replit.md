@@ -22,6 +22,7 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **StockScreenerFilters** (`client/src/components/StockScreenerFilters.tsx`) - Interactive filter form with badge, toggle, input, and add filter types. Supports state management for add/remove/toggle operations.
 - **FilterChooser** (`client/src/components/FilterChooser.tsx`) - Checkbox-based filter picker organized by categories with search.
 - **RangeInputFilter** (`client/src/components/RangeInputFilter.tsx`) - Standalone range input with condition dropdown (greater than, less than, etc).
+- **DetailCard** (`client/src/components/DetailCard.tsx`) - Fact-sheet card with optional tags (badges) at top, key-value rows separated by dashed borders, and optional footer with icon/score/external link. Props: tags, rows, footer.
 
 ## Spoke Applications
 - **Card Viewer** (`client/src/pages/MetricMarketPage.tsx`) - HR metrics dashboard with ticker cards, mini sparklines, screener panel (checkbox filter picker), and watchlist. Uses deterministic mock data generation. 6 metric categories: Workforce Composition, Compensation & Value, Popular Filters, Attrition & Movement, Performance & Development, Engagement & Culture. Sidebar label: "Card Viewer".

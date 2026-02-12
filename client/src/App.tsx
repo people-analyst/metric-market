@@ -11,6 +11,7 @@ import { ChooserPage } from "@/pages/ChooserPage";
 import { RangePage } from "@/pages/RangePage";
 import { MenuPage } from "@/pages/MenuPage";
 import { MetricMarketPage } from "@/pages/MetricMarketPage";
+import { DetailCardPage } from "@/pages/DetailCardPage";
 
 function Router() {
   return (
@@ -20,6 +21,7 @@ function Router() {
       <Route path="/range" component={RangePage} />
       <Route path="/menu" component={MenuPage} />
       <Route path="/metric-market" component={MetricMarketPage} />
+      <Route path="/detail-card" component={DetailCardPage} />
       <Route component={NotFound} />
     </Switch>
   );
