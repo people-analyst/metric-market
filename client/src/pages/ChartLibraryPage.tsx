@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   ConfidenceBandChart,
   AlluvialChart,
@@ -20,6 +22,7 @@ import {
   BumpChart,
   SparklineRowsChart,
   StackedAreaChart,
+  TILE_PRESETS,
 } from "@/components/charts";
 import type {
   ConfidenceBandDatum,
@@ -463,7 +466,8 @@ const CHARTS = [
   {
     title: "Tile Cartogram",
     description: "Geographic tile map with color-coded values per region",
-    component: <TileCartogramChart tiles={US_TILES} />,
+    component: null,
+    render: () => <TileCartogramTabbed />,
   },
   {
     title: "Timeline Milestones",
@@ -502,6 +506,36 @@ const CHARTS = [
   },
 ];
 
+function TileCartogramTabbed() {
+  const allPresets = [
+    { key: "us", label: "US States", tiles: US_TILES },
+    ...TILE_PRESETS,
+  ];
+  const [active, setActive] = useState("us");
+  const preset = allPresets.find((p) => p.key === active) ?? allPresets[0];
+
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-2">
+        {allPresets.map((p) => (
+          <Badge
+            key={p.key}
+            data-testid={`tile-tab-${p.key}`}
+            onClick={() => setActive(p.key)}
+            variant={active === p.key ? "default" : "secondary"}
+            className={`cursor-pointer text-[10px] ${active === p.key ? "bg-[#0f69ff]" : ""}`}
+          >
+            {p.label}
+          </Badge>
+        ))}
+      </div>
+      <div className="border border-border rounded-md p-2 bg-background" data-testid="tile-cartogram-display">
+        <TileCartogramChart tiles={preset.tiles} />
+      </div>
+    </div>
+  );
+}
+
 export function ChartLibraryPage() {
   return (
     <div className="p-5 space-y-6" data-testid="page-chart-library">
@@ -518,9 +552,13 @@ export function ChartLibraryPage() {
             <CardContent className="p-4">
               <h3 className="text-sm font-semibold mb-0.5">{chart.title}</h3>
               <p className="text-[10px] text-muted-foreground mb-3">{chart.description}</p>
-              <div className="border border-border rounded-md p-2 bg-background">
-                {chart.component}
-              </div>
+              {"render" in chart && chart.render ? (
+                chart.render()
+              ) : (
+                <div className="border border-border rounded-md p-2 bg-background">
+                  {chart.component}
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}

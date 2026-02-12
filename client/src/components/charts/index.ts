@@ -57,3 +57,6 @@ export type { SparklineRow, SparklineRowsChartProps } from "./SparklineRowsChart
 
 export { StackedAreaChart } from "./StackedAreaChart";
 export type { StackedAreaSeries, StackedAreaChartProps } from "./StackedAreaChart";
+
+export { TILE_PRESETS } from "./tilePresets";
+export type { TilePreset } from "./tilePresets";

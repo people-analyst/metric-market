@@ -16,6 +16,8 @@ export interface RadialBarChartProps {
   trackColor?: string;
 }
 
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
 export function RadialBarChart({
   data,
   maxValue,
@@ -24,9 +26,11 @@ export function RadialBarChart({
   defaultColors = ["#0f69ff", "#5b636a", "#232a31", "#a3adb8"],
   trackColor = "#e0e4e9",
 }: RadialBarChartProps) {
+  const legendH = data.length * 14 + 4;
+  const totalH = height + legendH;
   const cx = width / 2;
   const cy = height / 2;
-  const outerR = Math.min(cx, cy) - 12;
+  const outerR = Math.min(cx, cy) - 8;
   const barWidth = Math.min(16, outerR / (data.length + 1));
   const gap = 4;
 
@@ -45,39 +49,61 @@ export function RadialBarChart({
         .outerRadius(r)
         .cornerRadius(barWidth / 2);
 
+      const midR = r - barWidth / 2;
+      const indicatorX = Math.cos(endAngle) * midR;
+      const indicatorY = Math.sin(endAngle) * midR;
+
       return {
+        letter: LETTERS[i] ?? String(i + 1),
         label: d.label,
         color: d.color ?? defaultColors[i % defaultColors.length],
         valuePath: arcGen({ startAngle, endAngle, innerRadius: 0, outerRadius: 0 } as any) ?? "",
         trackPath: arcGen({ startAngle, endAngle: trackEnd, innerRadius: 0, outerRadius: 0 } as any) ?? "",
-        labelY: -r + barWidth / 2 + 4,
-        r,
+        indicatorX,
+        indicatorY,
+        value: d.value,
       };
     });
   }, [data, outerR, barWidth, gap, max, defaultColors]);
 
   return (
-    <svg width="100%" viewBox={`0 0 ${width} ${height}`} data-testid="chart-radial-bar">
+    <svg width="100%" viewBox={`0 0 ${width} ${totalH}`} data-testid="chart-radial-bar">
       <g transform={`translate(${cx},${cy})`}>
         {arcs.map((a) => (
-          <g key={a.label}>
+          <g key={a.letter}>
             <path d={a.trackPath} fill={trackColor} opacity={0.35} />
             <path d={a.valuePath} fill={a.color} />
+            <circle
+              cx={a.indicatorX}
+              cy={a.indicatorY}
+              r={barWidth * 0.42}
+              fill="#232a31"
+            />
+            <text
+              x={a.indicatorX}
+              y={a.indicatorY}
+              dy="0.35em"
+              textAnchor="middle"
+              fontSize={7}
+              fontWeight={700}
+              fill="#e0e4e9"
+            >
+              {a.letter}
+            </text>
           </g>
         ))}
+      </g>
+      <g transform={`translate(8,${height + 2})`}>
         {arcs.map((a, i) => (
-          <text
-            key={`label-${i}`}
-            x={-outerR + barWidth}
-            y={a.labelY}
-            textAnchor="end"
-            fontSize={9}
-            fill="#232a31"
-            fontWeight={500}
-            dominantBaseline="central"
-          >
-            {a.label}
-          </text>
+          <g key={a.letter} transform={`translate(0,${i * 14})`}>
+            <circle cx={5} cy={5} r={4} fill={a.color} />
+            <text x={13} y={5} dy="0.35em" fontSize={8} fill="#5b636a" fontWeight={500}>
+              {a.letter}
+            </text>
+            <text x={23} y={5} dy="0.35em" fontSize={8} fill="#5b636a">
+              {a.label} ({a.value})
+            </text>
+          </g>
         ))}
       </g>
     </svg>
