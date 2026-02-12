@@ -42,6 +42,8 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 
 - **Google Finance** (`client/src/pages/GoogleFinancePage.tsx`) - Google Finance-style content-dense dashboard. Contains: market category tabs, index ticker strip with up/down arrows, watchlist prompt, suggested metrics list, sidebar cards (trends/calendar/most-followed), mixed-content feed with 5 card types (Org Metric, Peer Reviewed Research, Analysis Summary, Action Planning, Competitive Intelligence) filterable by tab, full-width metric trends with Most active/Gainers/Losers tabs, and discover-more horizontal scroll cards. All People Analytics context. Feed cards include key-value rows, risk levels, progress bars, citations, and action checklists.
 
+- **Metric Detail** (`client/src/pages/MetricDetailPage.tsx`) - Google Finance stock detail page adapted for People Analytics. Contains: breadcrumb navigation, metric name with Follow/Share buttons, big value header with trend arrow and period change, large SVG chart with time-period tabs (1M/3M/6M/YTD/1Y/3Y/MAX), horizontal-scroll timeline event cards with source/date/headline/% change, "Metric Breakdown" section with quarterly/annual tabs, bar chart (voluntary vs involuntary), financial-style data rows with Y/Y change %, collapsible accordion sections (Retention Drivers, Exit Analysis), right sidebar fact-sheet card with tags and key-value rows, About card with description and icon-labeled facts (Owner, Tracking Since, Scope, Source, Population), "Discover more" and "People also track" horizontal scroll card rows with ticker badges.
+
 ## Structure
 ```
 client/           - React frontend
