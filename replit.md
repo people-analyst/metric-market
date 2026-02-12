@@ -38,6 +38,11 @@ This app (slug: `metric-market`) connects to a central Hub for cross-application
 - `HUB_APP_SLUG` — This app's registered slug (`metric-market`)
 - `HUB_API_KEY` — Secret API key for authentication (stored in Replit Secrets)
 
+### Standard Hub Endpoints (required by all spoke apps)
+- `GET /health` — Health check for hub monitoring (returns status, app slug, timestamp)
+- `POST /api/hub-webhook` — Receives real-time directive notifications; auto-acknowledges new directives
+- `GET /api/specifications` — Returns replit.md content as plain text for hub documentation pulls
+
 ### Hub API Endpoints (proxied through this server)
 - `GET /api/hub/status` — Check hub configuration status
 - `GET /api/hub/directives?status=pending` — Fetch directives from Hub
@@ -47,6 +52,7 @@ This app (slug: `metric-market`) connects to a central Hub for cross-application
 - `GET /api/hub/architecture` — Fetch ecosystem architecture
 
 ## Recent Changes
+- 2026-02-12: Added standard hub endpoints: /health, /api/hub-webhook, /api/specifications
 - 2026-02-12: Integrated hub-client module for Hub-and-Spoke communication (directives, registry, architecture, documentation push)
 - 2026-02-12: Built Card Bundle architecture — 20 self-contained bundle definitions with data/config/output schemas, documentation, and example data
 - 2026-02-12: Added card_bundles and card_relations tables; extended cards with refresh/scoring fields
