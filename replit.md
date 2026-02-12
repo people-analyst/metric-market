@@ -56,6 +56,9 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **WafflePercentChart** (`client/src/components/charts/WafflePercentChart.tsx`) - Single 10x10 waffle grid showing a percentage as filled cells. Props: percent, rows, cols, cellSize, filledColor, emptyColor.
 - **HeatmapChart** (`client/src/components/charts/HeatmapChart.tsx`) - Color-intensity matrix for cross-dimensional comparison. Props: data (number[][]), rowLabels, colLabels, colorRange.
 - **StripDotChart** (`client/src/components/charts/StripDotChart.tsx`) - Scattered colored squares across categorical rows for event positioning. Props: rows (label, events[])[], dotSize, defaultColors.
+- **MultiLineChart** (`client/src/components/charts/MultiLineChart.tsx`) - Multiple time series lines with optional reference line and legend. Props: series (label, values[], color?)[], xLabels, referenceLine, yLabel.
+- **TileCartogramChart** (`client/src/components/charts/TileCartogramChart.tsx`) - Geographic tile/cartogram map with color-coded squares positioned by row/col. Props: tiles (id, label, value, row, col)[], colorRange.
+- **TimelineMilestoneChart** (`client/src/components/charts/TimelineMilestoneChart.tsx`) - Labeled event markers at varying heights along a horizontal time axis. Props: milestones (label, position, height, color?)[], xLabels, defaultColors.
 
 ## Structure
 ```

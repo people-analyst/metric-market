@@ -30,3 +30,12 @@ export type { HeatmapChartProps } from "./HeatmapChart";
 
 export { StripDotChart } from "./StripDotChart";
 export type { StripDotRow, StripDotEvent, StripDotChartProps } from "./StripDotChart";
+
+export { MultiLineChart } from "./MultiLineChart";
+export type { MultiLineSeries, MultiLineChartProps } from "./MultiLineChart";
+
+export { TileCartogramChart } from "./TileCartogramChart";
+export type { TileCartogramDatum, TileCartogramChartProps } from "./TileCartogramChart";
+
+export { TimelineMilestoneChart } from "./TimelineMilestoneChart";
+export type { TimelineMilestone, TimelineMilestoneChartProps } from "./TimelineMilestoneChart";

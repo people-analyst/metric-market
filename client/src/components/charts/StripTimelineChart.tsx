@@ -62,7 +62,7 @@ export function StripTimelineChart({
                       y={ry + cellSize / 2}
                       dy="0.35em"
                       textAnchor="middle"
-                      fill="#fff"
+                      fill="#e0e4e9"
                       fontSize={7}
                       fontWeight={600}
                     >

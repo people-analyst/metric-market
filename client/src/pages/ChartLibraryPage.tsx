@@ -11,6 +11,9 @@ import {
   WafflePercentChart,
   HeatmapChart,
   StripDotChart,
+  MultiLineChart,
+  TileCartogramChart,
+  TimelineMilestoneChart,
 } from "@/components/charts";
 import type {
   ConfidenceBandDatum,
@@ -22,6 +25,9 @@ import type {
   BoxWhiskerDatum,
   StripTimelineRow,
   StripDotRow,
+  MultiLineSeries,
+  TileCartogramDatum,
+  TimelineMilestone,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -205,6 +211,90 @@ const STRIP_DOT_ROWS: StripDotRow[] = [
   },
 ];
 
+const MULTI_LINE_SERIES: MultiLineSeries[] = (() => {
+  const gen = (seed: number, len: number) => {
+    const vals: number[] = [];
+    let v = seed;
+    for (let i = 0; i < len; i++) {
+      v += (Math.sin(i * 0.4 + seed) * 0.04) + (Math.random() - 0.52) * 0.02;
+      vals.push(parseFloat(v.toFixed(3)));
+    }
+    return vals;
+  };
+  return [
+    { label: "Eng", values: gen(0.45, 50), color: "#0f69ff" },
+    { label: "Sales", values: gen(0.35, 50), color: "#5b636a" },
+    { label: "Ops", values: gen(0.30, 50), color: "#a3adb8" },
+  ];
+})();
+
+const MULTI_LINE_LABELS = (() => {
+  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  return Array.from({ length: 50 }, (_, i) => months[i % 12]);
+})();
+
+const US_TILES: TileCartogramDatum[] = [
+  { id: "AK", label: "AK", value: 12, row: 7, col: 0 },
+  { id: "HI", label: "HI", value: 8, row: 7, col: 1 },
+  { id: "WA", label: "WA", value: 45, row: 1, col: 1 },
+  { id: "OR", label: "OR", value: 32, row: 2, col: 1 },
+  { id: "CA", label: "CA", value: 78, row: 3, col: 1 },
+  { id: "NV", label: "NV", value: 22, row: 3, col: 2 },
+  { id: "ID", label: "ID", value: 18, row: 2, col: 2 },
+  { id: "MT", label: "MT", value: 15, row: 1, col: 2 },
+  { id: "WY", label: "WY", value: 10, row: 2, col: 3 },
+  { id: "UT", label: "UT", value: 25, row: 3, col: 3 },
+  { id: "AZ", label: "AZ", value: 35, row: 4, col: 2 },
+  { id: "CO", label: "CO", value: 42, row: 3, col: 4 },
+  { id: "NM", label: "NM", value: 20, row: 4, col: 3 },
+  { id: "ND", label: "ND", value: 8, row: 1, col: 3 },
+  { id: "SD", label: "SD", value: 9, row: 2, col: 4 },
+  { id: "NE", label: "NE", value: 14, row: 2, col: 5 },
+  { id: "KS", label: "KS", value: 16, row: 3, col: 5 },
+  { id: "OK", label: "OK", value: 19, row: 4, col: 4 },
+  { id: "TX", label: "TX", value: 65, row: 5, col: 3 },
+  { id: "MN", label: "MN", value: 38, row: 1, col: 4 },
+  { id: "IA", label: "IA", value: 20, row: 2, col: 6 },
+  { id: "MO", label: "MO", value: 28, row: 3, col: 6 },
+  { id: "AR", label: "AR", value: 15, row: 4, col: 5 },
+  { id: "LA", label: "LA", value: 22, row: 5, col: 5 },
+  { id: "WI", label: "WI", value: 30, row: 1, col: 5 },
+  { id: "IL", label: "IL", value: 55, row: 2, col: 7 },
+  { id: "IN", label: "IN", value: 32, row: 2, col: 8 },
+  { id: "MI", label: "MI", value: 40, row: 1, col: 7 },
+  { id: "OH", label: "OH", value: 48, row: 2, col: 9 },
+  { id: "KY", label: "KY", value: 22, row: 3, col: 7 },
+  { id: "TN", label: "TN", value: 30, row: 3, col: 8 },
+  { id: "MS", label: "MS", value: 12, row: 4, col: 6 },
+  { id: "AL", label: "AL", value: 18, row: 4, col: 7 },
+  { id: "GA", label: "GA", value: 42, row: 4, col: 8 },
+  { id: "FL", label: "FL", value: 60, row: 5, col: 9 },
+  { id: "SC", label: "SC", value: 20, row: 4, col: 9 },
+  { id: "NC", label: "NC", value: 35, row: 3, col: 9 },
+  { id: "VA", label: "VA", value: 40, row: 2, col: 10 },
+  { id: "WV", label: "WV", value: 10, row: 3, col: 10 },
+  { id: "PA", label: "PA", value: 52, row: 1, col: 9 },
+  { id: "NY", label: "NY", value: 72, row: 1, col: 8 },
+  { id: "NJ", label: "NJ", value: 45, row: 2, col: 11 },
+  { id: "DE", label: "DE", value: 8, row: 3, col: 11 },
+  { id: "MD", label: "MD", value: 30, row: 4, col: 10 },
+  { id: "CT", label: "CT", value: 22, row: 1, col: 10 },
+  { id: "RI", label: "RI", value: 5, row: 1, col: 11 },
+  { id: "MA", label: "MA", value: 38, row: 0, col: 11 },
+  { id: "VT", label: "VT", value: 6, row: 0, col: 9 },
+  { id: "NH", label: "NH", value: 8, row: 0, col: 10 },
+  { id: "ME", label: "ME", value: 10, row: 0, col: 12 },
+];
+
+const TIMELINE_MILESTONES: TimelineMilestone[] = [
+  { label: "A", position: 2018, height: 2, color: "#a3adb8" },
+  { label: "B", position: 2019, height: 4, color: "#0f69ff" },
+  { label: "C", position: 2020, height: 2, color: "#a3adb8" },
+  { label: "D", position: 2020.5, height: 6, color: "#5b636a" },
+  { label: "E", position: 2021, height: 5, color: "#232a31" },
+  { label: "F", position: 2023, height: 1, color: "#a3adb8" },
+];
+
 const CHARTS = [
   {
     title: "Confidence Band",
@@ -273,6 +363,28 @@ const CHARTS = [
     title: "Strip Dot Plot",
     description: "Categorical event positions across rows with color coding",
     component: <StripDotChart rows={STRIP_DOT_ROWS} />,
+  },
+  {
+    title: "Multi-Line Series",
+    description: "Multiple time series lines with reference line for comparison",
+    component: (
+      <MultiLineChart
+        series={MULTI_LINE_SERIES}
+        xLabels={MULTI_LINE_LABELS}
+        referenceLine={0.35}
+        yLabel="Retention"
+      />
+    ),
+  },
+  {
+    title: "Tile Cartogram",
+    description: "Geographic tile map with color-coded values per region",
+    component: <TileCartogramChart tiles={US_TILES} />,
+  },
+  {
+    title: "Timeline Milestones",
+    description: "Event markers at varying heights along a time axis",
+    component: <TimelineMilestoneChart milestones={TIMELINE_MILESTONES} />,
   },
 ];
 
