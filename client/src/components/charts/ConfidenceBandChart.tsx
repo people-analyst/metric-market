@@ -25,7 +25,7 @@ export function ConfidenceBandChart({
   width = 320,
   height = 180,
   lineColor = "#5b636a",
-  bandColors = ["rgba(15,105,255,0.25)", "rgba(15,105,255,0.10)"],
+  bandColors = ["#a3adb8", "#e0e4e9"],
   xLabel,
   yLabel,
 }: ConfidenceBandChartProps) {
@@ -83,8 +83,8 @@ export function ConfidenceBandChart({
         {xTicks.map((t) => (
           <text key={t} x={xScale(t)} y={ch + 14} textAnchor="middle" fontSize={8} fill="currentColor" opacity={0.35}>{t}</text>
         ))}
-        <path d={band2} fill={bandColors[1]} />
-        <path d={band1} fill={bandColors[0]} />
+        <path d={band2} fill={bandColors[1]} opacity={0.25} />
+        <path d={band1} fill={bandColors[0]} opacity={0.3} />
         <path d={linePath} fill="none" stroke={lineColor} strokeWidth={1.5} />
         {xLabel && <text x={cw / 2} y={ch + 24} textAnchor="middle" fontSize={8} fill="currentColor" opacity={0.4}>{xLabel}</text>}
         {yLabel && <text x={-pad.l + 6} y={-4} fontSize={8} fill="currentColor" opacity={0.4}>{yLabel}</text>}

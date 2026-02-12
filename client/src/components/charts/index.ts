@@ -39,3 +39,21 @@ export type { TileCartogramDatum, TileCartogramChartProps } from "./TileCartogra
 
 export { TimelineMilestoneChart } from "./TimelineMilestoneChart";
 export type { TimelineMilestone, TimelineMilestoneChartProps } from "./TimelineMilestoneChart";
+
+export { ControlChart } from "./ControlChart";
+export type { ControlChartProps } from "./ControlChart";
+
+export { DendrogramChart } from "./DendrogramChart";
+export type { DendrogramNode, DendrogramChartProps } from "./DendrogramChart";
+
+export { RadialBarChart } from "./RadialBarChart";
+export type { RadialBarDatum, RadialBarChartProps } from "./RadialBarChart";
+
+export { BumpChart } from "./BumpChart";
+export type { BumpChartItem, BumpChartProps } from "./BumpChart";
+
+export { SparklineRowsChart } from "./SparklineRowsChart";
+export type { SparklineRow, SparklineRowsChartProps } from "./SparklineRowsChart";
+
+export { StackedAreaChart } from "./StackedAreaChart";
+export type { StackedAreaSeries, StackedAreaChartProps } from "./StackedAreaChart";

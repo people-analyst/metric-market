@@ -59,6 +59,12 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **MultiLineChart** (`client/src/components/charts/MultiLineChart.tsx`) - Multiple time series lines with optional reference line and legend. Props: series (label, values[], color?)[], xLabels, referenceLine, yLabel.
 - **TileCartogramChart** (`client/src/components/charts/TileCartogramChart.tsx`) - Geographic tile/cartogram map with color-coded squares positioned by row/col. Props: tiles (id, label, value, row, col)[], colorRange.
 - **TimelineMilestoneChart** (`client/src/components/charts/TimelineMilestoneChart.tsx`) - Labeled event markers at varying heights along a horizontal time axis. Props: milestones (label, position, height, color?)[], xLabels, defaultColors.
+- **ControlChart** (`client/src/components/charts/ControlChart.tsx`) - SPC control chart with UCL/LCL bands and ±σ zones. Props: data (number[]), lineColor, bandColors, xLabel, yLabel.
+- **DendrogramChart** (`client/src/components/charts/DendrogramChart.tsx`) - Hierarchical clustering tree with branching structure. Props: root (DendrogramNode), lineColor, labelColor.
+- **RadialBarChart** (`client/src/components/charts/RadialBarChart.tsx`) - Concentric arc bars for proportional comparison. Props: data (label, value, color?)[], maxValue, defaultColors, trackColor.
+- **BumpChart** (`client/src/components/charts/BumpChart.tsx`) - Rank change visualization with crossing lines and value circles. Props: items (label, startRank, endRank, startValue, endValue)[], startYear, endYear.
+- **SparklineRowsChart** (`client/src/components/charts/SparklineRowsChart.tsx`) - Labeled rows with individual sparklines for quick comparison. Props: rows (label, value, data[])[], lineColor, rowHeight.
+- **StackedAreaChart** (`client/src/components/charts/StackedAreaChart.tsx`) - Layered filled areas showing composition over time. Props: series (label, values[], color?)[], xLabels, defaultColors.
 
 ## Structure
 ```

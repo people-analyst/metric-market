@@ -14,6 +14,12 @@ import {
   MultiLineChart,
   TileCartogramChart,
   TimelineMilestoneChart,
+  ControlChart,
+  DendrogramChart,
+  RadialBarChart,
+  BumpChart,
+  SparklineRowsChart,
+  StackedAreaChart,
 } from "@/components/charts";
 import type {
   ConfidenceBandDatum,
@@ -28,6 +34,11 @@ import type {
   MultiLineSeries,
   TileCartogramDatum,
   TimelineMilestone,
+  DendrogramNode,
+  RadialBarDatum,
+  BumpChartItem,
+  SparklineRow,
+  StackedAreaSeries,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -295,6 +306,79 @@ const TIMELINE_MILESTONES: TimelineMilestone[] = [
   { label: "F", position: 2023, height: 1, color: "#a3adb8" },
 ];
 
+const CONTROL_DATA = [150, 172, 148, 195, 180, 165, 140, 155, 170, 160];
+
+const DENDROGRAM_ROOT: DendrogramNode = {
+  height: 5,
+  children: [
+    {
+      height: 4,
+      children: [
+        {
+          height: 2,
+          children: [
+            { label: "A", height: 0 },
+            { label: "B", height: 0 },
+          ],
+        },
+        { label: "C", height: 0 },
+      ],
+    },
+    {
+      height: 3.5,
+      children: [
+        {
+          height: 2.5,
+          children: [
+            { label: "D", height: 0 },
+            { label: "E", height: 0 },
+          ],
+        },
+        {
+          height: 3,
+          children: [
+            { label: "F", height: 0 },
+            {
+              height: 1.5,
+              children: [
+                { label: "G", height: 0 },
+                { label: "H", height: 0 },
+                { label: "I", height: 0 },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  ],
+};
+
+const RADIAL_DATA: RadialBarDatum[] = [
+  { label: "Engineering", value: 82, color: "#0f69ff" },
+  { label: "Sales", value: 68, color: "#5b636a" },
+  { label: "Operations", value: 45, color: "#232a31" },
+];
+
+const BUMP_ITEMS: BumpChartItem[] = [
+  { label: "Engineering", startRank: 1, endRank: 3, startValue: 1, endValue: 3, startColor: "#0f69ff", endColor: "#0f69ff" },
+  { label: "Sales", startRank: 2, endRank: 1, startValue: 5, endValue: 10, startColor: "#5b636a", endColor: "#5b636a" },
+  { label: "Operations", startRank: 3, endRank: 2, startValue: 4, endValue: 8, startColor: "#232a31", endColor: "#a3adb8" },
+];
+
+const SPARKLINE_ROWS: SparklineRow[] = [
+  { label: "A", value: 240, data: [180, 200, 210, 230, 260, 280, 270, 250, 240, 235, 240] },
+  { label: "B", value: 135, data: [120, 125, 128, 130, 132, 140, 145, 142, 138, 135, 135] },
+  { label: "C", value: 90, data: [80, 82, 88, 92, 95, 98, 96, 93, 90, 88, 90] },
+  { label: "D", value: 85, data: [82, 83, 84, 84, 85, 86, 88, 90, 89, 87, 85] },
+];
+
+const STACKED_AREA: StackedAreaSeries[] = [
+  { label: "Engineering", values: [120, 130, 110, 140, 100, 80, 150, 120, 180, 140, 100, 130], color: "#232a31" },
+  { label: "Sales", values: [80, 100, 120, 90, 110, 130, 100, 120, 80, 110, 100, 90], color: "#5b636a" },
+  { label: "Marketing", values: [60, 80, 100, 120, 90, 80, 70, 100, 110, 90, 80, 70], color: "#a3adb8" },
+  { label: "Operations", values: [40, 50, 60, 80, 70, 60, 80, 90, 100, 70, 60, 50], color: "#0f69ff" },
+];
+
 const CHARTS = [
   {
     title: "Confidence Band",
@@ -385,6 +469,36 @@ const CHARTS = [
     title: "Timeline Milestones",
     description: "Event markers at varying heights along a time axis",
     component: <TimelineMilestoneChart milestones={TIMELINE_MILESTONES} />,
+  },
+  {
+    title: "Control / SPC",
+    description: "Statistical process control with UCL/LCL bands and sigma zones",
+    component: <ControlChart data={CONTROL_DATA} />,
+  },
+  {
+    title: "Dendrogram",
+    description: "Hierarchical clustering tree with branching structure",
+    component: <DendrogramChart root={DENDROGRAM_ROOT} />,
+  },
+  {
+    title: "Radial Bar",
+    description: "Concentric arc bars for proportional comparison",
+    component: <RadialBarChart data={RADIAL_DATA} maxValue={100} />,
+  },
+  {
+    title: "Bump / Rank",
+    description: "Rank changes between two periods with crossing lines",
+    component: <BumpChart items={BUMP_ITEMS} startYear={2020} endYear={2025} />,
+  },
+  {
+    title: "Sparkline Rows",
+    description: "Labeled rows with individual sparklines for quick comparison",
+    component: <SparklineRowsChart rows={SPARKLINE_ROWS} />,
+  },
+  {
+    title: "Stacked Area",
+    description: "Layered filled areas showing composition over time",
+    component: <StackedAreaChart series={STACKED_AREA} />,
   },
 ];
 
