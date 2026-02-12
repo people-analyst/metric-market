@@ -10,6 +10,7 @@ import { ScreenerPage } from "@/pages/ScreenerPage";
 import { ChooserPage } from "@/pages/ChooserPage";
 import { RangePage } from "@/pages/RangePage";
 import { MenuPage } from "@/pages/MenuPage";
+import { MetricMarketPage } from "@/pages/MetricMarketPage";
 
 function Router() {
   return (
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/chooser" component={ChooserPage} />
       <Route path="/range" component={RangePage} />
       <Route path="/menu" component={MenuPage} />
+      <Route path="/metric-market" component={MetricMarketPage} />
       <Route component={NotFound} />
     </Switch>
   );

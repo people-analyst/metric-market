@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3 } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +31,11 @@ const items = [
     title: "Menu",
     url: "/menu",
     icon: Menu,
+  },
+  {
+    title: "MetricMarket",
+    url: "/metric-market",
+    icon: BarChart3,
   },
 ];
 
