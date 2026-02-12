@@ -7,7 +7,10 @@ import {
   FilterChooser,
   type FilterCategory,
 } from "@/components/FilterChooser";
+import { RangeInputFilter } from "@/components/RangeInputFilter";
 import { useToast } from "@/hooks/use-toast";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Card, CardContent } from "@/components/ui/card";
 
 const defaultFilters: FilterItem[] = [
   {
@@ -177,24 +180,107 @@ export const Frame = (): JSX.Element => {
 
   return (
     <div className="bg-[#f5f8fa] min-h-screen p-5" data-testid="page-stock-screener">
-      <StockScreenerFilters
-        filters={filters}
-        estimatedResults={1}
-        onFiltersChange={setFilters}
-        onFindStocks={handleFindStocks}
-        onSaveFilters={handleSaveFilters}
-        onAddFilter={() => setShowChooser(true)}
-      />
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-lg font-semibold text-[#232a31] mb-4" data-testid="text-page-title">
+          People Analytics Toolbox
+        </h1>
 
-      {showChooser && (
-        <div className="mt-4" data-testid="section-filter-chooser">
-          <FilterChooser
-            categories={categories}
-            onClose={handleCloseChooser}
-            onCategoriesChange={setCategories}
-          />
-        </div>
-      )}
+        <Tabs defaultValue="screener" className="w-full">
+          <TabsList className="mb-4" data-testid="tabs-component-list">
+            <TabsTrigger value="screener" data-testid="tab-screener">
+              Stock Screener
+            </TabsTrigger>
+            <TabsTrigger value="chooser" data-testid="tab-chooser">
+              Filter Chooser
+            </TabsTrigger>
+            <TabsTrigger value="range" data-testid="tab-range">
+              Range Input
+            </TabsTrigger>
+            <TabsTrigger value="menu" data-testid="tab-menu">
+              Menu
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="screener">
+            <StockScreenerFilters
+              filters={filters}
+              estimatedResults={1}
+              onFiltersChange={setFilters}
+              onFindStocks={handleFindStocks}
+              onSaveFilters={handleSaveFilters}
+              onAddFilter={() => setShowChooser(true)}
+            />
+            {showChooser && (
+              <div className="mt-4" data-testid="section-filter-chooser">
+                <FilterChooser
+                  categories={categories}
+                  onClose={handleCloseChooser}
+                  onCategoriesChange={setCategories}
+                />
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="chooser">
+            <FilterChooser
+              categories={categories}
+              onClose={handleCloseChooser}
+              onCategoriesChange={setCategories}
+            />
+          </TabsContent>
+
+          <TabsContent value="range">
+            <Card>
+              <CardContent className="p-4 space-y-4">
+                <h2 className="text-sm font-semibold text-[#232a31]" data-testid="text-range-title">
+                  Range Input Filters
+                </h2>
+                <div className="space-y-3">
+                  <RangeInputFilter
+                    label="Years of Consecutive Positive EPS"
+                    onChange={(val) =>
+                      toast({
+                        title: "Range Changed",
+                        description: `${val.condition}: ${val.value}`,
+                      })
+                    }
+                  />
+                  <RangeInputFilter
+                    label="Gross Profit Margin %"
+                    defaultCondition="Less than"
+                    onChange={(val) =>
+                      toast({
+                        title: "Range Changed",
+                        description: `${val.condition}: ${val.value}`,
+                      })
+                    }
+                  />
+                  <RangeInputFilter
+                    label="Est. EPS Growth (%)"
+                    conditions={["Greater than", "Less than", "Equal to", "Between", "Not equal to"]}
+                    onChange={(val) =>
+                      toast({
+                        title: "Range Changed",
+                        description: `${val.condition}: ${val.value}`,
+                      })
+                    }
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="menu">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-[#5b636a]" data-testid="text-menu-placeholder">
+                  Menu component will be added here from the Menu4 Figma design.
+                </p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
