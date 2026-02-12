@@ -1,0 +1,267 @@
+# People Analytics Ecosystem — Development Context Package
+Generated: 2026-02-12T21:08:26.461Z
+Source: People Analytics Toolbox Hub
+
+## Ecosystem Architecture
+
+The People Analytics Toolbox uses a **hub-and-spoke architecture** where this hub application serves as the central coordination point for a growing ecosystem of specialized People Analytics applications (spokes).
+
+### How It Works
+- **Registration**: Spoke apps register with the hub via the App Registry, providing their name, URL, and description
+- **Authentication**: Each spoke receives a unique API key (format: `pat_...`) used in the `X-API-Key` header for authenticated communication
+- **Health Monitoring**: The hub periodically checks spoke health endpoints (`GET /health`) and tracks uptime
+- **Directives**: The hub can send directives (requirements, instructions, doc upgrade requests) to spokes for action
+- **Webhooks**: Spokes can register webhook URLs for real-time notifications from the hub
+- **Field Exchange**: A canonical field library ensures consistent data naming across all spokes
+- **Documentation Sync**: The hub fetches and scores spoke documentation against a 9-section quality framework
+
+## Registered Applications (12)
+
+### AnyComp
+- **Slug**: `anycomp`
+- **Status**: online
+- **URL**: https://compensation-hub.replit.app
+- **Description**: Compensation Decision Support System — converts executive priorities and budget constraints into optimized compensation scenarios with VOI analysis. Consumes Meta-Factory microservices for job matching, pay ranges, and compensation modeling.
+- **Doc Quality**: 96%
+
+### Conductor
+- **Slug**: `conductor`
+- **Status**: online
+- **URL**: https://data-model-explorer.replit.app
+- **Description**: Data Intelligence Platform. Orchestrates data model exploration, people analytics, and cross-system integration.
+- **Doc Quality**: 89%
+
+### Data Anonymizer
+- **Slug**: `data-anonymizer`
+- **Status**: online
+- **URL**: https://data-vault-anonymizer.replit.app
+- **Description**: Data anonymization and privacy protection tool for People Analytics datasets. Handles PII detection, masking, tokenization, and synthetic data generation to ensure compliance with data privacy regulations.
+- **Doc Quality**: 96%
+
+### Decision Wizard
+- **Slug**: `decision-wizard`
+- **Status**: online
+- **URL**: https://asset-manager-the1mikewest.replit.app
+- **Description**: Decision support tool for People Analytics. Experimental standalone application guiding users through structured decision-making frameworks.
+- **Doc Quality**: 100%
+
+### Metric Engine Calculus
+- **Slug**: `metric-engine-calculus`
+- **Status**: online
+- **URL**: https://metric-engine.replit.app
+- **Description**: Computation engine for People Analytics metrics. Syncs metric definitions from the hub, calculates results, and performs statistical enrichment and trend analysis.
+- **Doc Quality**: 98%
+
+### Metric Market
+- **Slug**: `metric-market`
+- **Status**: offline
+- **URL**: https://metric-market.replit.app
+- **Description**: Metrics Market is a data visualization and dashboard application that sits in the People Analytics Toolbox.
+ People Analytics Toolbox is a hub-and-spoke platform for building, configuring, and displaying data visualization cards for People Analytics (HR/compensation/workforce metrics). 
+
+The Metric Market serves two audiences:
+
+Workbench (Admin side): Where superusers and AI agents author reusable "card bundles" — self-contained chart definitions that declare what data they need, how they're configured, and how they render. You can define metrics (like attrition rate, headcount), pair them with one of 20 chart types (multi-line, heatmap, bump chart, etc.), and assemble cards that track refresh status and scoring (importance, significance, relevance). Cards can be linked together for drill-down navigation.
+
+Dashboard (Consumer side): Where end users view polished, pre-built cards fed by data from external "spoke" applications (like a Metric Calculator). It's a read-only experience showing the cards assembled in the workbench.
+
+The whole system is API-driven (24 endpoints) so spoke apps can discover available bundles, push data payloads, and query cards programmatically.
+- **Doc Quality**: 63%
+
+### PeopleAnalyst
+- **Slug**: `people-analyst`
+- **Status**: online
+- **URL**: https://performix.replit.app
+- **Description**: Executive Forecasting & Decision Platform. Probabilistic forecasting, Monte Carlo simulation, VOI analysis.
+- **Doc Quality**: 87%
+
+### Preference Modeler
+- **Slug**: `preference-modeler`
+- **Status**: online
+- **URL**: https://preference-modeler.replit.app
+- **Description**: Preference & Survey Collection. Survey response collection and preference modeling.
+- **Doc Quality**: 100%
+
+### Product Kanban
+- **Slug**: `kanban`
+- **Status**: online
+- **URL**: https://people-analytics-kanban.replit.app
+- **Description**: Central development tracker for all PA Toolbox applications. Manages projects, features, tasks, and bugs across the ecosystem.
+- **Doc Quality**: 98%
+
+### Reincarnation
+- **Slug**: `reincarnation`
+- **Status**: online
+- **URL**: https://reincarnation-engine.replit.app
+- **Description**: Adaptive Diagnostic System. Survey item management with population-level learning and psychometric optimization.
+- **Doc Quality**: 91%
+
+### Segmentation Studio
+- **Slug**: `segmentation-studio`
+- **Status**: online
+- **URL**: https://segmentation-builder.replit.app
+- **Description**: Employee Segmentation Engine. HRIS normalization, canonical field mapping, dimension building, pack publishing.
+- **Doc Quality**: 93%
+
+### VOI Calculator
+- **Slug**: `voi-calculator`
+- **Status**: online
+- **URL**: https://value-of-information.replit.app
+- **Description**: Value of Investment calculator for People Analytics initiatives. Experimental standalone tool for quantifying ROI and business impact of analytics projects.
+- **Doc Quality**: 100%
+
+## Available Code Bundles (6)
+
+These reusable code bundles can be downloaded and integrated into spoke applications:
+
+### MetricMarket Dashboard (`metric-market`)
+- **Category**: ui-component
+- **Description**: Yahoo Finance-style HR metrics dashboard with screener, ticker grid, sparklines, and watchlist. Translates stock market visualization patterns into People Analytics.
+- **Files**: client/src/pages/metric-market.tsx, server/routes/metric-market-routes.ts
+- **Dependencies**: @tanstack/react-query, recharts, lucide-react
+- **Tags**: dashboard, metrics, visualization, hr-analytics
+
+### Field Exchange SDK (`field-exchange`)
+- **Category**: sdk
+- **Description**: Zero-dependency TypeScript client for syncing canonical field mappings between spoke apps and the hub. Includes data profiling and fuzzy matching.
+- **Files**: server/sdk/field-exchange-client.ts, server/routes/field-exchange-routes.ts, client/src/pages/field-alignment.tsx
+- **Dependencies**: None
+- **Tags**: fields, mapping, data-governance
+
+### Hub Sync Agent (`hub-sync`)
+- **Category**: integration
+- **Description**: Automated sync agent that fetches directives, processes changes, updates documentation, and reports back to the hub. Full hub communication lifecycle.
+- **Files**: server/hub-sync-agent.js, server/hub-client.js, server/directive-executor.js
+- **Dependencies**: @anthropic-ai/sdk
+- **Tags**: automation, directives, sync
+
+### Documentation Quality Engine (`doc-quality`)
+- **Category**: feature-module
+- **Description**: Self-scoring documentation engine that evaluates markdown docs against the hub's 9-section quality framework. Same scoring algorithm used by the hub.
+- **Files**: server/doc-scorer.js, server/doc-routes.js
+- **Dependencies**: None
+- **Tags**: documentation, quality, governance
+
+### Development Context Generator (`dev-context`)
+- **Category**: feature-module
+- **Description**: Introspects your codebase to generate rich development context: tech stack, dependencies, API routes, DB schema, and code patterns. Powers AI agent understanding.
+- **Files**: server/context-generator.js, server/context-routes.js
+- **Dependencies**: None
+- **Tags**: context, ai, development
+
+### Role-Based Input Collector (`input-collector`)
+- **Category**: ui-component
+- **Description**: Token-based secure forms for collecting configuration inputs from stakeholders. No login required. Supports email and link distribution channels.
+- **Files**: client/src/pages/collect-form.tsx, client/src/pages/input-requests.tsx, server/routes/input-collection-routes.ts
+- **Dependencies**: @tanstack/react-query, react-hook-form
+- **Tags**: forms, stakeholder, input-collection
+
+## Field Library (66 canonical fields, 385 aliases)
+
+The canonical field library provides a standardized vocabulary for People Analytics data across all spoke applications.
+
+### Categories Covered
+- benefits
+- compensation
+- demographics
+- employment
+- identification
+- organization
+- performance
+- time_attendance
+
+### How to Use the Field Exchange SDK
+1. Download the Field Exchange SDK bundle from the Workbench
+2. Import the client: `import { FieldExchangeClient } from './field-exchange-client'`
+3. Initialize with your hub URL and API key
+4. Call `syncFields()` to fetch the canonical field library
+5. Use `matchField(sourceName)` to find the best canonical match for your local fields
+6. Submit mappings back to the hub for confirmation
+
+## Pipelines (1)
+
+### Test Pipeline gR7-iK
+- **Description**: Test description for automated pipeline
+- **Status**: draft
+- **Tags**: None
+
+## API Patterns & Conventions
+
+### Authentication
+- All spoke-to-hub requests use the `X-API-Key` header
+- API keys follow the format `pat_` followed by 48 hex characters
+- Keys are generated on app registration and can be regenerated
+
+### Hub Base URL
+The hub API is available at the deployed URL of this application.
+
+### Key Spoke-Facing Endpoints
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/hub/registry` | List all registered apps (sanitized, no API keys) |
+| GET | `/api/hub/architecture` | Get compiled architecture document |
+| GET | `/api/hub/app/:slug` | Get app details and documentation |
+| GET | `/api/spoke/:slug/directives` | Fetch pending directives for your app |
+| POST | `/api/spoke/:slug/directives/:id/acknowledge` | Acknowledge a directive |
+| POST | `/api/spoke/:slug/directives/:id/complete` | Mark directive as completed |
+| POST | `/api/spoke/:slug/metrics` | Push metrics to the hub |
+| POST | `/api/spoke/:slug/fields/sync` | Sync field mappings |
+| GET | `/api/canonical-fields` | Browse canonical field library |
+
+### Metrics Push Pattern
+```json
+POST /api/spoke/:slug/metrics
+X-API-Key: pat_...
+{
+  "metrics": [
+    { "metricKey": "active_users", "value": 42, "unit": "count", "tags": ["daily"] }
+  ]
+}
+```
+
+### Directive Lifecycle
+1. Hub creates directive (pending)
+2. Spoke fetches pending directives
+3. Spoke acknowledges directive
+4. Spoke processes and marks in_progress
+5. Spoke completes or rejects with response
+
+## Code Conventions
+
+### Backend
+- **Runtime**: TypeScript + Express on Node.js
+- **ORM**: Drizzle ORM with PostgreSQL (Neon-backed on Replit)
+- **Schema**: Defined in `shared/schema.ts` with Drizzle table definitions
+- **Validation**: Zod schemas generated from Drizzle schemas via `drizzle-zod`
+- **API Pattern**: RESTful routes in `server/routes.ts` using storage interface
+
+### Frontend
+- **Framework**: React with Vite bundler
+- **Styling**: Tailwind CSS with Shadcn UI components
+- **Routing**: wouter (lightweight React router)
+- **Data Fetching**: TanStack Query v5 (object form only)
+- **Forms**: react-hook-form with Zod validation via @hookform/resolvers
+
+### Project Structure
+```
+client/src/pages/      - React page components
+client/src/components/ - Reusable UI components
+client/src/lib/        - Utilities and query client
+server/routes.ts       - All API endpoints
+server/storage.ts      - Database access layer (IStorage interface)
+shared/schema.ts       - Drizzle schema + Zod types
+```
+
+## How to Integrate with the Hub
+
+### Step-by-Step for a New Spoke App
+
+1. **Register your app** via the Hub's App Registry page or POST to `/api/registry`
+2. **Get your API key** from the registration response (format: `pat_...`)
+3. **Download the Dev Kit** from the Hub's Onboarding page — includes hub-sync-agent, field-exchange SDK, and doc-quality engine
+4. **Implement a health endpoint** at `GET /health` returning `{ status: "ok" }`
+5. **Push metrics** periodically to `POST /api/spoke/:slug/metrics`
+6. **Sync field mappings** to align your data model with canonical fields
+7. **Serve documentation** at `GET /api/specifications` for hub doc sync
+8. **Poll for directives** and process hub instructions
+9. **Report documentation** following the 9-section quality framework for maximum score
