@@ -1,8 +1,17 @@
+import { useState, useCallback } from "react";
 import { ChevronDownIcon, PlusIcon, XIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export interface FilterItem {
   id: string;
@@ -12,6 +21,8 @@ export interface FilterItem {
   selected?: string[];
   placeholder?: string;
   sublabel?: string;
+  sublabelOptions?: string[];
+  inputValue?: string;
   hasIcon?: boolean;
   hasRemove?: boolean;
 }
@@ -21,35 +32,109 @@ interface StockScreenerFiltersProps {
   subtitle?: string;
   filters: FilterItem[];
   estimatedResults?: number;
-  onFindStocks?: () => void;
-  onSaveFilters?: () => void;
+  onFiltersChange?: (filters: FilterItem[]) => void;
+  onFindStocks?: (filters: FilterItem[]) => void;
+  onSaveFilters?: (filters: FilterItem[]) => void;
   onAddFilter?: () => void;
-  onRemoveFilter?: (filterId: string) => void;
+  onAddBadge?: (filterId: string) => void;
+  className?: string;
 }
 
 export function StockScreenerFilters({
   title = "Build Stocks screener with filters below",
   subtitle = "Currency in USD",
-  filters,
+  filters: initialFilters,
   estimatedResults = 1,
+  onFiltersChange,
   onFindStocks,
   onSaveFilters,
   onAddFilter,
-  onRemoveFilter,
+  onAddBadge,
+  className = "",
 }: StockScreenerFiltersProps) {
+  const [filters, setFilters] = useState<FilterItem[]>(initialFilters);
+
+  const updateFilters = useCallback(
+    (updated: FilterItem[]) => {
+      setFilters(updated);
+      onFiltersChange?.(updated);
+    },
+    [onFiltersChange]
+  );
+
+  const handleRemoveFilter = useCallback(
+    (filterId: string) => {
+      updateFilters(filters.filter((f) => f.id !== filterId));
+    },
+    [filters, updateFilters]
+  );
+
+  const handleRemoveBadge = useCallback(
+    (filterId: string, badgeValue: string) => {
+      updateFilters(
+        filters.map((f) =>
+          f.id === filterId
+            ? { ...f, selected: f.selected?.filter((s) => s !== badgeValue) }
+            : f
+        )
+      );
+    },
+    [filters, updateFilters]
+  );
+
+  const handleToggleChange = useCallback(
+    (filterId: string, values: string[]) => {
+      updateFilters(
+        filters.map((f) => (f.id === filterId ? { ...f, selected: values } : f))
+      );
+    },
+    [filters, updateFilters]
+  );
+
+  const handleInputChange = useCallback(
+    (filterId: string, value: string) => {
+      updateFilters(
+        filters.map((f) =>
+          f.id === filterId ? { ...f, inputValue: value } : f
+        )
+      );
+    },
+    [filters, updateFilters]
+  );
+
+  const handleSublabelChange = useCallback(
+    (filterId: string, value: string) => {
+      updateFilters(
+        filters.map((f) =>
+          f.id === filterId ? { ...f, sublabel: value } : f
+        )
+      );
+    },
+    [filters, updateFilters]
+  );
+
   return (
-    <div className="flex gap-5">
+    <div className={`flex gap-5 ${className}`}>
       <div className="flex-1 max-w-[800px]">
         <div className="mb-3">
-          <div className="flex items-center gap-1.5 mb-1">
-            <ChevronDownIcon className="w-4 h-4 text-[#232a31]" />
-            <h1 className="font-normal text-[#232a31] text-lg">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <ChevronDownIcon
+              className="w-4 h-4 text-[#232a31]"
+              data-testid="icon-collapse-header"
+            />
+            <h1
+              className="font-semibold text-[#232a31] text-sm"
+              data-testid="text-screener-title"
+            >
               {title}
             </h1>
+            <span
+              className="font-normal text-[#5b636a] text-xs"
+              data-testid="text-screener-subtitle"
+            >
+              {subtitle}
+            </span>
           </div>
-          <p className="font-normal text-[#5b636a] text-xs ml-6">
-            {subtitle}
-          </p>
         </div>
 
         <div className="space-y-1.5">
@@ -57,21 +142,59 @@ export function StockScreenerFilters({
             <Card
               key={filter.id}
               className="bg-white rounded-[3px] border-0 shadow-none"
+              data-testid={`card-filter-${filter.id}`}
             >
-              <CardContent className="px-3 py-2.5">
+              <CardContent className="px-3 py-2">
                 <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 flex-1">
-                    <span className="font-normal text-[#5b636a] text-xs whitespace-nowrap min-w-[170px]">
-                      {filter.label}
-                    </span>
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    {filter.type === "input" ? (
+                      <div className="flex flex-col min-w-[170px]">
+                        <span className="font-normal text-[#5b636a] text-xs whitespace-nowrap">
+                          {filter.label}
+                        </span>
+                        {filter.sublabelOptions ? (
+                          <Select
+                            value={filter.sublabel}
+                            onValueChange={(val) =>
+                              handleSublabelChange(filter.id, val)
+                            }
+                          >
+                            <SelectTrigger
+                              className="border-0 p-0 h-auto text-xs text-[#0f69ff] font-normal shadow-none focus:ring-0 w-auto gap-0.5"
+                              data-testid={`select-condition-${filter.id}`}
+                            >
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {filter.sublabelOptions.map((opt) => (
+                                <SelectItem key={opt} value={opt}>
+                                  {opt}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : filter.sublabel ? (
+                          <span className="font-normal text-[#0f69ff] text-xs flex items-center gap-0.5">
+                            {filter.sublabel}
+                            <ChevronDownIcon className="w-3 h-3" />
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <span className="font-normal text-[#5b636a] text-xs whitespace-nowrap min-w-[170px]">
+                        {filter.label}
+                      </span>
+                    )}
 
                     {filter.type === "badge" && (
-                      <div className="flex gap-1">
-                        {filter.selected?.map((item, idx) => (
+                      <div className="flex gap-1 flex-wrap">
+                        {filter.selected?.map((item) => (
                           <Badge
-                            key={idx}
+                            key={item}
                             variant="secondary"
-                            className="bg-[#e0f0ff] text-[#232a31] hover:bg-[#e0f0ff] font-normal text-xs px-2 py-1 h-auto rounded-[3px]"
+                            className="bg-[#e0f0ff] text-[#232a31] font-normal text-xs px-2 py-0.5 h-auto rounded-[3px] cursor-pointer"
+                            data-testid={`badge-filter-${filter.id}-${item.replace(/\s+/g, "-").toLowerCase()}`}
+                            onClick={() => handleRemoveBadge(filter.id, item)}
                           >
                             {item}
                             <XIcon className="w-3 h-3 ml-1" />
@@ -80,7 +203,8 @@ export function StockScreenerFilters({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 rounded-[3px]"
+                          onClick={() => onAddBadge?.(filter.id)}
+                          data-testid={`button-add-badge-${filter.id}`}
                         >
                           <PlusIcon className="w-3 h-3" />
                         </Button>
@@ -90,14 +214,19 @@ export function StockScreenerFilters({
                     {filter.type === "toggle" && (
                       <ToggleGroup
                         type="multiple"
-                        defaultValue={filter.selected}
-                        className="border border-[#e0e4e9] rounded-[3px] h-7 p-0"
+                        value={filter.selected || []}
+                        onValueChange={(vals) =>
+                          handleToggleChange(filter.id, vals)
+                        }
+                        className="border border-[#e0e4e9] rounded-[3px] p-0"
+                        data-testid={`toggle-group-${filter.id}`}
                       >
-                        {filter.options?.map((option, idx) => (
+                        {filter.options?.map((option) => (
                           <ToggleGroupItem
-                            key={idx}
+                            key={option}
                             value={option}
-                            className="font-normal text-[#5b636a] text-xs px-3 h-full rounded-none border-r border-[#e0e4e9] last:border-r-0 data-[state=on]:bg-[#e0f0ff] data-[state=on]:text-[#232a31]"
+                            className="font-normal text-[#5b636a] text-xs px-3 py-1 rounded-none border-r border-[#e0e4e9] last:border-r-0 data-[state=on]:bg-[#e0f0ff] data-[state=on]:text-[#232a31]"
+                            data-testid={`toggle-${filter.id}-${option.replace(/\s+/g, "-").toLowerCase()}`}
                           >
                             {option}
                           </ToggleGroupItem>
@@ -108,39 +237,49 @@ export function StockScreenerFilters({
                     {filter.type === "add" && (
                       <Button
                         variant="ghost"
-                        className="font-normal text-[#5b636a] text-xs h-auto p-1"
+                        size="sm"
+                        className="font-normal text-[#5b636a] text-xs"
+                        onClick={() => onAddBadge?.(filter.id)}
+                        data-testid={`button-add-${filter.id}`}
                       >
                         <PlusIcon className="w-3 h-3 mr-1" />
-                        {filter.placeholder}
+                        Add {filter.placeholder}
                       </Button>
                     )}
 
                     {filter.type === "input" && (
-                      <div className="flex flex-col gap-0.5">
-                        <div className="border border-[#e0e4e9] rounded-[3px] h-7 w-20 px-2" />
-                        {filter.sublabel && (
-                          <span className="font-normal text-[#0f69ff] text-xs">
-                            {filter.sublabel}
-                          </span>
-                        )}
-                      </div>
+                      <Input
+                        type="text"
+                        value={filter.inputValue || ""}
+                        onChange={(e) =>
+                          handleInputChange(filter.id, e.target.value)
+                        }
+                        className="w-20 text-xs border-[#e0e4e9] rounded-[3px]"
+                        data-testid={`input-value-${filter.id}`}
+                      />
                     )}
                   </div>
 
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-1.5">
                     {filter.hasIcon && (
-                      <div className="w-4 h-4 rounded-full bg-[#6c2bd9] flex items-center justify-center">
-                        <ChevronDownIcon className="w-2.5 h-2.5 text-white" />
+                      <div
+                        className="w-5 h-5 rounded-full bg-[#6c2bd9] flex items-center justify-center flex-shrink-0"
+                        data-testid={`icon-info-${filter.id}`}
+                      >
+                        <span className="text-white text-[8px] font-bold">
+                          Y
+                        </span>
                       </div>
                     )}
                     {filter.hasRemove && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-4 w-4 rounded-full text-[#5b636a]"
-                        onClick={() => onRemoveFilter?.(filter.id)}
+                        className="text-[#5b636a] flex-shrink-0"
+                        onClick={() => handleRemoveFilter(filter.id)}
+                        data-testid={`button-remove-filter-${filter.id}`}
                       >
-                        <XIcon className="w-3 h-3" />
+                        <XIcon className="w-3.5 h-3.5" />
                       </Button>
                     )}
                   </div>
@@ -152,36 +291,48 @@ export function StockScreenerFilters({
 
         <Button
           variant="ghost"
-          className="mt-3 font-normal text-[#0f69ff] text-xs h-auto p-1"
+          size="sm"
+          className="mt-3 font-normal text-[#0f69ff] text-xs"
           onClick={onAddFilter}
+          data-testid="button-add-another-filter"
         >
           <PlusIcon className="w-3.5 h-3.5 mr-1" />
           Add another filter
         </Button>
 
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2 mt-4 flex-wrap">
           <Button
-            className="bg-[#0f69ff] hover:bg-[#0f69ff]/90 font-normal text-white text-xs px-5 h-8 rounded-[3px]"
-            onClick={onFindStocks}
+            size="sm"
+            className="bg-[#0f69ff] font-normal text-white text-xs rounded-[3px]"
+            onClick={() => onFindStocks?.(filters)}
+            data-testid="button-find-stocks"
           >
             Find Stocks
           </Button>
           <Button
             variant="outline"
-            className="border-[#0f69ff] text-[#0f69ff] hover:bg-[#0f69ff]/10 font-normal text-xs px-5 h-8 rounded-[3px]"
-            onClick={onSaveFilters}
+            size="sm"
+            className="border-[#0f69ff] text-[#0f69ff] font-normal text-xs rounded-[3px]"
+            onClick={() => onSaveFilters?.(filters)}
+            data-testid="button-save-filters"
           >
             Save Filters
           </Button>
         </div>
       </div>
 
-      <div className="w-[150px]">
+      <div className="w-[140px] flex-shrink-0">
         <div className="border-l-[3px] border-[#e0e4e9] pl-3">
-          <p className="font-normal text-[#232a31] text-xs mb-1">
+          <p
+            className="font-normal text-[#232a31] text-xs mb-0.5"
+            data-testid="text-estimated-results-label"
+          >
             Estimated results
           </p>
-          <p className="font-normal text-[#232a31] text-xl">
+          <p
+            className="font-semibold text-[#232a31] text-2xl"
+            data-testid="text-estimated-results-value"
+          >
             {estimatedResults}
           </p>
         </div>

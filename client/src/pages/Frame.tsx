@@ -1,11 +1,18 @@
-import { useState } from "react";
-import { StockScreenerFilters, type FilterItem } from "@/components/StockScreenerFilters";
-import { FilterChooser, type FilterCategory } from "@/components/FilterChooser";
+import { useState, useCallback } from "react";
+import {
+  StockScreenerFilters,
+  type FilterItem,
+} from "@/components/StockScreenerFilters";
+import {
+  FilterChooser,
+  type FilterCategory,
+} from "@/components/FilterChooser";
+import { useToast } from "@/hooks/use-toast";
 
 const defaultFilters: FilterItem[] = [
   {
     id: "region",
-    label: "Region is",
+    label: "Region  is",
     type: "badge",
     selected: ["United States"],
     hasRemove: true,
@@ -15,19 +22,19 @@ const defaultFilters: FilterItem[] = [
     label: "Market Cap (Intraday) is",
     type: "toggle",
     options: ["Small Cap", "Mid Cap", "Large Cap", "Mega Cap"],
-    selected: [],
+    selected: ["Large Cap"],
     hasRemove: true,
   },
   {
     id: "sector",
-    label: "Sector is",
+    label: "Sector  is",
     type: "badge",
     selected: ["Financial Services", "Technology"],
     hasRemove: true,
   },
   {
     id: "industry",
-    label: "Industry is",
+    label: "Industry  is",
     type: "add",
     placeholder: "Industry",
     hasRemove: true,
@@ -43,15 +50,17 @@ const defaultFilters: FilterItem[] = [
   },
   {
     id: "consecutiveEps",
-    label: "Year of Consecutive Positive EPS",
+    label: "Years of Consecutive Positive EPS",
     type: "input",
     sublabel: "Greater than",
+    sublabelOptions: ["Greater than", "Less than", "Equal to", "Between"],
+    inputValue: "",
     hasIcon: true,
     hasRemove: true,
   },
   {
     id: "uncertaintyRating",
-    label: "Uncertainity rating is",
+    label: "Uncertainty Rating is",
     type: "toggle",
     options: ["Low", "Medium", "High", "Very High", "Extreme"],
     selected: ["Very High"],
@@ -69,9 +78,11 @@ const defaultFilters: FilterItem[] = [
   },
   {
     id: "grossProfitMargin",
-    label: "Gross Profit Margin % is",
+    label: "Gross Profit Margin %",
     type: "input",
     sublabel: "Greater than",
+    sublabelOptions: ["Greater than", "Less than", "Equal to", "Between"],
+    inputValue: "",
     hasRemove: true,
   },
 ];
@@ -79,15 +90,15 @@ const defaultFilters: FilterItem[] = [
 const defaultCategories: FilterCategory[] = [
   {
     id: "morningstarRating",
-    title: "Morninstars Rating",
+    title: "Morningstars Rating",
     hasIcon: true,
     options: [
-      { id: "economicMoat", label: "Ecnomic Moat" },
+      { id: "economicMoat", label: "Economic Moat" },
       { id: "morningstarRating", label: "Morningstar Rating" },
       { id: "stewardship", label: "Stewardship" },
       { id: "morningstarLastClose", label: "Morningstar Last Close Price/Fair Value" },
       { id: "morningstarRatingChange", label: "Morningstar Rating Change" },
-      { id: "uncertaintyRating", label: "Uncertanity Rating" },
+      { id: "uncertaintyRating", label: "Uncertainty Rating" },
       { id: "moatTrend", label: "Moat Trend" },
       { id: "morningstarRatingUpdated", label: "Morningstar Rating Updated Time" },
     ],
@@ -101,7 +112,7 @@ const defaultCategories: FilterCategory[] = [
       { id: "revenueConsistency", label: "Revenue Consistency" },
       { id: "valuation", label: "Valuation" },
       { id: "estEpsGrowth", label: "Est. EPS Growth (%)" },
-      { id: "estRateOfReturn", label: "Est. Rate if Return (%)" },
+      { id: "estRateOfReturn", label: "Est. Rate of Return (%)" },
       { id: "yearsConsecutiveEps", label: "Years of Consecutive Positive EPS" },
       { id: "estEpsGrowth2", label: "Est. EPS Growth (%)" },
       { id: "lastCloseFairValue", label: "Last Close Price/Fair Value" },
@@ -132,20 +143,55 @@ const defaultCategories: FilterCategory[] = [
 
 export const Frame = (): JSX.Element => {
   const [showChooser, setShowChooser] = useState(false);
+  const [filters, setFilters] = useState<FilterItem[]>(defaultFilters);
+  const [categories, setCategories] = useState<FilterCategory[]>(defaultCategories);
+  const { toast } = useToast();
+
+  const handleFindStocks = useCallback(
+    (currentFilters: FilterItem[]) => {
+      toast({
+        title: "Finding Stocks",
+        description: `Searching with ${currentFilters.length} active filters...`,
+      });
+    },
+    [toast]
+  );
+
+  const handleSaveFilters = useCallback(
+    (currentFilters: FilterItem[]) => {
+      toast({
+        title: "Filters Saved",
+        description: `${currentFilters.length} filters saved successfully.`,
+      });
+    },
+    [toast]
+  );
+
+  const handleCloseChooser = useCallback(
+    (updatedCategories: FilterCategory[]) => {
+      setCategories(updatedCategories);
+      setShowChooser(false);
+    },
+    []
+  );
 
   return (
-    <div className="bg-[#f5f8fa] min-h-screen p-5">
+    <div className="bg-[#f5f8fa] min-h-screen p-5" data-testid="page-stock-screener">
       <StockScreenerFilters
-        filters={defaultFilters}
+        filters={filters}
         estimatedResults={1}
+        onFiltersChange={setFilters}
+        onFindStocks={handleFindStocks}
+        onSaveFilters={handleSaveFilters}
         onAddFilter={() => setShowChooser(true)}
       />
 
       {showChooser && (
-        <div className="mt-4">
+        <div className="mt-4" data-testid="section-filter-chooser">
           <FilterChooser
-            categories={defaultCategories}
-            onClose={() => setShowChooser(false)}
+            categories={categories}
+            onClose={handleCloseChooser}
+            onCategoriesChange={setCategories}
           />
         </div>
       )}
