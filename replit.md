@@ -44,6 +44,14 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 
 - **Metric Detail** (`client/src/pages/MetricDetailPage.tsx`) - Google Finance stock detail page adapted for People Analytics. Contains: breadcrumb navigation, metric name with Follow/Share buttons, big value header with trend arrow and period change, large SVG chart with time-period tabs (1M/3M/6M/YTD/1Y/3Y/MAX), horizontal-scroll timeline event cards with source/date/headline/% change, "Metric Breakdown" section with quarterly/annual tabs, bar chart (voluntary vs involuntary), financial-style data rows with Y/Y change %, collapsible accordion sections (Retention Drivers, Exit Analysis), right sidebar fact-sheet card with tags and key-value rows, About card with description and icon-labeled facts (Owner, Tracking Since, Scope, Source, Population), "Discover more" and "People also track" horizontal scroll card rows with ticker badges.
 
+## Chart Library Components
+- **ConfidenceBandChart** (`client/src/components/charts/ConfidenceBandChart.tsx`) - Line chart with forecast confidence/uncertainty bands. Props: data (x,y,lo1,hi1,lo2,hi2)[], lineColor, bandColors, xLabel, yLabel.
+- **AlluvialChart** (`client/src/components/charts/AlluvialChart.tsx`) - Flow/Sankey diagram showing how categories redistribute between two time periods. Props: flows (from,to,value)[], colors, leftLabel, rightLabel.
+- **WaffleBarChart** (`client/src/components/charts/WaffleBarChart.tsx`) - Stacked bars made of countable grid cells showing composition. Props: groups (label, segments[])[], cellSize, cols, defaultColors.
+- **BulletBarChart** (`client/src/components/charts/BulletBarChart.tsx`) - Horizontal bars with range backgrounds, value bar, and target marker. Props: data (label, ranges[], value, marker)[], rangeColors, valueColor, markerColor.
+- **SlopeComparisonChart** (`client/src/components/charts/SlopeComparisonChart.tsx`) - Period-over-period growth with filled slope area and percentage change. Props: items (label, startValue, endValue)[], accentColor, startYear, endYear.
+- **BubbleScatterChart** (`client/src/components/charts/BubbleScatterChart.tsx`) - Scatter plot with sized/colored bubbles for multi-dimensional comparison. Props: data (x,y,size,label,color)[], xLabel, yLabel, maxRadius.
+
 ## Structure
 ```
 client/           - React frontend

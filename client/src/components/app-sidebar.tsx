@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -51,6 +51,11 @@ const items = [
     title: "Metric Detail",
     url: "/metric-detail",
     icon: Target,
+  },
+  {
+    title: "Chart Library",
+    url: "/chart-library",
+    icon: BarChart,
   },
   {
     title: "Google Finance",
