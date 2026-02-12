@@ -13,6 +13,15 @@ import {
   Calendar,
   Users,
   Eye,
+  FileText,
+  Target,
+  Shield,
+  BookOpen,
+  Lightbulb,
+  ExternalLink,
+  AlertTriangle,
+  CheckCircle2,
+  ClipboardList,
 } from "lucide-react";
 
 function seeded(key: string) {
@@ -106,23 +115,170 @@ const MOST_FOLLOWED = [
   { ticker: "FILL", color: "bg-cyan-600", name: "Time to Fill", followers: "1.49K tracking", changePct: "-1.37%", positive: false },
 ];
 
-interface InsightItem {
+type FeedCardType = "metric" | "research" | "analysis" | "action" | "competitive";
+
+interface FeedCard {
+  type: FeedCardType;
   source: string;
   time: string;
   headline: string;
+  ticker?: string;
+  tickerColor?: string;
+  value?: string;
+  changePct?: string;
+  positive?: boolean;
+  tags?: string[];
+  rows?: { label: string; value: string }[];
+  actions?: string[];
+  citation?: string;
+  riskLevel?: "low" | "medium" | "high";
+  score?: number;
 }
 
-const NEWS_TABS = ["Top stories", "Workforce", "Compensation"];
+const FEED_TABS = ["All", "Metrics", "Research", "Analysis", "Actions", "Intel"];
 
-const INSIGHTS: InsightItem[] = [
-  { source: "People Analytics", time: "2 hours ago", headline: "Engineering headcount growth outpaces budget projections for Q1" },
-  { source: "Talent Acquisition", time: "4 hours ago", headline: "New ATS integration reduces time-to-fill by 15% across technical roles" },
-  { source: "Compensation", time: "6 hours ago", headline: "Market salary data shows 3.2% increase in median software engineer pay" },
-  { source: "DEI Office", time: "8 hours ago", headline: "Leadership diversity index reaches all-time high of 0.72" },
-  { source: "Employee Experience", time: "1 day ago", headline: "Pulse survey results show significant improvement in remote work satisfaction" },
-  { source: "Learning & Dev", time: "1 day ago", headline: "New manager training program sees 94% completion rate in first cohort" },
-  { source: "HR Operations", time: "1 day ago", headline: "Benefits enrollment automation saves estimated 2,400 admin hours annually" },
-  { source: "Workforce Planning", time: "2 days ago", headline: "Predictive attrition model identifies 3 high-risk departments for Q2" },
+const FEED_CARDS: FeedCard[] = [
+  {
+    type: "metric",
+    source: "HRIS",
+    time: "2 hours ago",
+    headline: "Engineering headcount growth outpaces budget by 2.3%",
+    ticker: "HC",
+    tickerColor: "bg-blue-600",
+    value: "12,847",
+    changePct: "+2.30%",
+    positive: true,
+    rows: [
+      { label: "Eng Headcount", value: "3,241" },
+      { label: "Budget Target", value: "3,168" },
+      { label: "Variance", value: "+73 (+2.3%)" },
+    ],
+  },
+  {
+    type: "research",
+    source: "Journal of Applied Psychology",
+    time: "Published 2025",
+    headline: "Manager quality accounts for 70% of variance in team engagement scores",
+    citation: "Buckingham & Goodall, 2025. J. Applied Psychology, 110(4), pp. 412-429.",
+    tags: ["Peer Reviewed", "Engagement", "Management"],
+    rows: [
+      { label: "Sample Size", value: "n = 48,000" },
+      { label: "Effect Size", value: "r = 0.71" },
+      { label: "Confidence", value: "95% CI" },
+    ],
+  },
+  {
+    type: "analysis",
+    source: "People Analytics",
+    time: "4 hours ago",
+    headline: "Q1 Attrition Risk Analysis: Sales org showing elevated voluntary turnover signals",
+    ticker: "TURN",
+    tickerColor: "bg-red-500",
+    riskLevel: "high",
+    rows: [
+      { label: "Sales Turnover", value: "22.4% (vs 14.2% co. avg)" },
+      { label: "Flight Risk Flags", value: "47 employees" },
+      { label: "Est. Replacement Cost", value: "$3.2M" },
+      { label: "Key Driver", value: "Comp below P50 market" },
+    ],
+  },
+  {
+    type: "action",
+    source: "Retention Task Force",
+    time: "6 hours ago",
+    headline: "Action Plan: Sales Retention Initiative Q2",
+    tags: ["In Progress", "High Priority"],
+    actions: [
+      "Market adjustment for 23 below-band roles",
+      "Launch stay interviews for top performers",
+      "Redesign Sales IC career ladder",
+      "Manager coaching program enrollment",
+    ],
+    score: 35,
+  },
+  {
+    type: "competitive",
+    source: "Competitive Intelligence",
+    time: "1 day ago",
+    headline: "Industry benchmark: Tech sector median turnover dropped to 13.8%",
+    tags: ["Benchmark", "Tech Sector"],
+    rows: [
+      { label: "Industry Median", value: "13.8%" },
+      { label: "Our Rate", value: "14.2%" },
+      { label: "Gap", value: "+0.4pp above median" },
+      { label: "Peer Range", value: "11.2% - 18.7%" },
+    ],
+  },
+  {
+    type: "metric",
+    source: "Compensation",
+    time: "8 hours ago",
+    headline: "Market salary data shows 3.2% increase in median SWE pay",
+    ticker: "COMP",
+    tickerColor: "bg-amber-500",
+    value: "$97,240",
+    changePct: "+3.19%",
+    positive: true,
+    rows: [
+      { label: "Median Base (SWE)", value: "$142,000" },
+      { label: "Compa-Ratio", value: "0.98" },
+      { label: "Below Band", value: "12% of population" },
+    ],
+  },
+  {
+    type: "research",
+    source: "Harvard Business Review",
+    time: "Published Jan 2026",
+    headline: "Remote-first companies report 23% lower voluntary turnover than hybrid peers",
+    citation: "Bloom, Davis & Zheng, 2026. HBR Research, pp. 84-91.",
+    tags: ["Peer Reviewed", "Remote Work", "Retention"],
+    rows: [
+      { label: "Remote Turnover", value: "9.8%" },
+      { label: "Hybrid Turnover", value: "12.1%" },
+      { label: "Onsite Turnover", value: "15.3%" },
+    ],
+  },
+  {
+    type: "analysis",
+    source: "Workforce Planning",
+    time: "1 day ago",
+    headline: "DEI pipeline analysis: Leadership representation on track for 2026 targets",
+    ticker: "DEI",
+    tickerColor: "bg-purple-600",
+    riskLevel: "low",
+    rows: [
+      { label: "Current Index", value: "0.72" },
+      { label: "Target", value: "0.75 by Q4" },
+      { label: "Trend", value: "+0.04 YoY" },
+    ],
+  },
+  {
+    type: "competitive",
+    source: "Market Intelligence",
+    time: "2 days ago",
+    headline: "Competitor X announced 15% workforce reduction, talent pool expanding",
+    tags: ["Alert", "Talent Market"],
+    rows: [
+      { label: "Competitor Size", value: "~8,200 employees" },
+      { label: "Reduction", value: "~1,230 roles" },
+      { label: "Relevant Roles", value: "340 eng, 180 product" },
+      { label: "Opportunity", value: "High (skill overlap 78%)" },
+    ],
+  },
+  {
+    type: "action",
+    source: "Learning & Development",
+    time: "1 day ago",
+    headline: "Action Plan: New Manager Training Cohort 2 Launch",
+    tags: ["Scheduled", "Development"],
+    actions: [
+      "Enroll 45 newly promoted managers",
+      "Assign executive mentors",
+      "Schedule 360 feedback baseline",
+      "Set 90-day check-in cadence",
+    ],
+    score: 72,
+  },
 ];
 
 interface DiscoverCard {
@@ -152,12 +308,136 @@ function TickerBadge({ ticker, color }: { ticker: string; color: string }) {
   );
 }
 
+const FEED_TYPE_META: Record<FeedCardType, { icon: typeof BarChart3; label: string; accent: string }> = {
+  metric: { icon: BarChart3, label: "Org Metric", accent: "border-l-blue-500" },
+  research: { icon: BookOpen, label: "Research", accent: "border-l-emerald-500" },
+  analysis: { icon: Lightbulb, label: "Analysis", accent: "border-l-amber-500" },
+  action: { icon: ClipboardList, label: "Action Plan", accent: "border-l-violet-500" },
+  competitive: { icon: Shield, label: "Competitive Intel", accent: "border-l-cyan-500" },
+};
+
+function FeedCardRenderer({ card }: { card: FeedCard }) {
+  const meta = FEED_TYPE_META[card.type];
+  const Icon = meta.icon;
+
+  return (
+    <div
+      className="py-4 border-b border-border last:border-b-0"
+      data-testid={`feed-card-${card.type}`}
+    >
+      <div className="flex items-center gap-2 mb-2">
+        <div className="flex items-center gap-1.5 text-muted-foreground">
+          <Icon className="h-3.5 w-3.5" />
+          <span className="text-[10px] font-medium uppercase tracking-wider">{meta.label}</span>
+        </div>
+        <span className="text-[10px] text-muted-foreground">{card.source}</span>
+        <span className="text-[10px] text-muted-foreground">{card.time}</span>
+      </div>
+
+      <div className="flex items-start gap-2 mb-2">
+        {card.ticker && card.tickerColor && (
+          <TickerBadge ticker={card.ticker} color={card.tickerColor} />
+        )}
+        <p className="text-sm font-medium leading-snug">{card.headline}</p>
+      </div>
+
+      {card.tags && card.tags.length > 0 && (
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+          {card.tags.map((tag) => (
+            <Badge key={tag} variant="outline" className="text-[10px]">
+              {tag}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {card.type === "metric" && card.value && (
+        <div className="flex items-center gap-3 mb-2">
+          <span className="text-lg font-bold tabular-nums">{card.value}</span>
+          {card.changePct && (
+            <span className={`text-xs font-medium tabular-nums ${card.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+              {card.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
+              {card.changePct}
+            </span>
+          )}
+        </div>
+      )}
+
+      {card.type === "analysis" && card.riskLevel && (
+        <div className="flex items-center gap-2 mb-2">
+          <AlertTriangle className={`h-3.5 w-3.5 ${
+            card.riskLevel === "high" ? "text-red-500" : card.riskLevel === "medium" ? "text-amber-500" : "text-green-500"
+          }`} />
+          <span className={`text-xs font-medium ${
+            card.riskLevel === "high" ? "text-red-600 dark:text-red-400" : card.riskLevel === "medium" ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400"
+          }`}>
+            {card.riskLevel === "high" ? "High Risk" : card.riskLevel === "medium" ? "Medium Risk" : "Low Risk"}
+          </span>
+        </div>
+      )}
+
+      {card.rows && card.rows.length > 0 && (
+        <div className="space-y-1 mb-2">
+          {card.rows.map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">{row.label}</span>
+              <span className="text-xs font-medium tabular-nums border-b border-dashed border-border flex-1 text-right pb-0.5">{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {card.type === "action" && card.actions && (
+        <div className="space-y-1.5 mb-2">
+          {card.actions.map((action, i) => (
+            <div key={i} className="flex items-start gap-2">
+              <CheckCircle2 className={`h-3.5 w-3.5 mt-0.5 shrink-0 ${
+                card.score && i < Math.floor((card.score / 100) * card.actions!.length)
+                  ? "text-green-500"
+                  : "text-muted-foreground"
+              }`} />
+              <span className="text-xs">{action}</span>
+            </div>
+          ))}
+          {card.score !== undefined && (
+            <div className="flex items-center gap-2 mt-2">
+              <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-[#0f69ff] rounded-full" style={{ width: `${card.score}%` }} />
+              </div>
+              <span className="text-[10px] text-muted-foreground tabular-nums">{card.score}%</span>
+            </div>
+          )}
+        </div>
+      )}
+
+      {card.citation && (
+        <div className="flex items-start gap-1.5 mt-1">
+          <FileText className="h-3 w-3 text-muted-foreground mt-0.5 shrink-0" />
+          <p className="text-[10px] text-muted-foreground italic leading-snug">{card.citation}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function GoogleFinancePage() {
   const [activeMarketTab, setActiveMarketTab] = useState("All");
-  const [activeNewsTab, setActiveNewsTab] = useState("Top stories");
+  const [activeFeedTab, setActiveFeedTab] = useState("All");
   const [activeTrendTab, setActiveTrendTab] = useState("Most active");
 
   const currentTrends = TREND_DATA[activeTrendTab] || [];
+
+  const FEED_TAB_TYPE_MAP: Record<string, FeedCardType | undefined> = {
+    "All": undefined,
+    "Metrics": "metric",
+    "Research": "research",
+    "Analysis": "analysis",
+    "Actions": "action",
+    "Intel": "competitive",
+  };
+  const filteredFeed = activeFeedTab === "All"
+    ? FEED_CARDS
+    : FEED_CARDS.filter((c) => c.type === FEED_TAB_TYPE_MAP[activeFeedTab]);
 
   return (
     <div className="p-5 space-y-6" data-testid="page-google-finance">
@@ -253,36 +533,24 @@ export function GoogleFinancePage() {
             </div>
           </div>
 
-          <div data-testid="section-insights">
-            <h2 className="text-sm font-semibold mb-3">Today's people analytics insights</h2>
-            <div className="flex items-center gap-2 mb-4">
-              {NEWS_TABS.map((tab) => (
+          <div data-testid="section-feed">
+            <h2 className="text-sm font-semibold mb-3">Today's people analytics feed</h2>
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              {FEED_TABS.map((tab) => (
                 <Badge
                   key={tab}
-                  variant={activeNewsTab === tab ? "default" : "outline"}
+                  variant={activeFeedTab === tab ? "default" : "outline"}
                   className="cursor-pointer text-xs"
-                  onClick={() => setActiveNewsTab(tab)}
-                  data-testid={`tab-news-${tab.toLowerCase().replace(/\s+/g, "-")}`}
+                  onClick={() => setActiveFeedTab(tab)}
+                  data-testid={`tab-feed-${tab.toLowerCase()}`}
                 >
                   {tab}
                 </Badge>
               ))}
             </div>
-            <div className="space-y-0">
-              {INSIGHTS.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-start justify-between gap-4 py-3 border-b border-border last:border-b-0 hover-elevate rounded-md px-2 -mx-2 cursor-pointer"
-                  data-testid={`insight-item-${i}`}
-                >
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs text-muted-foreground">{item.source}</span>
-                      <span className="text-xs text-muted-foreground">{item.time}</span>
-                    </div>
-                    <p className="text-sm leading-snug">{item.headline}</p>
-                  </div>
-                </div>
+            <div>
+              {filteredFeed.map((card, i) => (
+                <FeedCardRenderer key={i} card={card} />
               ))}
             </div>
           </div>

@@ -35,7 +35,7 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
   4. **CreateNewSection** - Category picker grid (Workforce, Compensation, Performance, Attrition, Engagement screeners)
   5. **PremiumSection** - Gated content cards with P+ branding and trial CTA
 
-- **Google Finance** (`client/src/pages/GoogleFinancePage.tsx`) - Google Finance-style content-dense dashboard. Contains: market category tabs, index ticker strip with up/down arrows, watchlist prompt, suggested metrics list, sidebar cards (trends/calendar/most-followed), insights feed with tabs, full-width metric trends with Most active/Gainers/Losers tabs, and discover-more horizontal scroll cards. All People Analytics context.
+- **Google Finance** (`client/src/pages/GoogleFinancePage.tsx`) - Google Finance-style content-dense dashboard. Contains: market category tabs, index ticker strip with up/down arrows, watchlist prompt, suggested metrics list, sidebar cards (trends/calendar/most-followed), mixed-content feed with 5 card types (Org Metric, Peer Reviewed Research, Analysis Summary, Action Planning, Competitive Intelligence) filterable by tab, full-width metric trends with Most active/Gainers/Losers tabs, and discover-more horizontal scroll cards. All People Analytics context. Feed cards include key-value rows, risk levels, progress bars, citations, and action checklists.
 
 ## Structure
 ```
