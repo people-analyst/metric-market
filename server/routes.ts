@@ -6,10 +6,51 @@ import {
   insertChartConfigSchema,
   insertCardSchema,
   insertCardDataSchema,
+  insertCardBundleSchema,
+  insertCardRelationSchema,
   CHART_TYPES,
+  RELATION_TYPES,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  app.get("/api/bundles", async (_req, res) => {
+    const bundles = await storage.listCardBundles();
+    res.json(bundles);
+  });
+
+  app.get("/api/bundles/:id", async (req, res) => {
+    const b = await storage.getCardBundle(req.params.id);
+    if (!b) return res.status(404).json({ error: "Bundle not found" });
+    res.json(b);
+  });
+
+  app.get("/api/bundles/key/:key", async (req, res) => {
+    const b = await storage.getCardBundleByKey(req.params.key);
+    if (!b) return res.status(404).json({ error: "Bundle not found" });
+    res.json(b);
+  });
+
+  app.post("/api/bundles", async (req, res) => {
+    const parsed = insertCardBundleSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    const b = await storage.createCardBundle(parsed.data);
+    res.status(201).json(b);
+  });
+
+  app.patch("/api/bundles/:id", async (req, res) => {
+    const partial = insertCardBundleSchema.partial().safeParse(req.body);
+    if (!partial.success) return res.status(400).json({ error: partial.error.flatten() });
+    const b = await storage.updateCardBundle(req.params.id, partial.data);
+    if (!b) return res.status(404).json({ error: "Bundle not found" });
+    res.json(b);
+  });
+
+  app.delete("/api/bundles/:id", async (req, res) => {
+    const ok = await storage.deleteCardBundle(req.params.id);
+    if (!ok) return res.status(404).json({ error: "Bundle not found" });
+    res.status(204).end();
+  });
 
   app.get("/api/metric-definitions", async (_req, res) => {
     const metrics = await storage.listMetricDefinitions();
@@ -92,6 +133,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(c);
   });
 
+  app.get("/api/cards/:id/full", async (req, res) => {
+    const result = await storage.getCardWithLatest(req.params.id);
+    if (!result) return res.status(404).json({ error: "Card not found" });
+    res.json(result);
+  });
+
   app.post("/api/cards", async (req, res) => {
     const parsed = insertCardSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
@@ -130,7 +177,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const parsed = insertCardDataSchema.safeParse({ ...req.body, cardId: req.params.id });
     if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
     const d = await storage.pushCardData(parsed.data);
+    await storage.updateCard(req.params.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
     res.status(201).json(d);
+  });
+
+  app.get("/api/cards/:id/drilldowns", async (req, res) => {
+    const card = await storage.getCard(req.params.id);
+    if (!card) return res.status(404).json({ error: "Card not found" });
+    const drilldowns = await storage.getDrilldownCards(req.params.id);
+    res.json(drilldowns);
+  });
+
+  app.get("/api/cards/:id/relations", async (req, res) => {
+    const relations = await storage.listCardRelations(req.params.id);
+    res.json(relations);
+  });
+
+  app.post("/api/card-relations", async (req, res) => {
+    const parsed = insertCardRelationSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.flatten() });
+    if (!RELATION_TYPES.includes(parsed.data.relationType as any)) {
+      return res.status(400).json({ error: `Invalid relationType. Must be one of: ${RELATION_TYPES.join(", ")}` });
+    }
+    const sourceCard = await storage.getCard(parsed.data.sourceCardId);
+    const targetCard = await storage.getCard(parsed.data.targetCardId);
+    if (!sourceCard || !targetCard) {
+      return res.status(400).json({ error: "Both source and target cards must exist" });
+    }
+    const r = await storage.createCardRelation(parsed.data);
+    res.status(201).json(r);
+  });
+
+  app.delete("/api/card-relations/:id", async (req, res) => {
+    const ok = await storage.deleteCardRelation(req.params.id);
+    if (!ok) return res.status(404).json({ error: "Relation not found" });
+    res.status(204).end();
   });
 
   app.get("/api/chart-types", async (_req, res) => {

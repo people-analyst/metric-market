@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -42,6 +42,36 @@ export const CHART_TYPES = [
 
 export type ChartType = (typeof CHART_TYPES)[number];
 
+export const cardBundles = pgTable("card_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  chartType: text("chart_type").notNull(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  version: integer("version").notNull().default(1),
+  dataSchema: jsonb("data_schema").notNull(),
+  configSchema: jsonb("config_schema").notNull(),
+  outputSchema: jsonb("output_schema").notNull().default({}),
+  defaults: jsonb("defaults").notNull().default({}),
+  exampleData: jsonb("example_data").notNull().default({}),
+  exampleConfig: jsonb("example_config").notNull().default({}),
+  documentation: text("documentation"),
+  category: text("category"),
+  tags: text("tags").array(),
+  infrastructureNotes: text("infrastructure_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+export const insertCardBundleSchema = createInsertSchema(cardBundles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCardBundle = z.infer<typeof insertCardBundleSchema>;
+export type CardBundle = typeof cardBundles.$inferSelect;
+
 export const metricDefinitions = pgTable("metric_definitions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   key: text("key").notNull().unique(),
@@ -71,6 +101,7 @@ export const chartConfigs = pgTable("chart_configs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   chartType: text("chart_type").notNull(),
+  bundleId: varchar("bundle_id").references(() => cardBundles.id),
   description: text("description"),
   settings: jsonb("settings").notNull().default({}),
   defaultWidth: integer("default_width"),
@@ -88,8 +119,15 @@ export const insertChartConfigSchema = createInsertSchema(chartConfigs).omit({
 export type InsertChartConfig = z.infer<typeof insertChartConfigSchema>;
 export type ChartConfig = typeof chartConfigs.$inferSelect;
 
+export const CARD_STATUSES = ["draft", "active", "archived", "needs_refresh"] as const;
+export type CardStatus = (typeof CARD_STATUSES)[number];
+
+export const REFRESH_POLICIES = ["manual", "on_demand", "scheduled"] as const;
+export type RefreshPolicy = (typeof REFRESH_POLICIES)[number];
+
 export const cards = pgTable("cards", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bundleId: varchar("bundle_id").references(() => cardBundles.id),
   metricId: varchar("metric_id").references(() => metricDefinitions.id),
   chartConfigId: varchar("chart_config_id").references(() => chartConfigs.id),
   title: text("title").notNull(),
@@ -100,6 +138,15 @@ export const cards = pgTable("cards", {
   status: text("status").notNull().default("draft"),
   isPublished: boolean("is_published").notNull().default(false),
   metadata: jsonb("metadata").default({}),
+  refreshPolicy: text("refresh_policy").notNull().default("manual"),
+  refreshCadence: text("refresh_cadence"),
+  lastRefreshedAt: timestamp("last_refreshed_at"),
+  nextRefreshAt: timestamp("next_refresh_at"),
+  refreshStatus: text("refresh_status").default("current"),
+  importance: real("importance"),
+  significance: real("significance"),
+  relevance: real("relevance"),
+  scoringMetadata: jsonb("scoring_metadata").default({}),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -112,6 +159,28 @@ export const insertCardSchema = createInsertSchema(cards).omit({
 
 export type InsertCard = z.infer<typeof insertCardSchema>;
 export type Card = typeof cards.$inferSelect;
+
+export const RELATION_TYPES = ["drilldown", "component_of", "related", "parent"] as const;
+export type RelationType = (typeof RELATION_TYPES)[number];
+
+export const cardRelations = pgTable("card_relations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sourceCardId: varchar("source_card_id").notNull().references(() => cards.id),
+  targetCardId: varchar("target_card_id").notNull().references(() => cards.id),
+  relationType: text("relation_type").notNull(),
+  label: text("label"),
+  sortOrder: integer("sort_order").default(0),
+  navigationContext: jsonb("navigation_context").default({}),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertCardRelationSchema = createInsertSchema(cardRelations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCardRelation = z.infer<typeof insertCardRelationSchema>;
+export type CardRelation = typeof cardRelations.$inferSelect;
 
 export const cardData = pgTable("card_data", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

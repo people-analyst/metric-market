@@ -7,18 +7,42 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 1. **Workbench (Admin/Superuser + AI Agents)**: Create, configure, and test card/chart types with full control. Define metrics, pair them with chart configurations, and assemble cards. The authoring environment.
 2. **Dashboard (End Users)**: Consume pre-packaged cards fed by data from the Metric Calculator and other spoke apps. Read-only, polished experience.
 
+## Card Bundle Architecture
+Cards are built from **self-contained bundles** — composable, machine-readable definitions that declare everything needed to render and manage a card type. Each bundle includes:
+- **Data Schema**: What data the chart requires (JSON Schema format)
+- **Config Schema**: What configuration options are available (colors, labels, dimensions)
+- **Output Schema**: What the rendered output represents
+- **Defaults**: Default configuration values
+- **Example Data + Config**: Working examples for preview and testing
+- **Documentation**: Human/AI-readable description of purpose, usage, and data requirements
+- **Infrastructure Notes**: What systems/libraries are needed to operate the bundle
+
+Bundles are stored in `card_bundles` table and auto-seeded on server startup from `server/bundleDefinitions.ts`. AI agents can discover bundles via `GET /api/bundles` and inspect schemas via `GET /api/bundles/key/:key`.
+
+### Card Instance Lifecycle
+1. **Discover**: Browse available bundles and their data contracts
+2. **Define Metric**: Create a metric definition (what is being measured)
+3. **Configure Chart**: Create a chart config linked to a bundle (how to display it)
+4. **Assemble Card**: Create a card instance linking bundle + metric + chart config
+5. **Push Data**: Spoke apps push data payloads via `POST /api/cards/:id/data`
+6. **Render**: CardWrapper resolves chartType from bundle/config and renders with latest data
+7. **Refresh**: Cards track refresh status; algorithms can score importance/significance/relevance
+8. **Drill-down**: Card relations link parent cards to sub-measure cards via `card_relations` table
+
+### No Live Drill-down
+Since charts are pre-rendered from stored data, drill-downs are **database references** to other cards (not constructed on the fly). A card can reference sub-measure cards via `card_relations` with `relationType: "drilldown"`. The API at `GET /api/cards/:id/drilldowns` returns linked cards.
+
 ## Recent Changes
+- 2026-02-12: Built Card Bundle architecture — 20 self-contained bundle definitions with data/config/output schemas, documentation, and example data
+- 2026-02-12: Added card_bundles and card_relations tables; extended cards with refresh/scoring fields
+- 2026-02-12: Added Bundle Browser to Workbench with schema inspection, documentation, and live preview
+- 2026-02-12: Added Card Relations section for drill-down linking between cards
+- 2026-02-12: Added convenience endpoint GET /api/cards/:id/full (card + bundle + config + metric + latest data + relations)
+- 2026-02-12: Auto-seed 20 bundle definitions on server startup
 - 2026-02-12: Built data layer — metric_definitions, chart_configs, cards, card_data tables with full CRUD API
 - 2026-02-12: Created CardWrapper component that dynamically renders any of 20 chart types from chartType + payload
 - 2026-02-12: Built Workbench admin page for defining metrics, chart configs, and cards with API reference
-- 2026-02-12: Removed ABC labels from RadialBarChart, color-coded legend handles identification
-- 2026-02-12: Added sectionLabels support to TileCartogramChart for sub-regional grouped grids
-- 2026-02-12: Rebuilt non-US presets as organized sub-regional grids (N. America, S. America, EMEA, APAC)
 - 2026-02-12: Built Chart Library with 20 D3-powered SVG chart components
-- 2026-02-12: Added MetricMarket dashboard page (ticker cards, sparklines, screener panel, watchlist) from bundle
-- 2026-02-12: Added sidebar navigation with wouter routing to toggle between component pages
-- 2025-02-12: Built three reusable form components from Figma designs (StockScreenerFilters, FilterChooser, RangeInputFilter)
-- 2025-02-12: Initial Figma import and migration to Replit environment
 
 ## Project Architecture
 - **Frontend**: React 18 with TypeScript, Vite, Tailwind CSS, shadcn/ui components
@@ -29,57 +53,100 @@ A People Analytics toolbox with reusable form elements inspired by Yahoo Finance
 - **Build**: Vite for client, esbuild for server
 - **Ecosystem**: Hub-and-spoke architecture; this workbench is the hub creating shared components
 
-## Data Model (Hub API)
-- **metric_definitions** — What metrics exist (key, name, category, unit, source, cadence, calculation notes). The contract between the Metric Calculator spoke and this workbench.
-- **chart_configs** — Pairs a chart type (one of 20) with display settings stored as JSONB (colors, axis labels, dimensions). Reusable across cards.
-- **cards** — A configured instance tying a metric to a chart config, with metadata (title, tags, source attribution, status, isPublished). The unit of content.
-- **card_data** — Time-series data payloads (JSONB) pushed by spoke apps. Each record has effectiveAt + periodLabel. Latest payload feeds the card's chart.
+## Data Model
 
-## API Endpoints (for spoke apps)
+### card_bundles
+Self-contained chart type definitions. One per chart type. Seeded automatically.
+- key, chartType, displayName, description, version
+- dataSchema (JSONB), configSchema (JSONB), outputSchema (JSONB)
+- defaults (JSONB), exampleData (JSONB), exampleConfig (JSONB)
+- documentation, category, tags, infrastructureNotes
+
+### metric_definitions
+What metrics exist. Contract between Metric Calculator spoke and this workbench.
+- key, name, category, unit, source, cadence, calculationNotes
+
+### chart_configs
+Pairs a chart type with display settings. Reusable across cards.
+- name, chartType, bundleId (FK → card_bundles), settings (JSONB)
+
+### cards
+Configured instances tying bundle + metric + chart config with metadata.
+- bundleId (FK), metricId (FK), chartConfigId (FK)
+- title, subtitle, tags, sourceAttribution, status, isPublished
+- refreshPolicy, refreshCadence, lastRefreshedAt, nextRefreshAt, refreshStatus
+- importance, significance, relevance, scoringMetadata (JSONB)
+
+### card_relations
+Links between cards for drill-downs and related-card navigation.
+- sourceCardId (FK), targetCardId (FK)
+- relationType (drilldown | component_of | related | parent)
+- label, sortOrder, navigationContext (JSONB)
+
+### card_data
+Time-series data payloads pushed by spoke apps.
+- cardId (FK), payload (JSONB), periodLabel, effectiveAt
+
+## API Endpoints (24 total)
+
+### Bundles (Chart Type Contracts)
+- `GET /api/bundles` — List all bundles
+- `GET /api/bundles/:id` — Get bundle by ID
+- `GET /api/bundles/key/:key` — Get bundle by key (e.g. multi_line)
+- `POST /api/bundles` — Create a custom bundle
+- `PATCH /api/bundles/:id` — Update a bundle
+- `DELETE /api/bundles/:id` — Delete a bundle
+
+### Metrics
 - `GET /api/metric-definitions` — List all metrics
-- `POST /api/metric-definitions` — Create a metric definition
+- `POST /api/metric-definitions` — Create a metric
 - `PATCH /api/metric-definitions/:id` — Update a metric
 - `DELETE /api/metric-definitions/:id` — Delete a metric
+
+### Chart Configs
 - `GET /api/chart-configs` — List all chart configurations
-- `POST /api/chart-configs` — Create a chart config (chartType + settings JSONB)
+- `POST /api/chart-configs` — Create a chart config
 - `PATCH /api/chart-configs/:id` — Update a chart config
 - `DELETE /api/chart-configs/:id` — Delete a chart config
+
+### Cards
 - `GET /api/cards` — List all cards
-- `POST /api/cards` — Create a card (links metric + chart config)
-- `PATCH /api/cards/:id` — Update a card
+- `GET /api/cards/:id` — Get a card
+- `GET /api/cards/:id/full` — Get card + bundle + config + metric + latest data + relations
+- `POST /api/cards` — Create a card
+- `PATCH /api/cards/:id` — Update a card (scoring, refresh, metadata)
 - `DELETE /api/cards/:id` — Delete a card
-- `GET /api/cards/:id/data` — List all data snapshots for a card
+
+### Card Data
+- `GET /api/cards/:id/data` — List all data snapshots
 - `GET /api/cards/:id/data/latest` — Get latest data payload
-- `POST /api/cards/:id/data` — Push new data payload (spoke apps call this)
-- `GET /api/chart-types` — List all 20 available chart types
+- `POST /api/cards/:id/data` — Push new data (auto-updates refresh status)
+
+### Relations
+- `GET /api/cards/:id/drilldowns` — Get drill-down cards
+- `GET /api/cards/:id/relations` — Get all relations
+- `POST /api/card-relations` — Create a relation
+- `DELETE /api/card-relations/:id` — Delete a relation
+
+### Utility
+- `GET /api/chart-types` — List all 20 chart types
 
 ## CardWrapper Component
-`client/src/components/CardWrapper.tsx` — Dynamically renders any chart inside a standard Card frame. Maps `chartType` string to the correct chart component from the library. Props: title, subtitle, chartType, chartProps (JSONB payload), tags, sourceAttribution, periodLabel.
+`client/src/components/CardWrapper.tsx` — Dynamically renders any chart inside a standard Card frame. Maps `chartType` string to the correct chart component from CHART_COMPONENT_MAP.
 
 ## Workbench Admin Page
-`client/src/pages/WorkbenchPage.tsx` — Admin interface for:
-- Creating/managing metric definitions
-- Creating/managing chart configurations (selecting from 20 chart types)
-- Assembling cards (linking metrics to chart configs)
-- API reference section showing all endpoints for spoke app integration
-
-## Reusable Components
-- **StockScreenerFilters** (`client/src/components/StockScreenerFilters.tsx`) - Interactive filter form with badge, toggle, input, and add filter types.
-- **FilterChooser** (`client/src/components/FilterChooser.tsx`) - Checkbox-based filter picker organized by categories with search.
-- **RangeInputFilter** (`client/src/components/RangeInputFilter.tsx`) - Standalone range input with condition dropdown.
-- **DetailCard** (`client/src/components/DetailCard.tsx`) - Fact-sheet card with tags, key-value rows, and footer.
-- **OrgMetricCard** (`client/src/components/OrgMetricCard.tsx`) - Organization metric card with ticker badge and trend arrow.
-- **ResearchCard** (`client/src/components/ResearchCard.tsx`) - Peer-reviewed research card with citation and tags.
-- **AnalysisSummaryCard** (`client/src/components/AnalysisSummaryCard.tsx`) - Analysis summary with risk-level indicator.
-- **ActionPlanCard** (`client/src/components/ActionPlanCard.tsx`) - Action plan with checklist and progress bar.
-- **CompetitiveIntelCard** (`client/src/components/CompetitiveIntelCard.tsx`) - Competitive intelligence card with benchmark data.
+`client/src/pages/WorkbenchPage.tsx` — Admin interface with:
+- **Bundle Browser**: Browse all 20 bundles, inspect schemas, view documentation, preview with example data
+- **Metric Definitions**: Create/manage metric definitions
+- **Chart Configurations**: Create/manage configs (linked to bundles)
+- **Cards**: Assemble cards with bundle + metric + config, set refresh policy and scoring
+- **Card Relations**: Link cards for drill-down navigation
+- **API Reference**: All endpoints documented
 
 ## Chart Library (20 D3-powered SVG components)
-All charts in `client/src/components/charts/`. Each accepts typed props and renders from data. Strict palette: #0f69ff, #e0f0ff, #232a31, #5b636a, #e0e4e9.
+All charts in `client/src/components/charts/`. Strict palette: #0f69ff, #e0f0ff, #232a31, #5b636a, #e0e4e9.
 
 Charts: ConfidenceBandChart, AlluvialChart, WaffleBarChart, BulletBarChart, SlopeComparisonChart, BubbleScatterChart, BoxWhiskerChart, StripTimelineChart, WafflePercentChart, HeatmapChart, StripDotChart, MultiLineChart, TileCartogramChart, TimelineMilestoneChart, ControlChart, DendrogramChart, RadialBarChart, BumpChart, SparklineRowsChart, StackedAreaChart.
-
-Geographic presets: `tilePresets.ts` — N. America, S. America, EMEA, APAC (sub-regional grids with sectionLabels), Regions (macro squares).
 
 ## Structure
 ```
@@ -91,7 +158,7 @@ client/           - React frontend
       app-sidebar.tsx - Sidebar navigation (Admin + Components groups)
       CardWrapper.tsx - Dynamic chart renderer with metadata frame
     pages/          - Page components
-      WorkbenchPage.tsx  - Admin: metrics, chart configs, cards, API reference
+      WorkbenchPage.tsx  - Admin: bundles, metrics, configs, cards, relations, API reference
       ScreenerPage.tsx   - Stock Screener Filters demo
       ChooserPage.tsx    - Filter Chooser demo
       RangePage.tsx      - Range Input demo
@@ -103,13 +170,15 @@ client/           - React frontend
     lib/            - Utilities and query client
     hooks/          - Custom hooks
 server/           - Express backend
-  db.ts           - Database connection (pg + drizzle)
-  index.ts        - Server entry point
-  routes.ts       - API routes (CRUD for metrics/configs/cards/data)
-  storage.ts      - DatabaseStorage class implementing IStorage
-  vite.ts         - Vite dev server integration
+  db.ts             - Database connection (pg + drizzle)
+  index.ts          - Server entry point (includes bundle seeding)
+  routes.ts         - API routes (CRUD for bundles/metrics/configs/cards/data/relations)
+  storage.ts        - DatabaseStorage class implementing IStorage
+  seedBundles.ts    - Auto-seeds 20 bundle definitions on startup
+  bundleDefinitions.ts - All 20 bundle definitions with schemas and documentation
+  vite.ts           - Vite dev server integration
 shared/           - Shared types/schemas
-  schema.ts       - Drizzle schema: users, metric_definitions, chart_configs, cards, card_data
+  schema.ts       - Drizzle schema: users, card_bundles, metric_definitions, chart_configs, cards, card_relations, card_data
 ```
 
 ## User Preferences
@@ -121,3 +190,5 @@ shared/           - Shared types/schemas
 - Compact, minimal spacing design aesthetic (rounded-[3px], tight padding)
 - Charts should be minimal, toned down, use simple lines/greys/blacks/blues
 - Two-audience design: admin workbench for superusers/AI, consumer dashboard for end users
+- Self-contained card bundles: composable, machine-readable, agent-accessible
+- No live drill-down: use database references between cards

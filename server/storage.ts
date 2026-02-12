@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, and, or } from "drizzle-orm";
 import { db } from "./db";
 import {
   type User, type InsertUser,
@@ -6,13 +6,23 @@ import {
   type ChartConfig, type InsertChartConfig,
   type Card, type InsertCard,
   type CardData, type InsertCardData,
-  users, metricDefinitions, chartConfigs, cards, cardData,
+  type CardBundle, type InsertCardBundle,
+  type CardRelation, type InsertCardRelation,
+  users, metricDefinitions, chartConfigs, cards, cardData, cardBundles, cardRelations,
 } from "@shared/schema";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  listCardBundles(): Promise<CardBundle[]>;
+  getCardBundle(id: string): Promise<CardBundle | undefined>;
+  getCardBundleByKey(key: string): Promise<CardBundle | undefined>;
+  createCardBundle(b: InsertCardBundle): Promise<CardBundle>;
+  updateCardBundle(id: string, b: Partial<InsertCardBundle>): Promise<CardBundle | undefined>;
+  deleteCardBundle(id: string): Promise<boolean>;
+  upsertCardBundleByKey(b: InsertCardBundle): Promise<CardBundle>;
 
   listMetricDefinitions(): Promise<MetricDefinition[]>;
   getMetricDefinition(id: string): Promise<MetricDefinition | undefined>;
@@ -32,10 +42,17 @@ export interface IStorage {
   createCard(c: InsertCard): Promise<Card>;
   updateCard(id: string, c: Partial<InsertCard>): Promise<Card | undefined>;
   deleteCard(id: string): Promise<boolean>;
+  getCardWithLatest(id: string): Promise<{ card: Card; bundle?: CardBundle; chartConfig?: ChartConfig; metric?: MetricDefinition; latestData?: CardData; relations: CardRelation[] } | undefined>;
 
   listCardData(cardId: string): Promise<CardData[]>;
   getLatestCardData(cardId: string): Promise<CardData | undefined>;
   pushCardData(d: InsertCardData): Promise<CardData>;
+
+  listCardRelations(cardId: string): Promise<CardRelation[]>;
+  getCardRelation(id: string): Promise<CardRelation | undefined>;
+  createCardRelation(r: InsertCardRelation): Promise<CardRelation>;
+  deleteCardRelation(id: string): Promise<boolean>;
+  getDrilldownCards(cardId: string): Promise<{ relation: CardRelation; card: Card }[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -52,6 +69,44 @@ export class DatabaseStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db.insert(users).values(insertUser).returning();
     return user;
+  }
+
+  async listCardBundles(): Promise<CardBundle[]> {
+    return db.select().from(cardBundles).orderBy(cardBundles.category, cardBundles.displayName);
+  }
+
+  async getCardBundle(id: string): Promise<CardBundle | undefined> {
+    const [b] = await db.select().from(cardBundles).where(eq(cardBundles.id, id));
+    return b;
+  }
+
+  async getCardBundleByKey(key: string): Promise<CardBundle | undefined> {
+    const [b] = await db.select().from(cardBundles).where(eq(cardBundles.key, key));
+    return b;
+  }
+
+  async createCardBundle(b: InsertCardBundle): Promise<CardBundle> {
+    const [result] = await db.insert(cardBundles).values(b).returning();
+    return result;
+  }
+
+  async updateCardBundle(id: string, b: Partial<InsertCardBundle>): Promise<CardBundle | undefined> {
+    const [result] = await db.update(cardBundles).set({ ...b, updatedAt: new Date() }).where(eq(cardBundles.id, id)).returning();
+    return result;
+  }
+
+  async deleteCardBundle(id: string): Promise<boolean> {
+    const result = await db.delete(cardBundles).where(eq(cardBundles.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async upsertCardBundleByKey(b: InsertCardBundle): Promise<CardBundle> {
+    const existing = await this.getCardBundleByKey(b.key);
+    if (existing) {
+      const updated = await this.updateCardBundle(existing.id, b);
+      return updated!;
+    }
+    return this.createCardBundle(b);
   }
 
   async listMetricDefinitions(): Promise<MetricDefinition[]> {
@@ -131,6 +186,19 @@ export class DatabaseStorage implements IStorage {
     return result.length > 0;
   }
 
+  async getCardWithLatest(id: string) {
+    const card = await this.getCard(id);
+    if (!card) return undefined;
+    const [bundle, chartConfig, metric, latestData, relations] = await Promise.all([
+      card.bundleId ? this.getCardBundle(card.bundleId) : Promise.resolve(undefined),
+      card.chartConfigId ? this.getChartConfig(card.chartConfigId) : Promise.resolve(undefined),
+      card.metricId ? this.getMetricDefinition(card.metricId) : Promise.resolve(undefined),
+      this.getLatestCardData(id),
+      this.listCardRelations(id),
+    ]);
+    return { card, bundle, chartConfig, metric, latestData, relations };
+  }
+
   async listCardData(cardId: string): Promise<CardData[]> {
     return db.select().from(cardData).where(eq(cardData.cardId, cardId)).orderBy(desc(cardData.effectiveAt));
   }
@@ -143,6 +211,39 @@ export class DatabaseStorage implements IStorage {
   async pushCardData(d: InsertCardData): Promise<CardData> {
     const [result] = await db.insert(cardData).values(d).returning();
     return result;
+  }
+
+  async listCardRelations(cardId: string): Promise<CardRelation[]> {
+    return db.select().from(cardRelations)
+      .where(or(eq(cardRelations.sourceCardId, cardId), eq(cardRelations.targetCardId, cardId)))
+      .orderBy(cardRelations.sortOrder);
+  }
+
+  async getCardRelation(id: string): Promise<CardRelation | undefined> {
+    const [r] = await db.select().from(cardRelations).where(eq(cardRelations.id, id));
+    return r;
+  }
+
+  async createCardRelation(r: InsertCardRelation): Promise<CardRelation> {
+    const [result] = await db.insert(cardRelations).values(r).returning();
+    return result;
+  }
+
+  async deleteCardRelation(id: string): Promise<boolean> {
+    const result = await db.delete(cardRelations).where(eq(cardRelations.id, id)).returning();
+    return result.length > 0;
+  }
+
+  async getDrilldownCards(cardId: string): Promise<{ relation: CardRelation; card: Card }[]> {
+    const rels = await db.select().from(cardRelations)
+      .where(and(eq(cardRelations.sourceCardId, cardId), eq(cardRelations.relationType, "drilldown")))
+      .orderBy(cardRelations.sortOrder);
+    const results: { relation: CardRelation; card: Card }[] = [];
+    for (const rel of rels) {
+      const card = await this.getCard(rel.targetCardId);
+      if (card) results.push({ relation: rel, card });
+    }
+    return results;
   }
 }
 
