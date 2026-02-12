@@ -57,7 +57,7 @@ The application is built as a full-stack TypeScript monorepo with shared type de
 ## External Dependencies
 
 - **PostgreSQL 16:** Primary relational database (Neon-backed via Replit).
-- **Hub SDK v2.1.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`). Documentation is read from `hub-docs.md` (stable) with fallback to `replit.md`.
+- **Hub SDK v2.1.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`).
 - **D3.js v7:** JavaScript library for producing dynamic, interactive data visualizations.
 - **Vite 5:** Frontend build tool.
 - **Tailwind CSS 3:** Utility-first CSS framework.
