@@ -44,3 +44,6 @@ waitForPort = 5000
 [userenv.shared]
 HUB_URL = "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev"
 HUB_APP_SLUG = "metric-market"
+
+[agent]
+integrations = ["github:1.0.0"]
