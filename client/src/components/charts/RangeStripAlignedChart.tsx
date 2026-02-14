@@ -41,10 +41,10 @@ export function RangeStripAlignedChart({
   labelWidth: labelWidthProp,
   scaleMin: scaleMinProp,
   scaleMax: scaleMaxProp,
-  stepSize = 10000,
+  stepSize = 25000,
   formatValue = (v) => `$${Math.round(v / 1000)}k`,
 }: RangeStripAlignedChartProps) {
-  const labelWidth = labelWidthProp ?? (showLabels ? 40 : 0);
+  const labelWidth = labelWidthProp ?? (showLabels ? 36 : 0);
   const stripWidth = width - labelWidth - 4;
 
   const { scaleMin, scaleMax } = useMemo(() => {
@@ -77,7 +77,7 @@ export function RangeStripAlignedChart({
 
   const ticks = useMemo(() => {
     const result: { value: number; boxIndex: number }[] = [];
-    const tickStep = stepSize <= 10000 ? 20000 : stepSize <= 25000 ? 50000 : 100000;
+    const tickStep = stepSize <= 10000 ? 20000 : stepSize <= 30000 ? stepSize : 100000;
     let v = Math.ceil(scaleMin / tickStep) * tickStep;
     while (v <= scaleMax) {
       const idx = (v - scaleMin) / stepSize;
@@ -207,14 +207,14 @@ export function RangeStripAlignedChart({
                   >
                     <title>{tooltip}</title>
                   </rect>
-                  {boxWidth >= 12 && (
+                  {boxWidth >= 14 && (
                     <text
                       x={sx + boxWidth / 2}
                       y={ry + segmentHeight / 2}
                       dy="0.35em"
                       textAnchor="middle"
                       fill="#ffffff"
-                      fontSize={Math.min(8, boxWidth * 0.5)}
+                      fontSize={Math.min(10, boxWidth * 0.45)}
                       fontWeight={700}
                       data-testid={`aligned-strip-marker-${ri}-${firstIdx}`}
                     >
