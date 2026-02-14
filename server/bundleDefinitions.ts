@@ -1361,4 +1361,85 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
 - Emits structured change events for downstream consumption`,
     infrastructureNotes: "React state management with ResizeObserver for responsive layout. No D3 dependency. KPI calculations are client-side. For production use, connect onChange to server-side cost models and pay equity engines.",
   },
+  {
+    key: "range_target_bullet",
+    chartType: "range_target_bullet",
+    displayName: "Range Target Bullet",
+    description: "Bullet-graph style chart overlaying market range, target range, and actual employee pay extremes. Circle and triangle indicators change color based on whether values fall inside/outside market and target ranges. Designed to accompany the Range Builder control for visual comparison of proposed ranges against market benchmarks and actual employee data.",
+    version: 1,
+    category: "Compensation",
+    tags: ["bullet", "range", "compensation", "market", "target", "comparison", "actuals"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          description: "One row per job level. Each row defines market range, target (proposed) range, and actual employee pay min/max.",
+          items: {
+            type: "object",
+            required: ["label", "marketMin", "marketMax", "targetMin", "targetMax", "actualMin", "actualMax"],
+            properties: {
+              label: { type: "string", description: "Job level label (e.g., 'Eng III')" },
+              marketMin: { type: "number", description: "Market range lower bound (e.g., P25 or P50 - spread)" },
+              marketMax: { type: "number", description: "Market range upper bound (e.g., P75)" },
+              targetMin: { type: "number", description: "Target (proposed) range minimum" },
+              targetMax: { type: "number", description: "Target (proposed) range maximum" },
+              actualMin: { type: "number", description: "Lowest actual employee pay in this level" },
+              actualMax: { type: "number", description: "Highest actual employee pay in this level" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        scaleMin: { type: "number", description: "Minimum value for the shared dollar scale" },
+        scaleMax: { type: "number", description: "Maximum value for the shared dollar scale" },
+        rowHeight: { type: "number", description: "Height of each bullet row in pixels" },
+        rowGap: { type: "number", description: "Vertical gap between rows in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showScale: { type: "boolean", description: "Show dollar scale axis on top" },
+        marketColor: { type: "string", description: "Fill color for market range bar" },
+        targetColor: { type: "string", description: "Fill color for target range bar and indicators" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Read-only visualization; no output signals.",
+      properties: {},
+    },
+    exampleData: {
+      rows: [
+        { label: "Eng III", marketMin: 112000, marketMax: 148000, targetMin: 110000, targetMax: 150000, actualMin: 105000, actualMax: 155000 },
+        { label: "Eng IV", marketMin: 147000, marketMax: 185000, targetMin: 140000, targetMax: 190000, actualMin: 138000, actualMax: 195000 },
+      ],
+    },
+    exampleConfig: { scaleMin: 90000, scaleMax: 300000 },
+    documentation: `**Range Target Bullet Chart**
+
+A bullet-graph style visualization for compensation range analysis. Each row overlays three layers:
+
+1. **Light Grey Bar** — Full scale background
+2. **Light Blue Bar** — Market range (benchmark data)
+3. **Dark Blue Bar** — Target range (proposed/adjusted range)
+
+**Indicators:**
+- **Circles** mark Actual Employee Min and Max pay values
+- **Triangles** mark Target Range endpoints
+
+**Indicator color logic:**
+- *Filled blue circle* — actual value inside both Target and Market ranges
+- *Open blue circle* — actual value inside Target but outside Market
+- *Open black circle* — actual value outside Target but inside Market
+- *Filled black circle* — actual value outside both ranges
+- *Blue triangle* — target endpoint inside Market range
+- *Grey triangle* — target endpoint outside Market range
+
+**Integration:**
+- Pair with Range Builder control: target ranges update in real-time as users adjust the Range Builder
+- Market data comes from benchmark surveys; actual data from HRIS employee records`,
+    infrastructureNotes: "Pure SVG rendering with ResizeObserver for responsive width. No D3 dependency. Designed to pair with the range_builder control for interactive compensation analysis.",
+  },
 ];

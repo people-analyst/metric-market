@@ -1,7 +1,8 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { RangeBuilderControl, RangeBuilderChangeEvent, RangeBuilderRow } from "@/components/controls/RangeBuilderControl";
+import { RangeTargetBulletChart, BulletRangeRow } from "@/components/charts/RangeTargetBulletChart";
 
 const SAMPLE_ROWS: RangeBuilderRow[] = [
   { label: "Eng III", rangeMin: 110000, rangeMax: 150000, currentEmployees: 24, avgCurrentPay: 128000 },
@@ -17,12 +18,37 @@ const SAMPLE_MARKET_DATA = [
   { p50: 250000, p75: 275000 },
 ];
 
+const SAMPLE_ACTUALS = [
+  { actualMin: 105000, actualMax: 155000 },
+  { actualMin: 138000, actualMax: 195000 },
+  { actualMin: 180000, actualMax: 242000 },
+  { actualMin: 215000, actualMax: 285000 },
+];
+
 export function RangeBuilderPage() {
   const [lastEvent, setLastEvent] = useState<RangeBuilderChangeEvent | null>(null);
 
   const handleChange = useCallback((event: RangeBuilderChangeEvent) => {
     setLastEvent(event);
   }, []);
+
+  const bulletRows: BulletRangeRow[] = useMemo(() => {
+    return SAMPLE_ROWS.map((row, i) => {
+      const market = SAMPLE_MARKET_DATA[i];
+      const actuals = SAMPLE_ACTUALS[i];
+      const activeRange = lastEvent?.activeRanges[i];
+
+      return {
+        label: row.label,
+        marketMin: market.p50 - (market.p75 - market.p50),
+        marketMax: market.p75,
+        targetMin: activeRange?.min ?? row.rangeMin,
+        targetMax: activeRange?.max ?? row.rangeMax,
+        actualMin: actuals.actualMin,
+        actualMax: actuals.actualMax,
+      };
+    });
+  }, [lastEvent]);
 
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-4" data-testid="page-range-builder">
@@ -51,6 +77,53 @@ export function RangeBuilderPage() {
             onChange={handleChange}
             autoRecalculate
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1 pt-3 px-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground" data-testid="text-bullet-title">Target Range Analysis</h3>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Market range, target range, and actual employee pay extremes</p>
+          </div>
+          <Badge variant="secondary" className="text-[10px]" data-testid="badge-chart-type">Bullet Chart</Badge>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-2">
+          <RangeTargetBulletChart
+            rows={bulletRows}
+            scaleMin={90000}
+            scaleMax={300000}
+          />
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[10px] text-muted-foreground" data-testid="bullet-chart-legend">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-2 rounded-sm" style={{ backgroundColor: "#e0e4e9", opacity: 0.5 }} />
+              Scale
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-2 rounded-sm" style={{ backgroundColor: "#b8d4f0", opacity: 0.7 }} />
+              Market Range
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-6 h-2 rounded-sm" style={{ backgroundColor: "#0f69ff", opacity: 0.85 }} />
+              Target Range
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#0f69ff" /></svg>
+              Actual (in Target + Market)
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" fill="white" stroke="#0f69ff" strokeWidth="1.5" /></svg>
+              Actual (in Target only)
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="3.5" fill="white" stroke="#232a31" strokeWidth="1.5" /></svg>
+              Actual (in Market only)
+            </span>
+            <span className="flex items-center gap-1">
+              <svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill="#232a31" /></svg>
+              Actual (outside both)
+            </span>
+          </div>
         </CardContent>
       </Card>
 

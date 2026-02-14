@@ -24,6 +24,7 @@ import {
   StackedAreaChart,
   RangeStripChart,
   RangeStripAlignedChart,
+  RangeTargetBulletChart,
   TILE_PRESETS,
 } from "@/components/charts";
 import type { TilePreset } from "@/components/charts";
@@ -585,6 +586,16 @@ const CHARTS = [
     title: "Aligned Range Strip",
     description: "Percentile rows (P10-P90) with level markers (P1-P5) placed at their dollar positions on a shared scale",
     component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={450000} />,
+  },
+  {
+    title: "Range Target Bullet",
+    description: "Bullet-graph overlay of market range, target range, and actual employee pay extremes with conditional indicator colors",
+    component: <RangeTargetBulletChart rows={[
+      { label: "Eng III", marketMin: 112000, marketMax: 148000, targetMin: 110000, targetMax: 150000, actualMin: 105000, actualMax: 155000 },
+      { label: "Eng IV", marketMin: 147000, marketMax: 185000, targetMin: 140000, targetMax: 190000, actualMin: 138000, actualMax: 195000 },
+      { label: "Eng V", marketMin: 180000, marketMax: 230000, targetMin: 175000, targetMax: 235000, actualMin: 180000, actualMax: 242000 },
+      { label: "Eng VI", marketMin: 225000, marketMax: 275000, targetMin: 210000, targetMax: 280000, actualMin: 215000, actualMax: 285000 },
+    ]} scaleMin={90000} scaleMax={300000} />,
   },
   {
     title: "Stacked Area",

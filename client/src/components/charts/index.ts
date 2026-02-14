@@ -67,5 +67,8 @@ export type { AlignedRangeRow, AlignedRangeMarker, RangeStripAlignedChartProps }
 export { InteractiveRangeStripChart } from "./InteractiveRangeStripChart";
 export type { InteractiveRangeRow, InteractiveSegment, InteractiveRangeStripChartProps } from "./InteractiveRangeStripChart";
 
+export { RangeTargetBulletChart } from "./RangeTargetBulletChart";
+export type { BulletRangeRow, RangeTargetBulletChartProps } from "./RangeTargetBulletChart";
+
 export { TILE_PRESETS } from "./tilePresets";
 export type { TilePreset } from "./tilePresets";
