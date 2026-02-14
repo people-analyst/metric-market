@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench, Ruler } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench, Ruler, PackageOpen } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,6 +16,11 @@ const adminItems = [
     title: "Workbench",
     url: "/workbench",
     icon: Wrench,
+  },
+  {
+    title: "Export",
+    url: "/export",
+    icon: PackageOpen,
   },
 ];
 

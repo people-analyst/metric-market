@@ -12,6 +12,7 @@ import {
   RELATION_TYPES,
 } from "@shared/schema";
 import * as hub from "./hub-client";
+import { getComponentRegistry, getComponentDetail } from "./componentExport";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -273,6 +274,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (e: any) {
       res.status(502).json({ error: e.message });
     }
+  });
+
+  app.get("/api/components", async (req, res) => {
+    const filters = {
+      category: req.query.category as string | undefined,
+      componentType: req.query.type as string | undefined,
+      integrationTarget: req.query.target as string | undefined,
+    };
+    res.json(getComponentRegistry(filters));
+  });
+
+  app.get("/api/components/:key", async (req, res) => {
+    const pkg = getComponentDetail(req.params.key);
+    if (!pkg) return res.status(404).json({ error: "Component not found" });
+    res.json(pkg);
+  });
+
+  app.get("/api/export/:key", async (req, res) => {
+    const pkg = getComponentDetail(req.params.key);
+    if (!pkg) return res.status(404).json({ error: "Component not found" });
+    res.setHeader("Content-Disposition", `attachment; filename="${req.params.key}-export.json"`);
+    res.json(pkg);
   });
 
   const httpServer = createServer(app);
