@@ -47,14 +47,13 @@ export function RangeStripChart({
   const stripWidth = width - labelWidth - valueWidth;
 
   const rowSpacing = 6;
-  const markerHeadroom = 12;
-  const rowTotalHeight = segmentHeight + rowSpacing + markerHeadroom;
+  const rowTotalHeight = segmentHeight + rowSpacing;
   const totalHeight = rows.length * rowTotalHeight + 4;
 
   return (
     <svg width={width} height={totalHeight} className="block" data-testid="chart-range-strip">
       {rows.map((row, ri) => {
-        const ry = ri * rowTotalHeight + markerHeadroom + 2;
+        const ry = ri * rowTotalHeight + 2;
         const segCount = row.segments.length;
         const actualSegWidth = Math.max(1, (stripWidth - (segCount - 1) * gap) / segCount);
 
@@ -154,37 +153,6 @@ export function RangeStripChart({
                 </g>
               );
             })}
-
-            {row.markerPosition !== undefined && row.markerPosition >= 0 && row.markerPosition < segCount && (
-              <g data-testid={`range-strip-marker-${ri}`}>
-                <line
-                  x1={labelWidth + row.markerPosition * (actualSegWidth + gap) + actualSegWidth / 2}
-                  y1={ry - 3}
-                  x2={labelWidth + row.markerPosition * (actualSegWidth + gap) + actualSegWidth / 2}
-                  y2={ry + segmentHeight + 3}
-                  stroke={markerColor}
-                  strokeWidth={1.5}
-                />
-                <circle
-                  cx={labelWidth + row.markerPosition * (actualSegWidth + gap) + actualSegWidth / 2}
-                  cy={ry - 3}
-                  r={2}
-                  fill={markerColor}
-                />
-                {row.markerLabel && (
-                  <text
-                    x={labelWidth + row.markerPosition * (actualSegWidth + gap) + actualSegWidth / 2}
-                    y={ry - 7}
-                    textAnchor="middle"
-                    fill={markerColor}
-                    fontSize={7}
-                    fontWeight={600}
-                  >
-                    {row.markerLabel}
-                  </text>
-                )}
-              </g>
-            )}
 
             {showValues && hasRange && (
               <text
