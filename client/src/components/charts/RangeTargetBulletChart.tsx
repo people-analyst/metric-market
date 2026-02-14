@@ -125,13 +125,6 @@ export function RangeTargetBulletChart({
   function triangleStyle(endpoint: "min" | "max", row: BulletRangeRow): { fill: string; stroke: string; strokeWidth: number } {
     const val = endpoint === "min" ? row.targetMin : row.targetMax;
     const inMarket = isInRange(val, row.marketMin, row.marketMax);
-    const actualVal = endpoint === "min" ? row.actualMin : row.actualMax;
-    const actualInTarget = isInRange(actualVal, row.targetMin, row.targetMax);
-    const actualInMarket = isInRange(actualVal, row.marketMin, row.marketMax);
-
-    if (actualInTarget && actualInMarket && inMarket) {
-      return { fill: targetColor, stroke: targetColor, strokeWidth: 0 };
-    }
     if (inMarket) {
       return { fill: targetColor, stroke: targetColor, strokeWidth: 0 };
     }
