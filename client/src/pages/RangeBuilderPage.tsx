@@ -14,10 +14,10 @@ interface LevelTypeConfig {
 }
 
 const LEVEL_TYPE_CONFIG: Record<LevelType, LevelTypeConfig> = {
-  Professional: { prefix: "P", levels: [1, 2, 3, 4, 5, 6] },
-  Manager: { prefix: "M", levels: [1, 2, 3, 4, 5, 6] },
-  Executive: { prefix: "E", levels: [1, 2, 3, 4, 5] },
-  Support: { prefix: "S", levels: [1, 2, 3, 4] },
+  Professional: { prefix: "P", levels: [6, 5, 4, 3, 2, 1] },
+  Manager: { prefix: "M", levels: [6, 5, 4, 3, 2, 1] },
+  Executive: { prefix: "E", levels: [5, 4, 3, 2, 1] },
+  Support: { prefix: "S", levels: [4, 3, 2, 1] },
 };
 
 interface LevelData {
@@ -217,8 +217,8 @@ function computeTargetRangeStats(activeRanges: { label: string; min: number; max
     const mid = (r.min + r.max) / 2;
     const spreadPct = r.min > 0 ? ((r.max - r.min) / r.min) * 100 : 0;
 
-    const below = i > 0 ? activeRanges[i - 1] : null;
-    const above = i < activeRanges.length - 1 ? activeRanges[i + 1] : null;
+    const below = i < activeRanges.length - 1 ? activeRanges[i + 1] : null;
+    const above = i > 0 ? activeRanges[i - 1] : null;
 
     let minOverlapPct: number | null = null;
     if (below) {
@@ -248,6 +248,8 @@ function computeTargetRangeStats(activeRanges: { label: string; min: number; max
 export function RangeBuilderPage() {
   const [superFn, setSuperFn] = useState<SuperFunction>("R&D");
   const [levelType, setLevelType] = useState<LevelType>("Professional");
+  const STEP_OPTIONS = [2500, 5000, 10000, 15000, 20000] as const;
+  const [stepSize, setStepSize] = useState<number>(10000);
   const [lastEvent, setLastEvent] = useState<RangeBuilderChangeEvent | null>(null);
 
   const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax } = useMemo(
@@ -296,12 +298,7 @@ export function RangeBuilderPage() {
   const totalJobs = jobCounts.reduce((a, b) => a + b, 0);
   const totalEmployees = rows.reduce((a, r) => a + (r.currentEmployees ?? 0), 0);
 
-  const stepSize = useMemo(() => {
-    const range = scaleMax - scaleMin;
-    if (range > 500000) return 25000;
-    if (range > 200000) return 10000;
-    return 5000;
-  }, [scaleMin, scaleMax]);
+  const fmtStep = (v: number) => v >= 1000 ? `$${(v / 1000)}K` : `$${v}`;
 
   const fmtPct = (v: number | null) => {
     if (v === null) return "—";
@@ -351,7 +348,7 @@ export function RangeBuilderPage() {
                     onClick={() => handleLevelTypeChange(lt)}
                     data-testid={`button-lt-${lt}`}
                   >
-                    {lt} ({LEVEL_TYPE_CONFIG[lt].prefix}1-{LEVEL_TYPE_CONFIG[lt].prefix}{LEVEL_TYPE_CONFIG[lt].levels[LEVEL_TYPE_CONFIG[lt].levels.length - 1]})
+                    {lt} ({LEVEL_TYPE_CONFIG[lt].prefix}1-{LEVEL_TYPE_CONFIG[lt].prefix}{LEVEL_TYPE_CONFIG[lt].levels[0]})
                   </Button>
                 ))}
               </div>
@@ -372,11 +369,27 @@ export function RangeBuilderPage() {
             <h3 className="text-sm font-semibold text-foreground" data-testid="text-section-title">{superFn} {LEVEL_TYPE_CONFIG[levelType].prefix}-Level Pay Ranges</h3>
             <p className="text-[10px] text-muted-foreground mt-0.5">Click boxes to extend or shrink compensation ranges</p>
           </div>
-          <Badge variant="secondary" className="text-[10px]" data-testid="badge-control-type">Form Control</Badge>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] text-muted-foreground whitespace-nowrap">Step:</span>
+            <div className="flex gap-1" data-testid="granularity-toggle">
+              {STEP_OPTIONS.map((s) => (
+                <Button
+                  key={s}
+                  size="sm"
+                  variant={stepSize === s ? "default" : "outline"}
+                  className={`text-[10px] h-6 px-2 ${stepSize === s ? "bg-[#0f69ff]" : ""}`}
+                  onClick={() => { setStepSize(s); setLastEvent(null); }}
+                  data-testid={`button-step-${s}`}
+                >
+                  {fmtStep(s)}
+                </Button>
+              ))}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-1">
           <RangeBuilderControl
-            key={`${superFn}-${levelType}`}
+            key={`${superFn}-${levelType}-${stepSize}`}
             rows={rows}
             stepSize={stepSize}
             scaleMin={scaleMin}
