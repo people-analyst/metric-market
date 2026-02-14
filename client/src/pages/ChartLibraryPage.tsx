@@ -386,38 +386,32 @@ const RANGE_STRIP_ROWS: RangeStripRow[] = [
   {
     label: "Eng III",
     segments: [
-      { label: "P10", highlighted: false, tooltip: "P10: $95k" },
-      { label: "P25", highlighted: true, tooltip: "P25: $110k" },
-      { label: "P50", highlighted: true, tooltip: "P50: $125k" },
-      { label: "P75", highlighted: true, tooltip: "P75: $140k" },
-      { label: "P90", highlighted: false, tooltip: "P90: $160k" },
+      { value: 95000, highlighted: false },
+      { value: 110000, highlighted: true },
+      { value: 125000, highlighted: true },
+      { value: 140000, highlighted: true },
+      { value: 160000, highlighted: false },
     ],
-    markerPosition: 2,
-    markerLabel: "MRP",
   },
   {
     label: "Eng IV",
     segments: [
-      { label: "P10", highlighted: false, tooltip: "P10: $120k" },
-      { label: "P25", highlighted: false, tooltip: "P25: $135k" },
-      { label: "P50", highlighted: true, tooltip: "P50: $155k" },
-      { label: "P75", highlighted: true, tooltip: "P75: $175k" },
-      { label: "P90", highlighted: true, tooltip: "P90: $195k" },
+      { value: 120000, highlighted: false },
+      { value: 135000, highlighted: false },
+      { value: 155000, highlighted: true },
+      { value: 175000, highlighted: true },
+      { value: 195000, highlighted: true },
     ],
-    markerPosition: 3,
-    markerLabel: "MRP",
   },
   {
     label: "Mgr II",
     segments: [
-      { label: "P10", highlighted: false, tooltip: "P10: $130k" },
-      { label: "P25", highlighted: true, tooltip: "P25: $150k" },
-      { label: "P50", highlighted: true, tooltip: "P50: $170k" },
-      { label: "P75", highlighted: false, tooltip: "P75: $190k" },
-      { label: "P90", highlighted: false, tooltip: "P90: $210k" },
+      { value: 130000, highlighted: false },
+      { value: 150000, highlighted: true },
+      { value: 170000, highlighted: true },
+      { value: 190000, highlighted: false },
+      { value: 210000, highlighted: false },
     ],
-    markerPosition: 1,
-    markerLabel: "MRP",
   },
 ];
 
@@ -457,27 +451,21 @@ const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
 const INTERACTIVE_RANGE_ROWS: InteractiveRangeRow[] = [
   {
     label: "Eng III",
-    segments: [
-      { active: false }, { active: false }, { active: true }, { active: true },
-      { active: true }, { active: true }, { active: true }, { active: false },
-      { active: false }, { active: false }, { active: false }, { active: false },
-    ],
+    rangeMin: 110000,
+    rangeMax: 140000,
+    segments: [],
   },
   {
     label: "Eng IV",
-    segments: [
-      { active: false }, { active: false }, { active: false }, { active: true },
-      { active: true }, { active: true }, { active: true }, { active: true },
-      { active: false }, { active: false }, { active: false }, { active: false },
-    ],
+    rangeMin: 138000,
+    rangeMax: 178000,
+    segments: [],
   },
   {
     label: "Eng V",
-    segments: [
-      { active: false }, { active: false }, { active: false }, { active: false },
-      { active: true }, { active: true }, { active: true }, { active: true },
-      { active: true }, { active: false }, { active: false }, { active: false },
-    ],
+    rangeMin: 175000,
+    rangeMax: 220000,
+    segments: [],
   },
 ];
 
@@ -607,18 +595,18 @@ const CHARTS = [
   },
   {
     title: "Range Strip",
-    description: "Compensation range bands with percentile segments forming contiguous ranges",
-    component: <RangeStripChart rows={RANGE_STRIP_ROWS} />,
+    description: "Dollar-scale boxes showing compensation ranges across job levels",
+    component: <RangeStripChart rows={RANGE_STRIP_ROWS} stepSize={10000} />,
   },
   {
     title: "Aligned Range Strip",
-    description: "Shared numeric scale with floating percentile positions per job level",
-    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} />,
+    description: "Shared dollar scale with discrete boxes per job level for cross-level comparison",
+    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={10000} />,
   },
   {
     title: "Interactive Range Strip",
-    description: "Click segments to toggle on/off and experiment with range adjustments",
-    component: <InteractiveRangeStripChart rows={INTERACTIVE_RANGE_ROWS} />,
+    description: "Click boxes to toggle on/off and experiment with range adjustments on a dollar scale",
+    component: <InteractiveRangeStripChart rows={INTERACTIVE_RANGE_ROWS} stepSize={10000} scaleMin={90000} scaleMax={260000} />,
   },
   {
     title: "Stacked Area",

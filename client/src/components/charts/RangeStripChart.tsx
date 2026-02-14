@@ -27,45 +27,145 @@ export interface RangeStripChartProps {
   markerColor?: string;
   showLabels?: boolean;
   showValues?: boolean;
+  showScale?: boolean;
   labelWidth?: number;
+  stepSize?: number;
+  scaleMin?: number;
+  scaleMax?: number;
+  formatValue?: (v: number) => string;
 }
 
 export function RangeStripChart({
   rows,
   width = 320,
   segmentHeight = 18,
-  gap = 1,
+  gap = 2,
   highlightColor = "#0f69ff",
   baseColor = "#e0e4e9",
-  markerColor = "#232a31",
   showLabels = true,
   showValues = true,
+  showScale = true,
   labelWidth: labelWidthProp,
+  stepSize = 10000,
+  scaleMin: scaleMinProp,
+  scaleMax: scaleMaxProp,
+  formatValue = (v) => `$${Math.round(v / 1000)}k`,
 }: RangeStripChartProps) {
   const labelWidth = labelWidthProp ?? (showLabels ? 60 : 0);
   const valueWidth = showValues ? 36 : 0;
   const stripWidth = width - labelWidth - valueWidth;
 
+  const { scaleMin, scaleMax } = useMemo(() => {
+    if (scaleMinProp !== undefined && scaleMaxProp !== undefined) {
+      return { scaleMin: scaleMinProp, scaleMax: scaleMaxProp };
+    }
+    let min = Infinity;
+    let max = -Infinity;
+    for (const row of rows) {
+      for (const seg of row.segments) {
+        if (seg.value !== undefined) {
+          if (seg.value < min) min = seg.value;
+          if (seg.value > max) max = seg.value;
+        }
+      }
+    }
+    if (!isFinite(min)) { min = 0; max = 100000; }
+    return {
+      scaleMin: scaleMinProp ?? Math.floor(min / stepSize) * stepSize,
+      scaleMax: scaleMaxProp ?? Math.ceil(max / stepSize) * stepSize,
+    };
+  }, [rows, scaleMinProp, scaleMaxProp, stepSize]);
+
+  const boxCount = Math.max(1, Math.ceil((scaleMax - scaleMin) / stepSize));
+  const boxWidth = Math.max(1, (stripWidth - (boxCount - 1) * gap) / boxCount);
+
   const rowSpacing = 6;
+  const scaleHeight = showScale ? 18 : 0;
   const rowTotalHeight = segmentHeight + rowSpacing;
-  const totalHeight = rows.length * rowTotalHeight + 4;
+  const totalHeight = scaleHeight + rows.length * rowTotalHeight + 4;
+
+  const ticks = useMemo(() => {
+    const result: { value: number; boxIndex: number }[] = [];
+    const tickStep = stepSize <= 10000 ? 20000 : stepSize <= 25000 ? 50000 : 100000;
+    let v = Math.ceil(scaleMin / tickStep) * tickStep;
+    while (v <= scaleMax) {
+      const idx = (v - scaleMin) / stepSize;
+      result.push({ value: v, boxIndex: idx });
+      v += tickStep;
+    }
+    return result;
+  }, [scaleMin, scaleMax, stepSize]);
 
   return (
     <svg width={width} height={totalHeight} className="block" data-testid="chart-range-strip">
+      {showScale && (
+        <g>
+          <line
+            x1={labelWidth}
+            y1={scaleHeight - 4}
+            x2={labelWidth + stripWidth}
+            y2={scaleHeight - 4}
+            stroke="#e0e4e9"
+            strokeWidth={0.5}
+          />
+          {ticks.map((t) => {
+            const tx = labelWidth + t.boxIndex * (boxWidth + gap);
+            return (
+              <g key={t.value}>
+                <line
+                  x1={tx}
+                  y1={scaleHeight - 6}
+                  x2={tx}
+                  y2={scaleHeight - 2}
+                  stroke="#e0e4e9"
+                  strokeWidth={0.5}
+                />
+                <text
+                  x={tx}
+                  y={scaleHeight - 8}
+                  textAnchor="middle"
+                  fontSize={7}
+                  fill="#5b636a"
+                >
+                  {formatValue(t.value)}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      )}
+
       {rows.map((row, ri) => {
-        const ry = ri * rowTotalHeight + 2;
-        const segCount = row.segments.length;
-        const actualSegWidth = Math.max(1, (stripWidth - (segCount - 1) * gap) / segCount);
+        const ry = scaleHeight + ri * rowTotalHeight + 2;
+        const segsWithValues = row.segments.filter((s) => s.value !== undefined);
+        const sortedVals = [...segsWithValues].sort((a, b) => a.value! - b.value!);
+        const highlightedVals = sortedVals.filter((s) => s.highlighted);
 
-        const rangeStart = row.rangeStart ?? row.segments.findIndex((s) => s.highlighted);
-        const rangeEnd = row.rangeEnd ?? (() => {
-          const last = [...row.segments].reverse().findIndex((s) => s.highlighted);
-          return last >= 0 ? segCount - 1 - last : -1;
-        })();
-        const hasRange = rangeStart >= 0 && rangeEnd >= 0 && rangeStart <= rangeEnd;
+        const fullMin = sortedVals.length > 0 ? sortedVals[0].value! : scaleMin;
+        const fullMax = sortedVals.length > 0 ? sortedVals[sortedVals.length - 1].value! : scaleMax;
+        const hlMin = highlightedVals.length > 0 ? highlightedVals[0].value! : null;
+        const hlMax = highlightedVals.length > 0 ? highlightedVals[highlightedVals.length - 1].value! : null;
 
-        const highlightedCount = row.segments.filter((s) => s.highlighted).length;
-        const totalSegments = row.segments.length;
+        const boxes = [];
+        for (let i = 0; i < boxCount; i++) {
+          const boxStart = scaleMin + i * stepSize;
+          const boxEnd = boxStart + stepSize;
+          const boxMid = boxStart + stepSize / 2;
+          const inFullRange = boxMid >= fullMin && boxMid <= fullMax;
+          const inHighlightRange = hlMin !== null && hlMax !== null && boxMid >= hlMin && boxMid <= hlMax;
+          boxes.push({ index: i, boxStart, boxEnd, inFullRange, inHighlightRange });
+        }
+
+        const firstInRange = boxes.findIndex((b) => b.inFullRange);
+        const lastInRangeRev = [...boxes].reverse().findIndex((b) => b.inFullRange);
+        const lastInRange = lastInRangeRev >= 0 ? boxes.length - 1 - lastInRangeRev : -1;
+        const firstHL = boxes.findIndex((b) => b.inHighlightRange);
+        const lastHLRev = [...boxes].reverse().findIndex((b) => b.inHighlightRange);
+        const lastHL = lastHLRev >= 0 ? boxes.length - 1 - lastHLRev : -1;
+        const hasHL = firstHL >= 0 && lastHL >= 0;
+
+        const highlightedCount = boxes.filter((b) => b.inHighlightRange).length;
+        const totalBoxes = boxes.filter((b) => b.inFullRange).length;
 
         return (
           <g key={`row-${ri}`} data-testid={`range-strip-row-${ri}`}>
@@ -84,11 +184,11 @@ export function RangeStripChart({
               </text>
             )}
 
-            {hasRange && (
+            {hasHL && (
               <rect
-                x={labelWidth + rangeStart * (actualSegWidth + gap) - 1}
+                x={labelWidth + firstHL * (boxWidth + gap) - 1}
                 y={ry - 1}
-                width={(rangeEnd - rangeStart) * (actualSegWidth + gap) + actualSegWidth + 2}
+                width={(lastHL - firstHL) * (boxWidth + gap) + boxWidth + 2}
                 height={segmentHeight + 2}
                 fill="none"
                 stroke={highlightColor}
@@ -99,62 +199,34 @@ export function RangeStripChart({
               />
             )}
 
-            {row.segments.map((seg, si) => {
-              const sx = labelWidth + si * (actualSegWidth + gap);
-              const isHighlighted = seg.highlighted ?? false;
-              const fill = seg.color || (isHighlighted ? highlightColor : baseColor);
-
-              const isRangeStart = hasRange && si === rangeStart;
-              const isRangeEnd = hasRange && si === rangeEnd;
-              const isFirst = si === 0;
-              const isLast = si === segCount - 1;
-
-              const rx = 2;
-              const topLeftR = isFirst || isRangeStart ? rx : 0;
-              const topRightR = isLast || isRangeEnd ? rx : 0;
-              const botLeftR = isFirst || isRangeStart ? rx : 0;
-              const botRightR = isLast || isRangeEnd ? rx : 0;
-
-              const rectPath = roundedRectPath(sx, ry, actualSegWidth, segmentHeight, topLeftR, topRightR, botRightR, botLeftR);
-
-              const tooltipText = seg.tooltip || (seg.label && seg.value !== undefined ? `${seg.label}: ${seg.value}` : seg.label);
+            {boxes.map((box) => {
+              if (!box.inFullRange) return null;
+              const sx = labelWidth + box.index * (boxWidth + gap);
+              const fill = box.inHighlightRange ? highlightColor : baseColor;
+              const isFirst = box.index === firstInRange;
+              const isLast = box.index === lastInRange;
+              const rx = isFirst || isLast ? 2 : 0;
+              const tooltip = `${formatValue(box.boxStart)} - ${formatValue(box.boxEnd)}`;
 
               return (
-                <g key={si} data-testid={`range-strip-seg-${ri}-${si}`}>
-                  <path d={rectPath} fill={fill}>
-                    {tooltipText && <title>{tooltipText}</title>}
-                  </path>
-                  {seg.label && isHighlighted && (
-                    <text
-                      x={sx + actualSegWidth / 2}
-                      y={ry + segmentHeight / 2}
-                      dy="0.35em"
-                      textAnchor="middle"
-                      fill="#fff"
-                      fontSize={Math.min(7, actualSegWidth * 0.6)}
-                      fontWeight={600}
-                    >
-                      {seg.label}
-                    </text>
-                  )}
-                  {seg.label && !isHighlighted && actualSegWidth > 14 && (
-                    <text
-                      x={sx + actualSegWidth / 2}
-                      y={ry + segmentHeight / 2}
-                      dy="0.35em"
-                      textAnchor="middle"
-                      fill="#5b636a"
-                      fontSize={Math.min(7, actualSegWidth * 0.6)}
-                      fontWeight={500}
-                    >
-                      {seg.label}
-                    </text>
-                  )}
+                <g key={box.index} data-testid={`range-strip-seg-${ri}-${box.index}`}>
+                  <rect
+                    x={sx}
+                    y={ry}
+                    width={boxWidth}
+                    height={segmentHeight}
+                    fill={fill}
+                    rx={rx}
+                    stroke={box.inHighlightRange ? "rgba(255,255,255,0.3)" : "none"}
+                    strokeWidth={box.inHighlightRange ? 0.5 : 0}
+                  >
+                    <title>{tooltip}</title>
+                  </rect>
                 </g>
               );
             })}
 
-            {showValues && hasRange && (
+            {showValues && hasHL && (
               <text
                 x={width - 2}
                 y={ry + segmentHeight / 2}
@@ -165,7 +237,7 @@ export function RangeStripChart({
                 fontWeight={600}
                 data-testid={`range-strip-value-${ri}`}
               >
-                {highlightedCount}/{totalSegments}
+                {highlightedCount}/{totalBoxes}
               </text>
             )}
           </g>
@@ -173,22 +245,4 @@ export function RangeStripChart({
       })}
     </svg>
   );
-}
-
-function roundedRectPath(
-  x: number, y: number, w: number, h: number,
-  tl: number, tr: number, br: number, bl: number
-): string {
-  return [
-    `M${x + tl},${y}`,
-    `L${x + w - tr},${y}`,
-    tr > 0 ? `Q${x + w},${y} ${x + w},${y + tr}` : `L${x + w},${y}`,
-    `L${x + w},${y + h - br}`,
-    br > 0 ? `Q${x + w},${y + h} ${x + w - br},${y + h}` : `L${x + w},${y + h}`,
-    `L${x + bl},${y + h}`,
-    bl > 0 ? `Q${x},${y + h} ${x},${y + h - bl}` : `L${x},${y + h}`,
-    `L${x},${y + tl}`,
-    tl > 0 ? `Q${x},${y} ${x + tl},${y}` : `L${x},${y}`,
-    "Z",
-  ].join(" ");
 }

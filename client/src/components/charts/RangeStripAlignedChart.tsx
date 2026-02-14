@@ -4,7 +4,6 @@ export interface AlignedRangePoint {
   label?: string;
   value: number;
   highlighted?: boolean;
-  color?: string;
   tooltip?: string;
 }
 
@@ -25,6 +24,7 @@ export interface RangeStripAlignedChartProps {
   labelWidth?: number;
   scaleMin?: number;
   scaleMax?: number;
+  stepSize?: number;
   formatValue?: (v: number) => string;
 }
 
@@ -32,7 +32,7 @@ export function RangeStripAlignedChart({
   rows,
   width = 320,
   segmentHeight = 18,
-  gap = 1,
+  gap = 2,
   highlightColor = "#0f69ff",
   baseColor = "#e0e4e9",
   showLabels = true,
@@ -40,7 +40,8 @@ export function RangeStripAlignedChart({
   labelWidth: labelWidthProp,
   scaleMin: scaleMinProp,
   scaleMax: scaleMaxProp,
-  formatValue = (v) => `${Math.round(v / 1000)}k`,
+  stepSize = 10000,
+  formatValue = (v) => `$${Math.round(v / 1000)}k`,
 }: RangeStripAlignedChartProps) {
   const labelWidth = labelWidthProp ?? (showLabels ? 60 : 0);
   const stripWidth = width - labelWidth - 4;
@@ -57,34 +58,31 @@ export function RangeStripAlignedChart({
         if (pt.value > max) max = pt.value;
       }
     }
-    const pad = (max - min) * 0.05;
     return {
-      scaleMin: scaleMinProp ?? Math.floor((min - pad) / 5000) * 5000,
-      scaleMax: scaleMaxProp ?? Math.ceil((max + pad) / 5000) * 5000,
+      scaleMin: scaleMinProp ?? Math.floor(min / stepSize) * stepSize,
+      scaleMax: scaleMaxProp ?? Math.ceil(max / stepSize) * stepSize,
     };
-  }, [rows, scaleMinProp, scaleMaxProp]);
+  }, [rows, scaleMinProp, scaleMaxProp, stepSize]);
 
-  const toX = (v: number) => {
-    const frac = (v - scaleMin) / (scaleMax - scaleMin);
-    return labelWidth + frac * stripWidth;
-  };
+  const boxCount = Math.max(1, Math.ceil((scaleMax - scaleMin) / stepSize));
+  const boxWidth = Math.max(1, (stripWidth - (boxCount - 1) * gap) / boxCount);
 
   const rowSpacing = 6;
-  const scaleHeight = showScale ? 16 : 0;
+  const scaleHeight = showScale ? 18 : 0;
   const rowTotalHeight = segmentHeight + rowSpacing;
   const totalHeight = scaleHeight + rows.length * rowTotalHeight + 4;
 
   const ticks = useMemo(() => {
-    const range = scaleMax - scaleMin;
-    const step = range <= 50000 ? 10000 : range <= 200000 ? 25000 : 50000;
-    const result: number[] = [];
-    let v = Math.ceil(scaleMin / step) * step;
+    const result: { value: number; boxIndex: number }[] = [];
+    const tickStep = stepSize <= 10000 ? 20000 : stepSize <= 25000 ? 50000 : 100000;
+    let v = Math.ceil(scaleMin / tickStep) * tickStep;
     while (v <= scaleMax) {
-      result.push(v);
-      v += step;
+      const idx = (v - scaleMin) / stepSize;
+      result.push({ value: v, boxIndex: idx });
+      v += tickStep;
     }
     return result;
-  }, [scaleMin, scaleMax]);
+  }, [scaleMin, scaleMax, stepSize]);
 
   return (
     <svg width={width} height={totalHeight} className="block" data-testid="chart-range-strip-aligned">
@@ -98,39 +96,63 @@ export function RangeStripAlignedChart({
             stroke="#e0e4e9"
             strokeWidth={0.5}
           />
-          {ticks.map((t) => (
-            <g key={t}>
-              <line
-                x1={toX(t)}
-                y1={scaleHeight - 6}
-                x2={toX(t)}
-                y2={scaleHeight - 2}
-                stroke="#e0e4e9"
-                strokeWidth={0.5}
-              />
-              <text
-                x={toX(t)}
-                y={scaleHeight - 8}
-                textAnchor="middle"
-                fontSize={7}
-                fill="#5b636a"
-              >
-                {formatValue(t)}
-              </text>
-            </g>
-          ))}
+          {ticks.map((t) => {
+            const tx = labelWidth + t.boxIndex * (boxWidth + gap);
+            return (
+              <g key={t.value}>
+                <line
+                  x1={tx}
+                  y1={scaleHeight - 6}
+                  x2={tx}
+                  y2={scaleHeight - 2}
+                  stroke="#e0e4e9"
+                  strokeWidth={0.5}
+                />
+                <text
+                  x={tx}
+                  y={scaleHeight - 8}
+                  textAnchor="middle"
+                  fontSize={7}
+                  fill="#5b636a"
+                >
+                  {formatValue(t.value)}
+                </text>
+              </g>
+            );
+          })}
         </g>
       )}
 
       {rows.map((row, ri) => {
         const ry = scaleHeight + ri * rowTotalHeight + 2;
         const sorted = [...row.points].sort((a, b) => a.value - b.value);
-
         const highlightedPts = sorted.filter((p) => p.highlighted);
-        const hasHighlighted = highlightedPts.length > 0;
+        const hlMin = highlightedPts.length > 0 ? highlightedPts[0].value : null;
+        const hlMax = highlightedPts.length > 0 ? highlightedPts[highlightedPts.length - 1].value : null;
 
-        const fullMinX = toX(sorted[0].value);
-        const fullMaxX = toX(sorted[sorted.length - 1].value);
+        const fullMin = sorted[0].value;
+        const fullMax = sorted[sorted.length - 1].value;
+
+        const boxes = [];
+        for (let i = 0; i < boxCount; i++) {
+          const boxStart = scaleMin + i * stepSize;
+          const boxEnd = boxStart + stepSize;
+          const boxMid = boxStart + stepSize / 2;
+
+          const inFullRange = boxMid >= fullMin && boxMid <= fullMax;
+          const inHighlightRange = hlMin !== null && hlMax !== null && boxMid >= hlMin && boxMid <= hlMax;
+
+          boxes.push({ index: i, boxStart, boxEnd, inFullRange, inHighlightRange });
+        }
+
+        const firstInRange = boxes.findIndex((b) => b.inFullRange);
+        const lastInRangeRev = [...boxes].reverse().findIndex((b) => b.inFullRange);
+        const lastInRange = lastInRangeRev >= 0 ? boxes.length - 1 - lastInRangeRev : -1;
+
+        const firstHL = boxes.findIndex((b) => b.inHighlightRange);
+        const lastHLRev = [...boxes].reverse().findIndex((b) => b.inHighlightRange);
+        const lastHL = lastHLRev >= 0 ? boxes.length - 1 - lastHLRev : -1;
+        const hasHL = firstHL >= 0 && lastHL >= 0;
 
         return (
           <g key={`row-${ri}`} data-testid={`aligned-strip-row-${ri}`}>
@@ -149,65 +171,44 @@ export function RangeStripAlignedChart({
               </text>
             )}
 
-            <rect
-              x={fullMinX}
-              y={ry}
-              width={Math.max(1, fullMaxX - fullMinX)}
-              height={segmentHeight}
-              fill={baseColor}
-              rx={2}
-            />
+            {hasHL && (
+              <rect
+                x={labelWidth + firstHL * (boxWidth + gap) - 1}
+                y={ry - 1}
+                width={(lastHL - firstHL) * (boxWidth + gap) + boxWidth + 2}
+                height={segmentHeight + 2}
+                fill="none"
+                stroke={highlightColor}
+                strokeWidth={0.5}
+                strokeOpacity={0.25}
+                rx={3}
+                data-testid={`aligned-strip-highlight-${ri}`}
+              />
+            )}
 
-            {hasHighlighted && (() => {
-              const hMin = toX(highlightedPts[0].value);
-              const hMax = toX(highlightedPts[highlightedPts.length - 1].value);
-              return (
-                <rect
-                  x={hMin}
-                  y={ry}
-                  width={Math.max(1, hMax - hMin)}
-                  height={segmentHeight}
-                  fill={highlightColor}
-                  rx={2}
-                  data-testid={`aligned-strip-highlight-${ri}`}
-                />
-              );
-            })()}
-
-            {sorted.map((pt, pi) => {
-              const px = toX(pt.value);
-              const tooltipText = pt.tooltip || (pt.label ? `${pt.label}: ${formatValue(pt.value)}` : formatValue(pt.value));
+            {boxes.map((box) => {
+              if (!box.inFullRange) return null;
+              const sx = labelWidth + box.index * (boxWidth + gap);
+              const fill = box.inHighlightRange ? highlightColor : baseColor;
+              const isFirst = box.index === firstInRange;
+              const isLast = box.index === lastInRange;
+              const rx = isFirst || isLast ? 2 : 0;
+              const tooltip = `${formatValue(box.boxStart)} - ${formatValue(box.boxEnd)}`;
 
               return (
-                <g key={pi}>
-                  <line
-                    x1={px}
-                    y1={ry}
-                    x2={px}
-                    y2={ry + segmentHeight}
-                    stroke={pt.highlighted ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.08)"}
-                    strokeWidth={0.5}
-                  />
+                <g key={box.index} data-testid={`aligned-strip-box-${ri}-${box.index}`}>
                   <rect
-                    x={px - 3}
+                    x={sx}
                     y={ry}
-                    width={6}
+                    width={boxWidth}
                     height={segmentHeight}
-                    fill="transparent"
+                    fill={fill}
+                    rx={rx}
+                    stroke={box.inHighlightRange ? "rgba(255,255,255,0.3)" : "none"}
+                    strokeWidth={box.inHighlightRange ? 0.5 : 0}
                   >
-                    <title>{tooltipText}</title>
+                    <title>{tooltip}</title>
                   </rect>
-                  {pt.label && (
-                    <text
-                      x={px}
-                      y={ry + segmentHeight + 8}
-                      textAnchor="middle"
-                      fontSize={6}
-                      fill="#5b636a"
-                    >
-                      {pt.label}
-                    </text>
-                  )}
                 </g>
               );
             })}
