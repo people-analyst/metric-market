@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
-import type { ChartType, CardBundle } from "@shared/schema";
+import type { ComponentType as AppComponentType, CardBundle } from "@shared/schema";
 import {
   ConfidenceBandChart,
   AlluvialChart,
@@ -27,8 +27,9 @@ import {
   RangeStripAlignedChart,
   InteractiveRangeStripChart,
 } from "@/components/charts";
+import { RangeBuilderControl } from "@/components/controls/RangeBuilderControl";
 
-const CHART_COMPONENT_MAP: Record<ChartType, React.ComponentType<any>> = {
+const CHART_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   confidence_band: ConfidenceBandChart,
   alluvial: AlluvialChart,
   waffle_bar: WaffleBarChart,
@@ -52,12 +53,13 @@ const CHART_COMPONENT_MAP: Record<ChartType, React.ComponentType<any>> = {
   range_strip: RangeStripChart,
   range_strip_aligned: RangeStripAlignedChart,
   interactive_range_strip: InteractiveRangeStripChart,
+  range_builder: RangeBuilderControl,
 };
 
 export interface CardWrapperProps {
   title: string;
   subtitle?: string;
-  chartType?: ChartType;
+  chartType?: AppComponentType;
   bundleId?: string;
   chartProps?: Record<string, any>;
   tags?: string[];
@@ -90,7 +92,7 @@ export function CardWrapper({
     enabled: !!bundleId && !chartType,
   });
 
-  const resolvedChartType = chartType || (bundleId ? bundles.find((b) => b.id === bundleId)?.chartType as ChartType : undefined);
+  const resolvedChartType = chartType || (bundleId ? bundles.find((b) => b.id === bundleId)?.chartType as AppComponentType : undefined);
   const bundle = bundleId ? bundles.find((b) => b.id === bundleId) : undefined;
   const resolvedProps = chartProps || (bundle?.exampleData as Record<string, any>) || {};
 

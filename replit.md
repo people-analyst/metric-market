@@ -7,7 +7,9 @@ Metric Market is the **card workbench** of the People Analytics Toolbox ecosyste
 The core value proposition lies in **standardized, machine-readable card bundles**. These self-contained definitions declare data schemas, configuration options, output representations, documentation, and example data. This approach ensures consistent UI/UX across the ecosystem and facilitates AI agent discovery and automated card assembly. Each bundle uses JSON Schema contracts, allowing spoke applications to discover data requirements, push conforming payloads, and render visualizations without manual integration.
 
 Key capabilities include:
-- 23 distinct D3-powered SVG chart types (including Range Strip, Aligned Range Strip, and Interactive Range Strip for compensation range visualization).
+- 22 distinct D3-powered SVG chart types (including Range Strip and Aligned Range Strip for compensation range visualization).
+- **Range Builder form control** — a dedicated interactive control (not a chart) for compensation range simulation with real-time KPI cards (Cost Impact, Pay Equity, Competitiveness, Employees Affected). Located at `/range-builder` and registered as `range_builder` control type.
+- Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals). See `CHART_TYPES` and `CONTROL_TYPES` in `shared/schema.ts`.
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs.
 - Machine-readable data contracts (`dataSchema`, `configSchema`, `outputSchema`) for inter-application data exchange.
 - Hub-and-spoke integration for cross-application coordination, directive processing, and documentation management.

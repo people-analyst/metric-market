@@ -45,6 +45,14 @@ export const CHART_TYPES = [
 
 export type ChartType = (typeof CHART_TYPES)[number];
 
+export const CONTROL_TYPES = [
+  "range_builder",
+] as const;
+
+export type ControlType = (typeof CONTROL_TYPES)[number];
+
+export type ComponentType = ChartType | ControlType;
+
 export const cardBundles = pgTable("card_bundles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   key: text("key").notNull().unique(),

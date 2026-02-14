@@ -17,6 +17,7 @@ import { CardTypesPage } from "@/pages/CardTypesPage";
 import { MetricDetailPage } from "@/pages/MetricDetailPage";
 import { ChartLibraryPage } from "@/pages/ChartLibraryPage";
 import { WorkbenchPage } from "@/pages/WorkbenchPage";
+import { RangeBuilderPage } from "@/pages/RangeBuilderPage";
 
 function Router() {
   return (
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/metric-detail" component={MetricDetailPage} />
       <Route path="/chart-library" component={ChartLibraryPage} />
       <Route path="/workbench" component={WorkbenchPage} />
+      <Route path="/range-builder" component={RangeBuilderPage} />
       <Route component={NotFound} />
     </Switch>
   );

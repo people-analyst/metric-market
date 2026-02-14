@@ -24,7 +24,6 @@ import {
   StackedAreaChart,
   RangeStripChart,
   RangeStripAlignedChart,
-  InteractiveRangeStripChart,
   TILE_PRESETS,
 } from "@/components/charts";
 import type { TilePreset } from "@/components/charts";
@@ -48,7 +47,6 @@ import type {
   StackedAreaSeries,
   RangeStripRow,
   AlignedRangeRow,
-  InteractiveRangeRow,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -454,27 +452,6 @@ const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
   },
 ];
 
-const INTERACTIVE_RANGE_ROWS: InteractiveRangeRow[] = [
-  {
-    label: "Eng III",
-    rangeMin: 110000,
-    rangeMax: 140000,
-    segments: [],
-  },
-  {
-    label: "Eng IV",
-    rangeMin: 138000,
-    rangeMax: 178000,
-    segments: [],
-  },
-  {
-    label: "Eng V",
-    rangeMin: 175000,
-    rangeMax: 220000,
-    segments: [],
-  },
-];
-
 const STACKED_AREA: StackedAreaSeries[] = [
   { label: "Engineering", values: [120, 130, 110, 140, 100, 80, 150, 120, 180, 140, 100, 130], color: "#232a31" },
   { label: "Sales", values: [80, 100, 120, 90, 110, 130, 100, 120, 80, 110, 100, 90], color: "#5b636a" },
@@ -608,11 +585,6 @@ const CHARTS = [
     title: "Aligned Range Strip",
     description: "Percentile rows (P10-P90) with level markers (P1-P5) placed at their dollar positions on a shared scale",
     component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={450000} />,
-  },
-  {
-    title: "Interactive Range Strip",
-    description: "Click boxes to toggle on/off and experiment with range adjustments on a dollar scale",
-    component: <InteractiveRangeStripChart rows={INTERACTIVE_RANGE_ROWS} stepSize={10000} scaleMin={90000} scaleMax={260000} />,
   },
   {
     title: "Stacked Area",

@@ -1162,11 +1162,11 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
   {
     key: "interactive_range_strip",
     chartType: "interactive_range_strip",
-    displayName: "Interactive Range Strip",
-    description: "Clickable range strip where analysts can toggle individual segments on/off to experiment with range adjustments and see how changes affect coverage.",
+    displayName: "Interactive Range Strip (Legacy)",
+    description: "Legacy chart-based interactive range strip. Superseded by range_builder control type. Kept for backwards compatibility.",
     version: 1,
     category: "Compensation",
-    tags: ["range", "compensation", "interactive", "toggle", "range-builder", "cost-analysis"],
+    tags: ["range", "compensation", "interactive", "legacy"],
     dataSchema: {
       type: "object",
       required: ["rows"],
@@ -1185,11 +1185,10 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
                 items: {
                   type: "object",
                   properties: {
-                    active: { type: "boolean", description: "Whether this box is initially active" },
-                    tooltip: { type: "string", description: "Hover tooltip text" },
+                    active: { type: "boolean" },
+                    tooltip: { type: "string" },
                   },
                 },
-                description: "Optional explicit segment states. If omitted, boxes are generated from rangeMin/rangeMax and the shared scale.",
               },
             },
           },
@@ -1199,39 +1198,167 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
     configSchema: {
       type: "object",
       properties: {
-        activeColor: { type: "string", description: "Color for active segments" },
-        inactiveColor: { type: "string", description: "Color for inactive segments" },
-        segmentHeight: { type: "number", description: "Height of each segment block" },
-        gap: { type: "number", description: "Gap between segments" },
-        showLabels: { type: "boolean", description: "Show row labels" },
-        showCost: { type: "boolean", description: "Show active/total count" },
-        showScale: { type: "boolean", description: "Show dollar scale on top" },
-        stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes)" },
-        scaleMin: { type: "number", description: "Minimum value for the shared scale" },
-        scaleMax: { type: "number", description: "Maximum value for the shared scale" },
-        width: { type: "number" },
+        stepSize: { type: "number" },
+        scaleMin: { type: "number" },
+        scaleMax: { type: "number" },
       },
     },
-    outputSchema: { type: "object", description: "Rendered interactive SVG range strip chart" },
-    defaults: {
-      activeColor: "#0f69ff",
-      inactiveColor: "#e0e4e9",
-      segmentHeight: 22,
-      gap: 2,
-      showLabels: true,
-      showCost: true,
-      showScale: true,
-      stepSize: 10000,
-    },
+    outputSchema: { type: "object", description: "Rendered interactive SVG range strip chart (legacy)" },
+    defaults: { stepSize: 10000 },
     exampleData: {
       rows: [
         { label: "Eng III", rangeMin: 110000, rangeMax: 140000, segments: [] },
-        { label: "Eng IV", rangeMin: 138000, rangeMax: 178000, segments: [] },
-        { label: "Eng V", rangeMin: 175000, rangeMax: 220000, segments: [] },
       ],
     },
-    exampleConfig: { stepSize: 10000, scaleMin: 90000, scaleMax: 260000 },
-    documentation: "Interactive range builder for compensation analysis on a shared dollar scale. Box count is determined by stepSize (e.g., $10K per box). Rows can specify initial ranges via rangeMin/rangeMax dollar values. Click individual boxes to toggle active/inactive and experiment with range widths. Use for range modeling, cost impact analysis, and what-if compensation planning.",
-    infrastructureNotes: "Requires React state management. No D3 dependency.",
+    exampleConfig: { stepSize: 10000 },
+    documentation: "Legacy interactive range strip chart. Use range_builder control type instead for KPI-driven compensation range simulation.",
+    infrastructureNotes: "Superseded by range_builder control.",
+  },
+  {
+    key: "range_builder",
+    chartType: "range_builder",
+    displayName: "Range Builder",
+    description: "Form control for compensation range simulation. Users adjust ranges interactively and see real-time impact on cost, pay equity, market competitiveness, and affected employee counts. Emits change events with updated ranges and KPI calculations.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "form-control", "simulator", "kpi", "cost-analysis", "pay-equity", "competitiveness"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          description: "Compensation range rows. Each row represents a job level with its current range and employee population data.",
+          items: {
+            type: "object",
+            required: ["label", "rangeMin", "rangeMax"],
+            properties: {
+              label: { type: "string", description: "Job level or title label (e.g., 'Eng III')" },
+              rangeMin: { type: "number", description: "Current range minimum in dollars" },
+              rangeMax: { type: "number", description: "Current range maximum in dollars" },
+              currentEmployees: { type: "number", description: "Number of employees in this level. Used for cost impact and KPI calculations." },
+              avgCurrentPay: { type: "number", description: "Average current pay for employees in this level. Used to calculate cost impact when range boundaries move." },
+            },
+          },
+        },
+        marketData: {
+          type: "array",
+          description: "Market benchmark data per row, used for competitiveness ratio calculation.",
+          items: {
+            type: "object",
+            properties: {
+              p50: { type: "number", description: "Market 50th percentile (median) pay for this level" },
+              p75: { type: "number", description: "Market 75th percentile pay for this level" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes). Controls granularity of range adjustments." },
+        scaleMin: { type: "number", description: "Minimum value for the shared dollar scale" },
+        scaleMax: { type: "number", description: "Maximum value for the shared dollar scale" },
+        activeColor: { type: "string", description: "Color for active (in-range) segments" },
+        inactiveColor: { type: "string", description: "Color for inactive (out-of-range) segments" },
+        segmentHeight: { type: "number", description: "Height of each row segment in pixels" },
+        gap: { type: "number", description: "Gap between boxes in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showScale: { type: "boolean", description: "Show dollar scale axis on top" },
+        autoRecalculate: { type: "boolean", description: "If true, KPIs recalculate on every box toggle. If false, requires explicit Recalculate button press." },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Change event emitted when ranges are modified. Contains updated ranges and computed KPIs.",
+      properties: {
+        rows: { type: "array", description: "Original row data" },
+        activeRanges: {
+          type: "array",
+          description: "Current active range per row after user adjustments.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string" },
+              min: { type: "number", description: "New range minimum in dollars" },
+              max: { type: "number", description: "New range maximum in dollars" },
+            },
+          },
+        },
+        kpis: {
+          type: "object",
+          description: "Computed KPI values based on current range configuration.",
+          properties: {
+            totalCostImpact: { type: "number", description: "Net change in total compensation cost (positive = increase)" },
+            costChangePercent: { type: "number", description: "Percentage change in total compensation cost" },
+            payEquityScore: { type: "number", description: "Pay equity score (0-1), measures how centered employees are within their ranges" },
+            payEquityChange: { type: "number", description: "Change in pay equity vs baseline" },
+            competitivenessRatio: { type: "number", description: "Ratio of range midpoints to market P50 (1.0 = at market)" },
+            competitivenessChange: { type: "number", description: "Change in competitiveness vs baseline" },
+            employeesAffected: { type: "number", description: "Number of employees whose pay falls outside the new range boundaries" },
+            totalEmployees: { type: "number", description: "Total employee count across all levels" },
+          },
+        },
+      },
+    },
+    defaults: {
+      stepSize: 10000,
+      activeColor: "#0f69ff",
+      inactiveColor: "#e0e4e9",
+      segmentHeight: 24,
+      gap: 2,
+      showLabels: true,
+      showScale: true,
+      autoRecalculate: true,
+    },
+    exampleData: {
+      rows: [
+        { label: "Eng III", rangeMin: 110000, rangeMax: 150000, currentEmployees: 24, avgCurrentPay: 128000 },
+        { label: "Eng IV", rangeMin: 140000, rangeMax: 190000, currentEmployees: 18, avgCurrentPay: 162000 },
+        { label: "Eng V", rangeMin: 175000, rangeMax: 235000, currentEmployees: 12, avgCurrentPay: 198000 },
+        { label: "Eng VI", rangeMin: 210000, rangeMax: 280000, currentEmployees: 6, avgCurrentPay: 245000 },
+      ],
+      marketData: [
+        { p50: 130000, p75: 148000 },
+        { p50: 165000, p75: 185000 },
+        { p50: 205000, p75: 230000 },
+        { p50: 250000, p75: 275000 },
+      ],
+    },
+    exampleConfig: { stepSize: 10000, scaleMin: 90000, scaleMax: 300000, autoRecalculate: true },
+    documentation: `Range Builder is a form control (not a chart) for interactive compensation range simulation. It provides:
+
+**Purpose:** Allow compensation analysts to visually adjust pay ranges and immediately see the downstream impact on key compensation KPIs.
+
+**KPI Cards (top section):**
+- Cost Impact: Net change in total compensation cost when employees outside new range boundaries are adjusted
+- Pay Equity: How centered employees are within their ranges (0-100%)
+- Competitiveness: Ratio of range midpoints to market P50 benchmarks (100% = at market)
+- Employees Affected: Count of employees whose current pay falls outside the adjusted range
+
+**How it works:**
+1. Each row represents a job level with a compensation range shown as toggleable boxes
+2. Click boxes to extend or shrink the range
+3. KPIs update in real-time (or on button press if autoRecalculate=false)
+4. The onChange callback emits a RangeBuilderChangeEvent with updated ranges and KPIs
+
+**Data wiring:**
+- Input: rows[] with label, rangeMin, rangeMax, currentEmployees, avgCurrentPay
+- Input: marketData[] with p50, p75 per level (for competitiveness calculation)
+- Output: activeRanges[] with adjusted min/max per level
+- Output: kpis{} with totalCostImpact, payEquityScore, competitivenessRatio, employeesAffected
+
+**Integration pattern:**
+- Mount as a form control inside a card or standalone page
+- Wire onChange to update downstream KPI displays, cost models, or approval workflows
+- Use autoRecalculate=true for real-time simulation, false for batch recalculation
+
+**Difference from interactive_range_strip (legacy):**
+- range_builder is a form control with KPI outputs, not just a visualization
+- Includes employee population data for cost calculations
+- Accepts market benchmark data for competitiveness scoring
+- Emits structured change events for downstream consumption`,
+    infrastructureNotes: "React state management with ResizeObserver for responsive layout. No D3 dependency. KPI calculations are client-side. For production use, connect onChange to server-side cost models and pay equity engines.",
   },
 ];

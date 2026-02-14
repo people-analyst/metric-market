@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench, Ruler } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -59,6 +59,11 @@ const componentItems = [
     title: "Metric Detail",
     url: "/metric-detail",
     icon: Target,
+  },
+  {
+    title: "Range Builder",
+    url: "/range-builder",
+    icon: Ruler,
   },
   {
     title: "Chart Library",
