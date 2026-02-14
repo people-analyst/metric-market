@@ -417,33 +417,53 @@ const RANGE_STRIP_ROWS: RangeStripRow[] = [
 
 const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
   {
-    label: "Eng III",
-    points: [
-      { label: "P10", value: 95000 },
-      { label: "P25", value: 110000, highlighted: true },
-      { label: "P50", value: 125000, highlighted: true },
-      { label: "P75", value: 140000, highlighted: true },
-      { label: "P90", value: 160000 },
+    label: "P10",
+    markers: [
+      { label: "P1", value: 95000 },
+      { label: "P2", value: 120000 },
+      { label: "P3", value: 155000 },
+      { label: "P4", value: 190000 },
+      { label: "P5", value: 230000 },
     ],
   },
   {
-    label: "Eng IV",
-    points: [
-      { label: "P10", value: 120000 },
-      { label: "P25", value: 138000, highlighted: true },
-      { label: "P50", value: 158000, highlighted: true },
-      { label: "P75", value: 178000, highlighted: true },
-      { label: "P90", value: 200000 },
+    label: "P25",
+    markers: [
+      { label: "P1", value: 110000 },
+      { label: "P2", value: 138000 },
+      { label: "P3", value: 175000 },
+      { label: "P4", value: 210000 },
+      { label: "P5", value: 255000 },
     ],
   },
   {
-    label: "Eng V",
-    points: [
-      { label: "P10", value: 155000 },
-      { label: "P25", value: 175000, highlighted: true },
-      { label: "P50", value: 198000, highlighted: true },
-      { label: "P75", value: 220000, highlighted: true },
-      { label: "P90", value: 250000 },
+    label: "P50",
+    markers: [
+      { label: "P1", value: 125000 },
+      { label: "P2", value: 158000 },
+      { label: "P3", value: 198000 },
+      { label: "P4", value: 235000 },
+      { label: "P5", value: 280000 },
+    ],
+  },
+  {
+    label: "P75",
+    markers: [
+      { label: "P1", value: 140000 },
+      { label: "P2", value: 178000 },
+      { label: "P3", value: 220000 },
+      { label: "P4", value: 260000 },
+      { label: "P5", value: 310000 },
+    ],
+  },
+  {
+    label: "P90",
+    markers: [
+      { label: "P1", value: 160000 },
+      { label: "P2", value: 200000 },
+      { label: "P3", value: 250000 },
+      { label: "P4", value: 295000 },
+      { label: "P5", value: 345000 },
     ],
   },
 ];
@@ -600,8 +620,8 @@ const CHARTS = [
   },
   {
     title: "Aligned Range Strip",
-    description: "Shared dollar scale with discrete boxes per job level for cross-level comparison",
-    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={10000} />,
+    description: "Percentile rows (P10-P90) with level markers (P1-P5) placed at their dollar positions on a shared scale",
+    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={10000} scaleMin={90000} scaleMax={350000} />,
   },
   {
     title: "Interactive Range Strip",

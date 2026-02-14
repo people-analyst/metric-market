@@ -1056,10 +1056,10 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
     key: "range_strip_aligned",
     chartType: "range_strip_aligned",
     displayName: "Aligned Range Strip",
-    description: "Range strips on a shared numeric scale so percentile positions float independently per row. Enables visual comparison of where different job levels sit on a common compensation axis.",
-    version: 1,
+    description: "Percentile-by-level matrix on a shared dollar scale. Rows represent percentiles (P10, P25, P50, P75, P90) and level markers (P1–P5) are placed inside boxes at their corresponding dollar positions, enabling cross-level comparison at each percentile.",
+    version: 2,
     category: "Compensation",
-    tags: ["range", "compensation", "percentile", "aligned", "pay-structure", "comparison"],
+    tags: ["range", "compensation", "percentile", "aligned", "pay-structure", "comparison", "levels"],
     dataSchema: {
       type: "object",
       required: ["rows"],
@@ -1068,22 +1068,22 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
           type: "array",
           items: {
             type: "object",
-            required: ["label", "points"],
+            required: ["label"],
             properties: {
-              label: { type: "string", description: "Row label (e.g., job level)" },
-              points: {
+              label: { type: "string", description: "Percentile row label (e.g., P10, P25, P50)" },
+              markers: {
                 type: "array",
                 items: {
                   type: "object",
-                  required: ["value"],
+                  required: ["label", "value"],
                   properties: {
-                    label: { type: "string", description: "Point label (e.g., P25, P50)" },
-                    value: { type: "number", description: "Numeric position on the shared scale" },
-                    highlighted: { type: "boolean", description: "Whether this point is within the active range" },
+                    label: { type: "string", description: "Level label placed inside the box (e.g., P1, P2, L3)" },
+                    value: { type: "number", description: "Dollar amount determining which box this level occupies" },
+                    color: { type: "string", description: "Optional override color for this marker box" },
                     tooltip: { type: "string", description: "Hover tooltip text" },
                   },
                 },
-                description: "Data points positioned on a shared numeric scale. Highlighted points define the range band.",
+                description: "Level markers placed at dollar positions on the shared scale. Each marker label appears inside the corresponding box.",
               },
             },
           },
@@ -1095,10 +1095,10 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
     configSchema: {
       type: "object",
       properties: {
-        highlightColor: { type: "string", description: "Color for highlighted range band" },
-        baseColor: { type: "string", description: "Color for the full range background" },
+        markerColor: { type: "string", description: "Default color for marker boxes" },
+        baseColor: { type: "string", description: "Color for empty/unoccupied boxes" },
         segmentHeight: { type: "number", description: "Height of each row strip in pixels" },
-        showLabels: { type: "boolean", description: "Show row labels" },
+        showLabels: { type: "boolean", description: "Show percentile row labels" },
         showScale: { type: "boolean", description: "Show the dollar scale on top" },
         stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes)" },
         scaleMin: { type: "number", description: "Minimum value for the shared scale (auto-detected if omitted)" },
@@ -1106,11 +1106,11 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
         width: { type: "number" },
       },
     },
-    outputSchema: { type: "object", description: "Rendered SVG aligned range strip chart" },
+    outputSchema: { type: "object", description: "Rendered SVG aligned range strip chart with level markers" },
     defaults: {
-      highlightColor: "#0f69ff",
+      markerColor: "#0f69ff",
       baseColor: "#e0e4e9",
-      segmentHeight: 18,
+      segmentHeight: 20,
       showLabels: true,
       showScale: true,
       stepSize: 10000,
@@ -1118,39 +1118,59 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
     exampleData: {
       rows: [
         {
-          label: "Eng III",
-          points: [
-            { label: "P10", value: 95000 },
-            { label: "P25", value: 110000, highlighted: true },
-            { label: "P50", value: 125000, highlighted: true },
-            { label: "P75", value: 140000, highlighted: true },
-            { label: "P90", value: 160000 },
+          label: "P10",
+          markers: [
+            { label: "P1", value: 95000 },
+            { label: "P2", value: 120000 },
+            { label: "P3", value: 155000 },
+            { label: "P4", value: 190000 },
+            { label: "P5", value: 230000 },
           ],
         },
         {
-          label: "Eng IV",
-          points: [
-            { label: "P10", value: 120000 },
-            { label: "P25", value: 138000, highlighted: true },
-            { label: "P50", value: 158000, highlighted: true },
-            { label: "P75", value: 178000, highlighted: true },
-            { label: "P90", value: 200000 },
+          label: "P25",
+          markers: [
+            { label: "P1", value: 110000 },
+            { label: "P2", value: 138000 },
+            { label: "P3", value: 175000 },
+            { label: "P4", value: 210000 },
+            { label: "P5", value: 255000 },
           ],
         },
         {
-          label: "Eng V",
-          points: [
-            { label: "P10", value: 155000 },
-            { label: "P25", value: 175000, highlighted: true },
-            { label: "P50", value: 198000, highlighted: true },
-            { label: "P75", value: 220000, highlighted: true },
-            { label: "P90", value: 250000 },
+          label: "P50",
+          markers: [
+            { label: "P1", value: 125000 },
+            { label: "P2", value: 158000 },
+            { label: "P3", value: 198000 },
+            { label: "P4", value: 235000 },
+            { label: "P5", value: 280000 },
+          ],
+        },
+        {
+          label: "P75",
+          markers: [
+            { label: "P1", value: 140000 },
+            { label: "P2", value: 178000 },
+            { label: "P3", value: 220000 },
+            { label: "P4", value: 260000 },
+            { label: "P5", value: 310000 },
+          ],
+        },
+        {
+          label: "P90",
+          markers: [
+            { label: "P1", value: 160000 },
+            { label: "P2", value: 200000 },
+            { label: "P3", value: 250000 },
+            { label: "P4", value: 295000 },
+            { label: "P5", value: 345000 },
           ],
         },
       ],
     },
-    exampleConfig: { stepSize: 10000 },
-    documentation: "Visualize compensation ranges on a shared dollar scale using discrete boxes. All rows share the same x-axis with box count determined by stepSize (e.g., $10K per box). Use for level-over-level range comparison, market data benchmarking, and pay equity analysis. The box-based display makes it easy to count and compare range widths visually.",
+    exampleConfig: { stepSize: 10000, scaleMin: 90000, scaleMax: 350000 },
+    documentation: "Percentile-by-level matrix visualization. Rows represent percentiles (P10–P90) and level markers (P1–P5) are placed inside the boxes at their dollar positions on a shared scale. Use for cross-level compensation analysis at each percentile, market benchmarking, and pay structure design. stepSize controls box width (e.g., $10K per box).",
     infrastructureNotes: "No D3 dependency.",
   },
   {
