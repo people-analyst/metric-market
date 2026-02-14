@@ -1,0 +1,1445 @@
+import type { InsertCardBundle } from "@shared/schema";
+
+export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
+  {
+    key: "confidence_band",
+    chartType: "confidence_band",
+    displayName: "Confidence Band Chart",
+    description: "Line chart with forecast confidence/uncertainty bands. Shows a central trend line with inner and outer prediction intervals.",
+    version: 1,
+    category: "Forecasting",
+    tags: ["forecast", "uncertainty", "prediction", "time-series"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["x", "y"],
+            properties: {
+              x: { type: "number", description: "X-axis position (e.g. month index, year)" },
+              y: { type: "number", description: "Central value" },
+              lo1: { type: "number", description: "Inner band lower bound" },
+              hi1: { type: "number", description: "Inner band upper bound" },
+              lo2: { type: "number", description: "Outer band lower bound" },
+              hi2: { type: "number", description: "Outer band upper bound" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        lineColor: { type: "string", description: "Color of the central line" },
+        bandColors: { type: "array", items: { type: "string" }, minItems: 2, maxItems: 2, description: "[innerBandColor, outerBandColor]" },
+        xLabel: { type: "string", description: "X-axis label" },
+        yLabel: { type: "string", description: "Y-axis label" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG chart with confidence bands" },
+    defaults: { lineColor: "#5b636a", bandColors: ["#a3adb8", "#e0e4e9"] },
+    exampleData: {
+      data: [
+        { x: 0, y: 50, lo1: 45, hi1: 55, lo2: 40, hi2: 60 },
+        { x: 1, y: 55, lo1: 48, hi1: 62, lo2: 42, hi2: 68 },
+        { x: 2, y: 58, lo1: 49, hi1: 67, lo2: 43, hi2: 73 },
+        { x: 3, y: 62, lo1: 50, hi1: 74, lo2: 44, hi2: 80 },
+      ],
+    },
+    exampleConfig: { xLabel: "Quarter", yLabel: "Attrition Rate (%)" },
+    documentation: "Use for metric forecasting with uncertainty. Supply actual + predicted values with confidence intervals. Inner band (lo1/hi1) typically represents 1-sigma, outer band (lo2/hi2) represents 2-sigma. AI agents: POST data with x as time index, y as forecast center, and band bounds.",
+    infrastructureNotes: "Requires D3.js for rendering. Data payloads pushed via POST /api/cards/:id/data.",
+  },
+  {
+    key: "alluvial",
+    chartType: "alluvial",
+    displayName: "Alluvial / Flow Chart",
+    description: "Flow/Sankey diagram showing how categories redistribute between two time periods or states.",
+    version: 1,
+    category: "Flow & Movement",
+    tags: ["flow", "sankey", "movement", "redistribution", "transitions"],
+    dataSchema: {
+      type: "object",
+      required: ["flows"],
+      properties: {
+        flows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["from", "to", "value"],
+            properties: {
+              from: { type: "string", description: "Source category" },
+              to: { type: "string", description: "Target category" },
+              value: { type: "number", description: "Flow magnitude" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        leftLabel: { type: "string", description: "Label for left (source) column" },
+        rightLabel: { type: "string", description: "Label for right (target) column" },
+        colors: { type: "object", additionalProperties: { type: "string" }, description: "Map of category name to color" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG alluvial diagram" },
+    defaults: { leftLabel: "Before", rightLabel: "After" },
+    exampleData: {
+      flows: [
+        { from: "Engineering", to: "Engineering", value: 80 },
+        { from: "Engineering", to: "Product", value: 15 },
+        { from: "Engineering", to: "Left", value: 5 },
+        { from: "Product", to: "Product", value: 60 },
+        { from: "Product", to: "Engineering", value: 10 },
+      ],
+    },
+    exampleConfig: { leftLabel: "Q1 2025", rightLabel: "Q1 2026" },
+    documentation: "Visualize talent movement, org restructuring, or status transitions. Each flow has a source, target, and magnitude. Colors are auto-assigned by category or can be overridden.",
+    infrastructureNotes: "Requires D3.js. No geographic data needed.",
+  },
+  {
+    key: "waffle_bar",
+    chartType: "waffle_bar",
+    displayName: "Waffle Bar Chart",
+    description: "Stacked bars made of countable grid cells showing composition within groups.",
+    version: 1,
+    category: "Composition",
+    tags: ["composition", "breakdown", "proportion", "grid"],
+    dataSchema: {
+      type: "object",
+      required: ["groups"],
+      properties: {
+        groups: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "segments"],
+            properties: {
+              label: { type: "string" },
+              segments: { type: "array", items: { type: "object", required: ["label", "count"], properties: { label: { type: "string" }, count: { type: "number" }, color: { type: "string" } } } },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        cellSize: { type: "number" },
+        cols: { type: "number", description: "Cells per row" },
+        defaultColors: { type: "array", items: { type: "string" } },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG waffle bar chart" },
+    defaults: { cellSize: 12, cols: 4, defaultColors: ["#0f69ff", "#5b636a", "#a3adb8"] },
+    exampleData: {
+      groups: [
+        { label: "Dept A", segments: [{ label: "Full-time", count: 8 }, { label: "Contract", count: 3 }] },
+        { label: "Dept B", segments: [{ label: "Full-time", count: 12 }, { label: "Contract", count: 2 }] },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Shows workforce composition by department or category. Each cell represents one unit. Good for headcount breakdowns where exact counts matter.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "bullet_bar",
+    chartType: "bullet_bar",
+    displayName: "Bullet Bar Chart",
+    description: "Horizontal bars with range backgrounds, value bar, and target marker for goal tracking.",
+    version: 1,
+    category: "Performance",
+    tags: ["target", "goal", "benchmark", "kpi"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "ranges", "value", "marker"],
+            properties: {
+              label: { type: "string" },
+              ranges: { type: "array", items: { type: "number" }, description: "Background range thresholds [poor, satisfactory, good]" },
+              value: { type: "number", description: "Actual value" },
+              marker: { type: "number", description: "Target/goal marker" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        rangeColors: { type: "array", items: { type: "string" } },
+        valueColor: { type: "string" },
+        markerColor: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG bullet bar chart" },
+    defaults: { rangeColors: ["#e0e4e9", "#a3adb8", "#5b636a"], valueColor: "#5b636a", markerColor: "#232a31" },
+    exampleData: {
+      data: [
+        { label: "Retention", ranges: [60, 80, 100], value: 85, marker: 90 },
+        { label: "Engagement", ranges: [40, 70, 100], value: 72, marker: 80 },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Compare actual metric values against targets and qualitative ranges. Ideal for KPI dashboards where you need to show actual vs target vs threshold bands.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "slope_comparison",
+    chartType: "slope_comparison",
+    displayName: "Slope Comparison Chart",
+    description: "Period-over-period growth with filled slope area and percentage change per item.",
+    version: 1,
+    category: "Comparison",
+    tags: ["comparison", "growth", "change", "period-over-period"],
+    dataSchema: {
+      type: "object",
+      required: ["items"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "startValue", "endValue"],
+            properties: {
+              label: { type: "string" },
+              startValue: { type: "number" },
+              endValue: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        accentColor: { type: "string" },
+        startYear: { type: "string" },
+        endYear: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG slope comparison chart" },
+    defaults: { accentColor: "#0f69ff", startYear: "'20", endYear: "'25" },
+    exampleData: {
+      items: [
+        { label: "Engineering", startValue: 120, endValue: 185 },
+        { label: "Sales", startValue: 90, endValue: 75 },
+        { label: "Operations", startValue: 60, endValue: 82 },
+      ],
+    },
+    exampleConfig: { startYear: "2024", endYear: "2025" },
+    documentation: "Show how metrics changed between two time periods. Each item gets a slope line connecting start to end values with a filled area and computed % change.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "bubble_scatter",
+    chartType: "bubble_scatter",
+    displayName: "Bubble Scatter Chart",
+    description: "Scatter plot with sized/colored bubbles for multi-dimensional comparison.",
+    version: 1,
+    category: "Distribution",
+    tags: ["scatter", "multi-dimensional", "correlation", "bubbles"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["x", "y", "size"],
+            properties: {
+              x: { type: "number" },
+              y: { type: "number" },
+              size: { type: "number", description: "Bubble radius multiplier" },
+              label: { type: "string" },
+              color: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        xLabel: { type: "string" },
+        yLabel: { type: "string" },
+        maxRadius: { type: "number" },
+        defaultColors: { type: "array", items: { type: "string" } },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG bubble scatter chart" },
+    defaults: { maxRadius: 22 },
+    exampleData: {
+      data: [
+        { x: 75, y: 85, size: 120, label: "Engineering" },
+        { x: 60, y: 90, size: 80, label: "Marketing" },
+        { x: 90, y: 70, size: 200, label: "Sales" },
+      ],
+    },
+    exampleConfig: { xLabel: "Engagement Score", yLabel: "Retention Rate %" },
+    documentation: "Plot three dimensions: x-axis, y-axis, and bubble size. Each bubble can be labeled and colored. Use for comparing teams/departments across multiple metrics simultaneously.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "box_whisker",
+    chartType: "box_whisker",
+    displayName: "Box & Whisker Chart",
+    description: "Candlestick-style distribution chart showing min, Q1, median, Q3, max spread.",
+    version: 1,
+    category: "Distribution",
+    tags: ["distribution", "statistics", "quartiles", "spread"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "min", "q1", "median", "q3", "max"],
+            properties: {
+              label: { type: "string" },
+              min: { type: "number" },
+              q1: { type: "number" },
+              median: { type: "number" },
+              q3: { type: "number" },
+              max: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        boxColor: { type: "string" },
+        whiskerColor: { type: "string" },
+        medianColor: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG box and whisker chart" },
+    defaults: { boxColor: "#0f69ff", whiskerColor: "#232a31", medianColor: "#232a31" },
+    exampleData: {
+      data: [
+        { label: "Dept A", min: 35, q1: 50, median: 65, q3: 80, max: 95 },
+        { label: "Dept B", min: 40, q1: 55, median: 70, q3: 82, max: 92 },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Show statistical distribution of a metric across groups. Each box shows the interquartile range with whiskers extending to min/max. Pre-calculate the 5-number summary before pushing data.",
+    infrastructureNotes: "Requires D3.js. Data must be pre-aggregated into min/q1/median/q3/max.",
+  },
+  {
+    key: "strip_timeline",
+    chartType: "strip_timeline",
+    displayName: "Strip Timeline Chart",
+    description: "Horizontal strip of cells with highlighted colored blocks showing event patterns over time.",
+    version: 1,
+    category: "Time Series",
+    tags: ["timeline", "events", "patterns", "activity"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "cells"],
+            properties: {
+              label: { type: "string" },
+              cells: { type: "array", items: { type: "object", properties: { color: { type: "string" }, label: { type: "string" } } } },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        cellSize: { type: "number" },
+        gap: { type: "number" },
+        defaultColor: { type: "string" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG strip timeline chart" },
+    defaults: { cellSize: 14, gap: 2, defaultColor: "#e0e4e9" },
+    exampleData: {
+      rows: [
+        { label: "Jan", cells: [{ color: "#0f69ff" }, {}, { color: "#5b636a" }, {}, {}] },
+        { label: "Feb", cells: [{}, { color: "#0f69ff" }, {}, {}, { color: "#0f69ff" }] },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Visualize event occurrence patterns over time periods. Each cell can be empty (default color) or highlighted. Use for showing hiring activity, incident patterns, or training schedules.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "waffle_percent",
+    chartType: "waffle_percent",
+    displayName: "Waffle Percent Chart",
+    description: "Single 10x10 waffle grid showing a percentage as filled cells.",
+    version: 1,
+    category: "Proportion",
+    tags: ["percentage", "proportion", "single-metric"],
+    dataSchema: {
+      type: "object",
+      required: ["percent"],
+      properties: {
+        percent: { type: "number", minimum: 0, maximum: 100, description: "Percentage to fill (0-100)" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        rows: { type: "number" },
+        cols: { type: "number" },
+        cellSize: { type: "number" },
+        gap: { type: "number" },
+        filledColor: { type: "string" },
+        emptyColor: { type: "string" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG waffle percentage grid" },
+    defaults: { rows: 10, cols: 10, filledColor: "#0f69ff", emptyColor: "#e0e4e9" },
+    exampleData: { percent: 73 },
+    exampleConfig: {},
+    documentation: "Simple single-metric visualization showing a percentage. Each filled cell represents 1%. Great for engagement scores, completion rates, or representation percentages.",
+    infrastructureNotes: "Requires D3.js. Simplest data input of all bundles — just one number.",
+  },
+  {
+    key: "heatmap",
+    chartType: "heatmap",
+    displayName: "Heatmap Chart",
+    description: "Color-intensity matrix for cross-dimensional comparison.",
+    version: 1,
+    category: "Distribution",
+    tags: ["matrix", "correlation", "cross-dimensional", "intensity"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: { type: "array", items: { type: "array", items: { type: "number" } }, description: "2D matrix of values [rows][cols]" },
+        rowLabels: { type: "array", items: { type: "string" } },
+        colLabels: { type: "array", items: { type: "string" } },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        colorRange: { type: "array", items: { type: "string" }, minItems: 3, maxItems: 3, description: "[low, mid, high] colors" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG heatmap" },
+    defaults: { colorRange: ["#e0e4e9", "#0f69ff", "#232a31"] },
+    exampleData: {
+      data: [[85, 72, 90], [60, 88, 75], [92, 68, 80]],
+      rowLabels: ["Q1", "Q2", "Q3"],
+      colLabels: ["Engagement", "Retention", "Performance"],
+    },
+    exampleConfig: {},
+    documentation: "Display a matrix of values with color intensity encoding. Rows and columns represent two dimensions (e.g., departments x metrics). Value determines color from cool to hot.",
+    infrastructureNotes: "Requires D3.js. Data is a 2D number array.",
+  },
+  {
+    key: "strip_dot",
+    chartType: "strip_dot",
+    displayName: "Strip Dot Chart",
+    description: "Scattered colored squares across categorical rows for event positioning.",
+    version: 1,
+    category: "Events",
+    tags: ["events", "categorical", "scatter", "activity"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "events"],
+            properties: {
+              label: { type: "string" },
+              events: { type: "array", items: { type: "object", required: ["position"], properties: { position: { type: "number" }, color: { type: "string" }, label: { type: "string" } } } },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        dotSize: { type: "number" },
+        defaultColors: { type: "array", items: { type: "string" } },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG strip dot chart" },
+    defaults: { dotSize: 8 },
+    exampleData: {
+      rows: [
+        { label: "Team A", events: [{ position: 10 }, { position: 30 }, { position: 70 }] },
+        { label: "Team B", events: [{ position: 20 }, { position: 50 }] },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Show event occurrences along a continuous axis per category. Each row is a category, each dot is an event positioned by its value. Good for incident timelines, tenure distributions.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "multi_line",
+    chartType: "multi_line",
+    displayName: "Multi-Line Chart",
+    description: "Multiple time series lines with optional reference line and legend.",
+    version: 1,
+    category: "Time Series",
+    tags: ["time-series", "trend", "comparison", "multi-metric"],
+    dataSchema: {
+      type: "object",
+      required: ["series"],
+      properties: {
+        series: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "values"],
+            properties: {
+              label: { type: "string" },
+              values: { type: "array", items: { type: "number" } },
+              color: { type: "string" },
+            },
+          },
+        },
+        xLabels: { type: "array", items: { type: "string" } },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        referenceLine: { type: "number", description: "Optional horizontal reference line value" },
+        defaultColors: { type: "array", items: { type: "string" } },
+        yLabel: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG multi-line chart" },
+    defaults: {},
+    exampleData: {
+      series: [
+        { label: "Attrition", values: [12, 14, 11, 13, 15, 12] },
+        { label: "Hiring", values: [20, 18, 22, 19, 25, 28] },
+      ],
+      xLabels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    },
+    exampleConfig: { yLabel: "Rate (%)" },
+    documentation: "Compare multiple metrics over time. Each series is a named line with sequential values. Optional reference line for targets/benchmarks. X-labels align to value indices.",
+    infrastructureNotes: "Requires D3.js. Most versatile time-series chart.",
+  },
+  {
+    key: "tile_cartogram",
+    chartType: "tile_cartogram",
+    displayName: "Tile Cartogram Chart",
+    description: "Geographic tile/cartogram map with color-coded squares positioned by row/col grid.",
+    version: 1,
+    category: "Geographic",
+    tags: ["geographic", "map", "regional", "spatial"],
+    dataSchema: {
+      type: "object",
+      required: ["tiles"],
+      properties: {
+        tiles: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["id", "label", "value", "row", "col"],
+            properties: {
+              id: { type: "string" },
+              label: { type: "string" },
+              value: { type: "number" },
+              row: { type: "number" },
+              col: { type: "number" },
+            },
+          },
+        },
+        sectionLabels: { type: "object", additionalProperties: { type: "string" }, description: "Map of row number to section header label" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        colorRange: { type: "array", items: { type: "string" } },
+        tileSize: { type: "number" },
+        gap: { type: "number" },
+        width: { type: "number" },
+        height: { type: "number" },
+        preset: { type: "string", description: "Use a geographic preset: us_states, north_america, south_america, emea, apac, regions" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG tile cartogram" },
+    defaults: {},
+    exampleData: {
+      tiles: [
+        { id: "CA", label: "CA", value: 85, row: 4, col: 0 },
+        { id: "TX", label: "TX", value: 72, row: 6, col: 3 },
+        { id: "NY", label: "NY", value: 90, row: 2, col: 9 },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Display metric values geographically using a grid-based tile map. Pre-staged presets available for US states, N. America, S. America, EMEA, APAC, and macro Regions. Use presets or define custom tile positions.",
+    infrastructureNotes: "Requires D3.js. Geographic presets in tilePresets.ts.",
+  },
+  {
+    key: "timeline_milestone",
+    chartType: "timeline_milestone",
+    displayName: "Timeline Milestone Chart",
+    description: "Labeled event markers at varying heights along a horizontal time axis.",
+    version: 1,
+    category: "Events",
+    tags: ["milestones", "events", "timeline", "key-dates"],
+    dataSchema: {
+      type: "object",
+      required: ["milestones"],
+      properties: {
+        milestones: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "position"],
+            properties: {
+              label: { type: "string" },
+              position: { type: "number", description: "Position along the axis (0-100)" },
+              height: { type: "number", description: "Visual height of the marker stem" },
+              color: { type: "string" },
+            },
+          },
+        },
+        xLabels: { type: "array", items: { type: "string" } },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        defaultColors: { type: "array", items: { type: "string" } },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG timeline milestone chart" },
+    defaults: {},
+    exampleData: {
+      milestones: [
+        { label: "Kickoff", position: 10, height: 40 },
+        { label: "Review", position: 45, height: 60 },
+        { label: "Launch", position: 85, height: 50 },
+      ],
+      xLabels: ["Jan", "Apr", "Jul", "Oct"],
+    },
+    exampleConfig: {},
+    documentation: "Show key events/milestones along a timeline. Heights can vary to indicate importance or stagger labels. Use for project milestones, policy changes, or program launches.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "control",
+    chartType: "control",
+    displayName: "Control Chart (SPC)",
+    description: "Statistical process control chart with UCL/LCL bands and sigma zones.",
+    version: 1,
+    category: "Quality",
+    tags: ["spc", "quality", "control-limits", "process"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: { type: "array", items: { type: "number" }, description: "Sequential observations" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        lineColor: { type: "string" },
+        bandColors: { type: "array", items: { type: "string" }, description: "[sigma1Color, sigma2Color, sigma3Color]" },
+        xLabel: { type: "string" },
+        yLabel: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG control chart with auto-calculated control limits" },
+    defaults: {},
+    exampleData: { data: [72, 75, 68, 74, 71, 76, 73, 69, 77, 72, 74, 70] },
+    exampleConfig: { xLabel: "Month", yLabel: "Score" },
+    documentation: "Monitor metric stability with statistical control limits. Automatically calculates mean, UCL, LCL, and sigma zones. Points outside control limits signal process changes. Supply raw sequential observations.",
+    infrastructureNotes: "Requires D3.js. Control limits are computed from the data.",
+  },
+  {
+    key: "dendrogram",
+    chartType: "dendrogram",
+    displayName: "Dendrogram Chart",
+    description: "Hierarchical clustering tree with branching structure.",
+    version: 1,
+    category: "Hierarchy",
+    tags: ["hierarchy", "clustering", "tree", "organizational"],
+    dataSchema: {
+      type: "object",
+      required: ["root"],
+      properties: {
+        root: {
+          type: "object",
+          required: ["label"],
+          properties: {
+            label: { type: "string" },
+            value: { type: "number" },
+            children: { type: "array", description: "Recursive tree nodes" },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        lineColor: { type: "string" },
+        labelColor: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG dendrogram" },
+    defaults: { lineColor: "#5b636a", labelColor: "#232a31" },
+    exampleData: {
+      root: {
+        label: "Org",
+        children: [
+          { label: "Engineering", children: [{ label: "Frontend" }, { label: "Backend" }] },
+          { label: "Product", children: [{ label: "Design" }, { label: "PM" }] },
+        ],
+      },
+    },
+    exampleConfig: {},
+    documentation: "Visualize hierarchical structures: org charts, skill taxonomies, cluster analysis results. Recursive tree structure with label and optional value at each node.",
+    infrastructureNotes: "Requires D3.js. Recursive data structure.",
+  },
+  {
+    key: "radial_bar",
+    chartType: "radial_bar",
+    displayName: "Radial Bar Chart",
+    description: "Concentric arc bars for proportional comparison with color-coded legend.",
+    version: 1,
+    category: "Proportion",
+    tags: ["proportion", "comparison", "radial", "gauge"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "value"],
+            properties: {
+              label: { type: "string" },
+              value: { type: "number" },
+              color: { type: "string" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        maxValue: { type: "number" },
+        defaultColors: { type: "array", items: { type: "string" } },
+        trackColor: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG radial bar chart" },
+    defaults: { defaultColors: ["#0f69ff", "#5b636a", "#232a31", "#a3adb8"], trackColor: "#e0e4e9" },
+    exampleData: {
+      data: [
+        { label: "Engagement", value: 82 },
+        { label: "Retention", value: 91 },
+        { label: "Satisfaction", value: 76 },
+      ],
+    },
+    exampleConfig: { maxValue: 100 },
+    documentation: "Compare proportional values as concentric arcs. Each bar wraps around the center. Legend below identifies each ring by color. Good for comparing 2-5 related percentages.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "bump",
+    chartType: "bump",
+    displayName: "Bump Chart",
+    description: "Rank change visualization with crossing lines and value circles.",
+    version: 1,
+    category: "Ranking",
+    tags: ["ranking", "rank-change", "competition", "position"],
+    dataSchema: {
+      type: "object",
+      required: ["items"],
+      properties: {
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "startRank", "endRank", "startValue", "endValue"],
+            properties: {
+              label: { type: "string" },
+              startRank: { type: "number" },
+              endRank: { type: "number" },
+              startValue: { type: "number" },
+              endValue: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        startYear: { type: "string" },
+        endYear: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG bump chart" },
+    defaults: { startYear: "'24", endYear: "'25" },
+    exampleData: {
+      items: [
+        { label: "Engineering", startRank: 1, endRank: 2, startValue: 92, endValue: 88 },
+        { label: "Sales", startRank: 3, endRank: 1, startValue: 78, endValue: 94 },
+        { label: "Marketing", startRank: 2, endRank: 3, startValue: 85, endValue: 82 },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Show rank changes between two periods. Lines cross to show position swaps. Circles show actual values at each endpoint. Good for team performance rankings, metric leaderboards.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "sparkline_rows",
+    chartType: "sparkline_rows",
+    displayName: "Sparkline Rows Chart",
+    description: "Labeled rows with individual sparklines for quick multi-metric comparison.",
+    version: 1,
+    category: "Time Series",
+    tags: ["sparkline", "overview", "multi-metric", "compact"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "value", "data"],
+            properties: {
+              label: { type: "string" },
+              value: { type: "string", description: "Current value displayed as text" },
+              data: { type: "array", items: { type: "number" }, description: "Sequential values for the sparkline" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        lineColor: { type: "string" },
+        rowHeight: { type: "number" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG sparkline rows" },
+    defaults: { lineColor: "#5b636a", rowHeight: 48 },
+    exampleData: {
+      rows: [
+        { label: "Attrition", value: "12.3%", data: [12, 14, 11, 13, 15, 12, 12.3] },
+        { label: "Engagement", value: "78", data: [72, 75, 73, 76, 77, 78, 78] },
+        { label: "Headcount", value: "1,245", data: [1100, 1150, 1180, 1200, 1220, 1240, 1245] },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Compact overview of multiple metrics with trend sparklines. Each row shows a label, current value, and mini line chart. Ideal for dashboard summaries and watchlists.",
+    infrastructureNotes: "Requires D3.js. Most compact multi-metric view.",
+  },
+  {
+    key: "stacked_area",
+    chartType: "stacked_area",
+    displayName: "Stacked Area Chart",
+    description: "Layered filled areas showing composition over time.",
+    version: 1,
+    category: "Composition",
+    tags: ["composition", "time-series", "stacked", "trend"],
+    dataSchema: {
+      type: "object",
+      required: ["series"],
+      properties: {
+        series: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "values"],
+            properties: {
+              label: { type: "string" },
+              values: { type: "array", items: { type: "number" } },
+              color: { type: "string" },
+            },
+          },
+        },
+        xLabels: { type: "array", items: { type: "string" } },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        defaultColors: { type: "array", items: { type: "string" } },
+        xLabel: { type: "string" },
+        yLabel: { type: "string" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG stacked area chart" },
+    defaults: { defaultColors: ["#232a31", "#5b636a", "#a3adb8", "#0f69ff"] },
+    exampleData: {
+      series: [
+        { label: "Full-time", values: [800, 820, 850, 880, 900, 920] },
+        { label: "Contract", values: [120, 130, 125, 140, 150, 145] },
+        { label: "Intern", values: [30, 25, 40, 35, 45, 50] },
+      ],
+      xLabels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
+    },
+    exampleConfig: { yLabel: "Headcount" },
+    documentation: "Show how total composition changes over time. Each layer represents a category stacking on previous ones. Use for workforce composition trends, budget allocation over time.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "range_strip",
+    chartType: "range_strip",
+    displayName: "Range Strip Chart",
+    description: "Sequential rectangular blocks with highlighting to visualize ranges. Blocks represent percentiles, quartiles, or custom slices with highlighted segments forming a contiguous range.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "percentile", "quartile", "distribution", "pay-structure"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "segments"],
+            properties: {
+              label: { type: "string", description: "Row label (e.g., job title, department, grade)" },
+              segments: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string", description: "Segment label (e.g., P10, Q1, $50K)" },
+                    value: { type: "number", description: "Numeric value for the segment" },
+                    highlighted: { type: "boolean", description: "Whether this segment is part of the active range" },
+                    color: { type: "string", description: "Override color for this segment" },
+                    tooltip: { type: "string", description: "Hover tooltip text" },
+                  },
+                },
+                description: "Sequential blocks forming the strip. Highlighted segments define the range.",
+              },
+              rangeStart: { type: "number", description: "Index of the first highlighted segment (auto-detected if omitted)" },
+              rangeEnd: { type: "number", description: "Index of the last highlighted segment (auto-detected if omitted)" },
+              markerPosition: { type: "number", description: "Segment index for a reference marker (e.g., current position, MRP)" },
+              markerLabel: { type: "string", description: "Label for the reference marker" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        highlightColor: { type: "string", description: "Color for highlighted range segments" },
+        baseColor: { type: "string", description: "Color for non-highlighted segments" },
+        segmentHeight: { type: "number", description: "Height of each segment block in pixels" },
+        gap: { type: "number", description: "Gap between segments in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showValues: { type: "boolean", description: "Show range fraction on the right" },
+        showScale: { type: "boolean", description: "Show dollar scale on top" },
+        stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes)" },
+        scaleMin: { type: "number", description: "Minimum value for the shared scale (auto-detected if omitted)" },
+        scaleMax: { type: "number", description: "Maximum value for the shared scale (auto-detected if omitted)" },
+        labelWidth: { type: "number", description: "Width allocated for row labels" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG range strip chart" },
+    defaults: {
+      highlightColor: "#0f69ff",
+      baseColor: "#e0e4e9",
+      segmentHeight: 18,
+      gap: 2,
+      showLabels: true,
+      showValues: true,
+      showScale: true,
+      stepSize: 10000,
+    },
+    exampleData: {
+      rows: [
+        {
+          label: "Eng IC",
+          segments: [
+            { value: 95000, highlighted: false },
+            { value: 110000, highlighted: true },
+            { value: 125000, highlighted: true },
+            { value: 140000, highlighted: true },
+            { value: 160000, highlighted: false },
+          ],
+        },
+        {
+          label: "Eng Mgr",
+          segments: [
+            { value: 120000, highlighted: false },
+            { value: 155000, highlighted: true },
+            { value: 175000, highlighted: true },
+            { value: 195000, highlighted: true },
+            { value: 210000, highlighted: false },
+          ],
+        },
+        {
+          label: "Eng Dir",
+          segments: [
+            { value: 150000, highlighted: false },
+            { value: 180000, highlighted: true },
+            { value: 210000, highlighted: true },
+            { value: 240000, highlighted: true },
+            { value: 270000, highlighted: false },
+          ],
+        },
+      ],
+    },
+    exampleConfig: { stepSize: 10000 },
+    documentation: "Visualize pay ranges on a shared dollar scale. Each row shows discrete boxes where box count is determined by the stepSize (e.g., $10K per box). Highlighted boxes form the active range. Use for pay structure visualization, market positioning, range overlap analysis, and level-over-level comparison. The shared scale enables direct visual comparison across roles.",
+    infrastructureNotes: "Designed for compensation range visualization. No D3 dependency.",
+  },
+  {
+    key: "range_strip_aligned",
+    chartType: "range_strip_aligned",
+    displayName: "Aligned Range Strip",
+    description: "Percentile-by-level matrix on a shared dollar scale. Rows represent percentiles (P10, P25, P50, P75, P90) and level markers (P1–P5) are placed inside boxes at their corresponding dollar positions, enabling cross-level comparison at each percentile.",
+    version: 2,
+    category: "Compensation",
+    tags: ["range", "compensation", "percentile", "aligned", "pay-structure", "comparison", "levels"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label"],
+            properties: {
+              label: { type: "string", description: "Percentile row label (e.g., P10, P25, P50)" },
+              markers: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["label", "value"],
+                  properties: {
+                    label: { type: "string", description: "Level label placed inside the box (e.g., P1, P2, L3)" },
+                    value: { type: "number", description: "Dollar amount determining which box this level occupies" },
+                    color: { type: "string", description: "Optional override color for this marker box" },
+                    tooltip: { type: "string", description: "Hover tooltip text" },
+                  },
+                },
+                description: "Level markers placed at dollar positions on the shared scale. Each marker label appears inside the corresponding box.",
+              },
+            },
+          },
+        },
+        scaleMin: { type: "number", description: "Minimum value for the shared scale (auto-detected if omitted)" },
+        scaleMax: { type: "number", description: "Maximum value for the shared scale (auto-detected if omitted)" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        markerColor: { type: "string", description: "Default color for marker boxes" },
+        baseColor: { type: "string", description: "Color for empty/unoccupied boxes" },
+        segmentHeight: { type: "number", description: "Height of each row strip in pixels" },
+        showLabels: { type: "boolean", description: "Show percentile row labels" },
+        showScale: { type: "boolean", description: "Show the dollar scale on top" },
+        stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes)" },
+        scaleMin: { type: "number", description: "Minimum value for the shared scale (auto-detected if omitted)" },
+        scaleMax: { type: "number", description: "Maximum value for the shared scale (auto-detected if omitted)" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG aligned range strip chart with level markers" },
+    defaults: {
+      markerColor: "#0f69ff",
+      baseColor: "#e0e4e9",
+      segmentHeight: 20,
+      showLabels: true,
+      showScale: true,
+      stepSize: 25000,
+    },
+    exampleData: {
+      rows: [
+        {
+          label: "P10",
+          markers: [
+            { label: "P1", value: 62000 },
+            { label: "P2", value: 88000 },
+            { label: "P3", value: 115000 },
+            { label: "P4", value: 150000 },
+            { label: "P5", value: 188000 },
+            { label: "P6", value: 240000 },
+            { label: "P7", value: 310000 },
+          ],
+        },
+        {
+          label: "P50",
+          markers: [
+            { label: "P1", value: 82000 },
+            { label: "P2", value: 112000 },
+            { label: "P3", value: 148000 },
+            { label: "P4", value: 190000 },
+            { label: "P5", value: 238000 },
+            { label: "P6", value: 298000 },
+            { label: "P7", value: 380000 },
+          ],
+        },
+        {
+          label: "P90",
+          markers: [
+            { label: "P1", value: 105000 },
+            { label: "P2", value: 140000 },
+            { label: "P3", value: 185000 },
+            { label: "P4", value: 238000 },
+            { label: "P5", value: 295000 },
+            { label: "P6", value: 370000 },
+            { label: "P7", value: 462000 },
+          ],
+        },
+      ],
+    },
+    exampleConfig: { stepSize: 25000, scaleMin: 50000, scaleMax: 475000 },
+    documentation: "Percentile-by-level matrix visualization. Rows represent percentiles (P10–P90) and level markers (P1–P5) are placed inside the boxes at their dollar positions on a shared scale. Use for cross-level compensation analysis at each percentile, market benchmarking, and pay structure design. stepSize controls box width (e.g., $10K per box).",
+    infrastructureNotes: "No D3 dependency.",
+  },
+  {
+    key: "interactive_range_strip",
+    chartType: "interactive_range_strip",
+    displayName: "Interactive Range Strip (Legacy)",
+    description: "Legacy chart-based interactive range strip. Superseded by range_builder control type. Kept for backwards compatibility.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "interactive", "legacy"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label"],
+            properties: {
+              label: { type: "string", description: "Row label (e.g., job title)" },
+              rangeMin: { type: "number", description: "Dollar value for the start of the initial active range" },
+              rangeMax: { type: "number", description: "Dollar value for the end of the initial active range" },
+              segments: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    active: { type: "boolean" },
+                    tooltip: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        stepSize: { type: "number" },
+        scaleMin: { type: "number" },
+        scaleMax: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered interactive SVG range strip chart (legacy)" },
+    defaults: { stepSize: 10000 },
+    exampleData: {
+      rows: [
+        { label: "Eng III", rangeMin: 110000, rangeMax: 140000, segments: [] },
+      ],
+    },
+    exampleConfig: { stepSize: 10000 },
+    documentation: "Legacy interactive range strip chart. Use range_builder control type instead for KPI-driven compensation range simulation.",
+    infrastructureNotes: "Superseded by range_builder control.",
+  },
+  {
+    key: "range_builder",
+    chartType: "range_builder",
+    displayName: "Range Builder",
+    description: "Form control for compensation range simulation. Users adjust ranges interactively and see real-time impact on cost, pay equity, market competitiveness, and affected employee counts. Emits change events with updated ranges and KPI calculations.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "form-control", "simulator", "kpi", "cost-analysis", "pay-equity", "competitiveness"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          description: "Compensation range rows. Each row represents a job level with its current range and employee population data.",
+          items: {
+            type: "object",
+            required: ["label", "rangeMin", "rangeMax"],
+            properties: {
+              label: { type: "string", description: "Job level or title label (e.g., 'Eng III')" },
+              rangeMin: { type: "number", description: "Current range minimum in dollars" },
+              rangeMax: { type: "number", description: "Current range maximum in dollars" },
+              currentEmployees: { type: "number", description: "Number of employees in this level. Used for cost impact and KPI calculations." },
+              avgCurrentPay: { type: "number", description: "Average current pay for employees in this level. Used to calculate cost impact when range boundaries move." },
+            },
+          },
+        },
+        marketData: {
+          type: "array",
+          description: "Market benchmark data per row, used for competitiveness ratio calculation.",
+          items: {
+            type: "object",
+            properties: {
+              p50: { type: "number", description: "Market 50th percentile (median) pay for this level" },
+              p75: { type: "number", description: "Market 75th percentile pay for this level" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        stepSize: { type: "number", description: "Dollar amount per box (e.g., 10000 for $10K boxes). Controls granularity of range adjustments." },
+        scaleMin: { type: "number", description: "Minimum value for the shared dollar scale" },
+        scaleMax: { type: "number", description: "Maximum value for the shared dollar scale" },
+        activeColor: { type: "string", description: "Color for active (in-range) segments" },
+        inactiveColor: { type: "string", description: "Color for inactive (out-of-range) segments" },
+        segmentHeight: { type: "number", description: "Height of each row segment in pixels" },
+        gap: { type: "number", description: "Gap between boxes in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showScale: { type: "boolean", description: "Show dollar scale axis on top" },
+        autoRecalculate: { type: "boolean", description: "If true, KPIs recalculate on every box toggle. If false, requires explicit Recalculate button press." },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Change event emitted when ranges are modified. Contains updated ranges and computed KPIs.",
+      properties: {
+        rows: { type: "array", description: "Original row data" },
+        activeRanges: {
+          type: "array",
+          description: "Current active range per row after user adjustments.",
+          items: {
+            type: "object",
+            properties: {
+              label: { type: "string" },
+              min: { type: "number", description: "New range minimum in dollars" },
+              max: { type: "number", description: "New range maximum in dollars" },
+            },
+          },
+        },
+        kpis: {
+          type: "object",
+          description: "Computed KPI values based on current range configuration.",
+          properties: {
+            totalCostImpact: { type: "number", description: "Net change in total compensation cost (positive = increase)" },
+            costChangePercent: { type: "number", description: "Percentage change in total compensation cost" },
+            peerEquityScore: { type: "number", description: "Peer equity (internal equity) score (0-1), measures how centered employees are within their ranges" },
+            peerEquityChange: { type: "number", description: "Change in peer equity vs baseline" },
+            competitivenessRatio: { type: "number", description: "Ratio of range midpoints to market P50 (1.0 = at market)" },
+            competitivenessChange: { type: "number", description: "Change in competitiveness vs baseline" },
+            employeesAffected: { type: "number", description: "Number of employees whose pay falls outside the new range boundaries" },
+            totalEmployees: { type: "number", description: "Total employee count across all levels" },
+          },
+        },
+      },
+    },
+    defaults: {
+      stepSize: 10000,
+      activeColor: "#0f69ff",
+      inactiveColor: "#e0e4e9",
+      segmentHeight: 24,
+      gap: 2,
+      showLabels: true,
+      showScale: true,
+      autoRecalculate: true,
+    },
+    exampleData: {
+      rows: [
+        { label: "Eng III", rangeMin: 110000, rangeMax: 150000, currentEmployees: 24, avgCurrentPay: 128000 },
+        { label: "Eng IV", rangeMin: 140000, rangeMax: 190000, currentEmployees: 18, avgCurrentPay: 162000 },
+        { label: "Eng V", rangeMin: 175000, rangeMax: 235000, currentEmployees: 12, avgCurrentPay: 198000 },
+        { label: "Eng VI", rangeMin: 210000, rangeMax: 280000, currentEmployees: 6, avgCurrentPay: 245000 },
+      ],
+      marketData: [
+        { p50: 130000, p75: 148000 },
+        { p50: 165000, p75: 185000 },
+        { p50: 205000, p75: 230000 },
+        { p50: 250000, p75: 275000 },
+      ],
+    },
+    exampleConfig: { stepSize: 10000, scaleMin: 90000, scaleMax: 300000, autoRecalculate: true },
+    documentation: `Range Builder is a form control (not a chart) for interactive compensation range simulation. It provides:
+
+**Purpose:** Allow compensation analysts to visually adjust pay ranges and immediately see the downstream impact on key compensation KPIs.
+
+**KPI Cards (top section):**
+- Cost Impact: Net change in total compensation cost when employees outside new range boundaries are adjusted
+- Peer Equity: How centered employees are within their ranges (0-100%), aka Internal Equity — distinct from Gender/Ethnic Pay Equity
+- Competitiveness: Ratio of range midpoints to market P50 benchmarks (100% = at market)
+- People Impact: Proportion of employees unaffected by range changes
+
+**How it works:**
+1. Each row represents a job level with a compensation range shown as toggleable boxes
+2. Click boxes to extend or shrink the range
+3. KPIs update in real-time (or on button press if autoRecalculate=false)
+4. The onChange callback emits a RangeBuilderChangeEvent with updated ranges and KPIs
+
+**Data wiring:**
+- Input: rows[] with label, rangeMin, rangeMax, currentEmployees, avgCurrentPay
+- Input: marketData[] with p50, p75 per level (for competitiveness calculation)
+- Output: activeRanges[] with adjusted min/max per level
+- Output: kpis{} with totalCostImpact, peerEquityScore, competitivenessRatio, employeesAffected
+
+**Integration pattern:**
+- Mount as a form control inside a card or standalone page
+- Wire onChange to update downstream KPI displays, cost models, or approval workflows
+- Use autoRecalculate=true for real-time simulation, false for batch recalculation
+
+**Difference from interactive_range_strip (legacy):**
+- range_builder is a form control with KPI outputs, not just a visualization
+- Includes employee population data for cost calculations
+- Accepts market benchmark data for competitiveness scoring
+- Emits structured change events for downstream consumption`,
+    infrastructureNotes: "React state management with ResizeObserver for responsive layout. No D3 dependency. KPI calculations are client-side. For production use, connect onChange to server-side cost models and pay equity engines.",
+  },
+  {
+    key: "range_target_bullet",
+    chartType: "range_target_bullet",
+    displayName: "Range Target Bullet",
+    description: "Bullet-graph style chart overlaying market range, target range, and actual employee pay extremes. Circle and triangle indicators change color based on whether values fall inside/outside market and target ranges. Designed to accompany the Range Builder control for visual comparison of proposed ranges against market benchmarks and actual employee data.",
+    version: 1,
+    category: "Compensation",
+    tags: ["bullet", "range", "compensation", "market", "target", "comparison", "actuals"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          description: "One row per job level. Each row defines market range, target (proposed) range, and actual employee pay min/max.",
+          items: {
+            type: "object",
+            required: ["label", "marketMin", "marketMax", "targetMin", "targetMax", "actualMin", "actualMax"],
+            properties: {
+              label: { type: "string", description: "Job level label (e.g., 'Eng III')" },
+              marketMin: { type: "number", description: "Market range lower bound (e.g., P25 or P50 - spread)" },
+              marketMax: { type: "number", description: "Market range upper bound (e.g., P75)" },
+              targetMin: { type: "number", description: "Target (proposed) range minimum" },
+              targetMax: { type: "number", description: "Target (proposed) range maximum" },
+              actualMin: { type: "number", description: "Lowest actual employee pay in this level" },
+              actualMax: { type: "number", description: "Highest actual employee pay in this level" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        scaleMin: { type: "number", description: "Minimum value for the shared dollar scale" },
+        scaleMax: { type: "number", description: "Maximum value for the shared dollar scale" },
+        rowHeight: { type: "number", description: "Height of each bullet row in pixels" },
+        rowGap: { type: "number", description: "Vertical gap between rows in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showScale: { type: "boolean", description: "Show dollar scale axis on top" },
+        marketColor: { type: "string", description: "Fill color for market range bar" },
+        targetColor: { type: "string", description: "Fill color for target range bar and indicators" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Read-only visualization; no output signals.",
+      properties: {},
+    },
+    exampleData: {
+      rows: [
+        { label: "Eng III", marketMin: 112000, marketMax: 148000, targetMin: 110000, targetMax: 150000, actualMin: 105000, actualMax: 155000 },
+        { label: "Eng IV", marketMin: 147000, marketMax: 185000, targetMin: 140000, targetMax: 190000, actualMin: 138000, actualMax: 195000 },
+      ],
+    },
+    exampleConfig: { scaleMin: 90000, scaleMax: 300000 },
+    documentation: `**Range Target Bullet Chart**
+
+A bullet-graph style visualization for compensation range analysis. Each row overlays three layers:
+
+1. **Light Grey Bar** — Full scale background
+2. **Light Blue Bar** — Market range (benchmark data)
+3. **Dark Blue Bar** — Target range (proposed/adjusted range)
+
+**Indicators:**
+- **Circles** mark Actual Employee Min and Max pay values
+- **Triangles** mark Target Range endpoints
+
+**Indicator color logic:**
+- *Filled blue circle* — actual value inside both Target and Market ranges
+- *Open blue circle* — actual value inside Target but outside Market
+- *Open black circle* — actual value outside Target but inside Market
+- *Filled black circle* — actual value outside both ranges
+- *Blue triangle* — target endpoint inside Market range
+- *Grey triangle* — target endpoint outside Market range
+
+**Integration:**
+- Pair with Range Builder control: target ranges update in real-time as users adjust the Range Builder
+- Market data comes from benchmark surveys; actual data from HRIS employee records`,
+    infrastructureNotes: "Pure SVG rendering with ResizeObserver for responsive width. No D3 dependency. Designed to pair with the range_builder control for interactive compensation analysis.",
+  },
+];

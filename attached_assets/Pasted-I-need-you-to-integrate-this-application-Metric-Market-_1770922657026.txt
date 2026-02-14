@@ -1,0 +1,242 @@
+I need you to integrate this application ("Metric Market", slug: "metric-market") with the People Analytics Toolbox hub. This is a central registry that monitors health, syncs documentation, and sends directives to all spoke applications in our ecosystem.
+
+Please complete ALL of the following steps:
+
+═══════════════════════════════════════════════════
+STEP 1: Report Your Deployed URL
+═══════════════════════════════════════════════════
+
+The hub needs to know this app's real deployed URL for health monitoring and doc sync. First, find this app's deployed URL (on Replit it looks like: https://your-repl-name.username.replit.app).
+
+Then tell me what it is so I can run this update (note: this must be run from the hub or its admin UI — the endpoint is not authenticated):
+
+curl -X PATCH "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/registry/13" \
+  -H "Content-Type: application/json" \
+  -d '{"deployedUrl": "https://YOUR_REAL_URL", "webhookUrl": "https://YOUR_REAL_URL/api/hub-webhook"}'
+
+IMPORTANT: Replace YOUR_REAL_URL in both places above with your actual URL.
+
+═══════════════════════════════════════════════════
+STEP 2: Create hub-client.js in the project root
+═══════════════════════════════════════════════════
+
+Create a file called hub-client.js with this exact content:
+
+// hub-client.js — Standard Hub Integration Module
+// Application: Metric Market (metric-market)
+// Generated: 2026-02-12
+//
+// SETUP: Drop this file into your project root.
+// All spoke apps MUST use this identical interface for consistency.
+
+const HUB_URL = "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
+const APP_SLUG = "metric-market";
+const API_KEY = "pat_bd10eceb8568a0c3a5de974f30e2589acc220560dab711cd";
+
+const headers = {
+  "Content-Type": "application/json",
+  "X-API-Key": API_KEY,
+};
+
+// ── Core API Methods ──────────────────────────────────────────
+
+async function fetchDirectives(status) {
+  const url = status
+    ? `${HUB_URL}/api/hub/app/${APP_SLUG}/directives?status=${status}`
+    : `${HUB_URL}/api/hub/app/${APP_SLUG}/directives`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) throw new Error(`Hub responded ${res.status}`);
+  return res.json();
+}
+
+async function updateDirective(directiveId, status, response) {
+  const body = { status };
+  if (response) body.response = response;
+  const res = await fetch(
+    `${HUB_URL}/api/hub/app/${APP_SLUG}/directives/${directiveId}`,
+    { method: "PATCH", headers, body: JSON.stringify(body) }
+  );
+  if (!res.ok) throw new Error(`Hub responded ${res.status}`);
+  return res.json();
+}
+
+async function pushDocumentation(content, version) {
+  const res = await fetch(
+    `${HUB_URL}/api/hub/app/${APP_SLUG}/documentation`,
+    { method: "POST", headers, body: JSON.stringify({ content, version }) }
+  );
+  if (!res.ok) throw new Error(`Hub responded ${res.status}`);
+  return res.json();
+}
+
+async function fetchRegistry() {
+  const res = await fetch(`${HUB_URL}/api/hub/registry`);
+  if (!res.ok) throw new Error(`Hub responded ${res.status}`);
+  return res.json();
+}
+
+async function fetchArchitecture() {
+  const res = await fetch(`${HUB_URL}/api/hub/architecture`);
+  if (!res.ok) throw new Error(`Hub responded ${res.status}`);
+  return res.json();
+}
+
+// ── Lifecycle Helpers ─────────────────────────────────────────
+
+async function acknowledgeDirective(directiveId) {
+  return updateDirective(directiveId, "acknowledged");
+}
+
+async function completeDirective(directiveId, response) {
+  return updateDirective(directiveId, "completed", response);
+}
+
+async function rejectDirective(directiveId, reason) {
+  return updateDirective(directiveId, "rejected", reason);
+}
+
+// ── Auto-Polling (optional) ──────────────────────────────────
+
+let pollTimer = null;
+
+function startPolling(callback, intervalMs = 300000) {
+  async function poll() {
+    try {
+      const directives = await fetchDirectives("pending");
+      if (directives.length > 0) {
+        for (const d of directives) {
+          await acknowledgeDirective(d.id);
+        }
+        callback(directives);
+      }
+    } catch (err) {
+      console.error("[hub-client] Poll error:", err.message);
+    }
+  }
+  poll();
+  pollTimer = setInterval(poll, intervalMs);
+  return () => clearInterval(pollTimer);
+}
+
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+}
+
+module.exports = {
+  fetchDirectives,
+  updateDirective,
+  pushDocumentation,
+  fetchRegistry,
+  fetchArchitecture,
+  acknowledgeDirective,
+  completeDirective,
+  rejectDirective,
+  startPolling,
+  stopPolling,
+  HUB_URL,
+  APP_SLUG,
+};
+
+═══════════════════════════════════════════════════
+STEP 3: Add required Express routes
+═══════════════════════════════════════════════════
+
+Add ALL THREE of these routes to your Express server (e.g., server/index.ts or wherever your Express app is defined). These must be accessible from outside.
+
+IMPORTANT: Make sure your Express app has JSON body parsing enabled (app.use(express.json())) so the webhook handler can read incoming payloads.
+
+// hub-webhook.js — Standard Webhook + Health + Specifications Routes
+// Add these routes to your Express app for full hub integration.
+// All spoke apps MUST expose these endpoints identically.
+
+const hubClient = require("./hub-client");
+
+// 1. HEALTH ENDPOINT — Required for hub monitoring
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    app: "metric-market",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// 2. WEBHOOK HANDLER — Receives directive notifications in real-time
+app.post("/api/hub-webhook", async (req, res) => {
+  const { event, directive } = req.body;
+
+  if (event === "directive.created" && directive) {
+    console.log(
+      `[Hub] ${directive.priority} ${directive.type}: ${directive.title}`
+    );
+    try {
+      await hubClient.acknowledgeDirective(directive.id);
+    } catch (err) {
+      console.error("[Hub] Failed to acknowledge:", err.message);
+    }
+  }
+
+  res.json({ received: true });
+});
+
+// 3. SPECIFICATIONS ENDPOINT — Lets the hub pull your docs on demand
+//    Return your replit.md or documentation content here.
+const fs = require("fs");
+app.get("/api/specifications", (req, res) => {
+  try {
+    const content = fs.readFileSync("replit.md", "utf-8");
+    res.type("text/plain").send(content);
+  } catch {
+    res.status(404).json({ message: "No documentation found" });
+  }
+});
+
+═══════════════════════════════════════════════════
+STEP 4: Ensure replit.md is comprehensive
+═══════════════════════════════════════════════════
+
+The hub pulls documentation from GET /api/specifications (which serves replit.md). Make sure your replit.md includes these sections — they are scored by the hub:
+
+- **Overview**: What this app does, its purpose, current state
+- **Tech Stack**: Languages, frameworks, databases used
+- **Architecture**: How components connect, data flow, key patterns
+- **API Reference**: All endpoints with request/response schemas
+- **Data Model**: Database tables, relationships, key fields
+- **Auth & Security**: Authentication method, roles, permissions
+- **Integration Points**: How this app connects to other systems
+- **Deployment**: How to build, deploy, environment variables needed
+
+═══════════════════════════════════════════════════
+STEP 5: Verify integration is working
+═══════════════════════════════════════════════════
+
+After completing steps 1-4, verify each endpoint works. Replace YOUR_REAL_URL with this app's actual deployed URL:
+
+1. Health check (test locally first, then via deployed URL):
+   curl https://YOUR_REAL_URL/health
+   Expected: {"status":"ok","app":"metric-market",...}
+
+2. Specifications endpoint:
+   curl https://YOUR_REAL_URL/api/specifications
+   Expected: Your replit.md content returned as plain text
+
+3. Fetch directives from the hub:
+   curl -H "X-API-Key: pat_bd10eceb8568a0c3a5de974f30e2589acc220560dab711cd" "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/hub/app/metric-market/directives"
+   Expected: JSON array of directives (may be empty if none pending)
+
+4. Push documentation to hub:
+   node -e "const hc = require('./hub-client'); hc.pushDocumentation(require('fs').readFileSync('replit.md','utf-8'), '1.0').then(r => console.log('Score:', r.score)).catch(e => console.error(e.message))"
+   Expected: Prints a quality score (0-100)
+
+If any step fails, report the exact error message so we can troubleshoot.
+
+═══════════════════════════════════════════════════
+STEP 6: Update replit.md with hub integration info
+═══════════════════════════════════════════════════
+
+Add a "Hub Integration" section to replit.md documenting:
+- Hub URL: https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev
+- App slug: metric-market
+- Endpoints added: /health, /api/hub-webhook, /api/specifications
+- hub-client.js location and usage
+
+Once complete, please confirm which steps succeeded and report any issues.

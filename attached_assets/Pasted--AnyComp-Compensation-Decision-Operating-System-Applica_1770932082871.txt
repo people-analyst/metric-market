@@ -1,0 +1,349 @@
+# AnyComp - Compensation Decision Operating System
+
+## Application Overview
+
+AnyComp is a full-stack compensation decision support system built as a spoke application in the People Analytics Toolbox Hub ecosystem. It converts executive priorities, governance philosophies, and budget constraints into optimized compensation scenarios using AI-powered analysis and Value of Information (VOI) decision science. The application transforms compensation planning from manual spreadsheet-driven processes into a structured, auditable, AI-assisted decision workflow with full Hub ecosystem integration and Field Exchange canonical mapping for data validation.
+
+- Slug: anycomp
+- Version: 1.0.0
+- Key Capabilities: Multi-tab strategy builder, 100 Pennies budget allocation, Action Library, Scenario modeling with AI narratives, VOI analysis with EVPI/EVSI, Field Exchange SDK (66 fields, 385+ aliases, 10 platforms), Full audit trail
+
+## Technology Stack
+
+AnyComp is a monorepo full-stack TypeScript application running on Replit with these technology choices:
+
+- Frontend Framework: React 18 with TypeScript, bundled by Vite
+- UI Components: shadcn/ui on Radix UI primitives, styled with Tailwind CSS
+- Client Routing: wouter for client-side routing across 10 pages
+- Server State: TanStack Query v5 with automatic cache invalidation
+- Theme System: Custom ThemeProvider with dark/light mode and localStorage persistence
+- Backend Runtime: Express.js on Node.js with TypeScript via tsx
+- Database ORM: Drizzle ORM with drizzle-zod for Zod schema generation
+- Database Engine: PostgreSQL (Neon-backed) via pg connection pool
+- Schema Validation: Zod schemas for all API request bodies
+- AI Integration: OpenAI gpt-5-mini via Replit AI Integrations
+- Hub Communication: Custom hubFetch client with X-API-Key header
+
+```
+server/index.ts - Express app on port 5000
+shared/schema.ts - Drizzle tables + Zod schemas + types
+server/storage.ts - IStorage interface + DatabaseStorage
+server/routes.ts - All REST + Hub + AI endpoints
+hub-client.cjs - Hub directives and docs push
+```
+
+## Ecosystem Integration
+
+AnyComp is a spoke in the People Analytics Toolbox Hub ecosystem. Hub coordinates spokes through directives, documentation scoring, and shared patterns. AnyComp authenticates via X-API-Key header. Key stored as HUB_API_KEY in Replit Secrets.
+
+- Hub Registration: Auto-registers 3s after startup via POST /api/register
+- Directives: Fetched via GET /api/hub/app/anycomp/directives, acknowledged via PATCH
+- Documentation Sync: Pushes replit.md via POST /api/hub/app/anycomp/documentation
+- Webhook Receiver: POST /api/hub-webhook with X-API-Key auth
+- Field Exchange SDK: 66 canonical fields, 385+ aliases, 10 platforms (Workday, SAP, ADP, BambooHR, Oracle HCM, UKG, Paycom, Paylocity, Ceridian, Namely)
+
+| Service | Type | Status |
+|---------|------|--------|
+| Hub | Ecosystem coordinator | Active |
+| Field Exchange SDK | Canonical mapping | Active |
+| OpenAI gpt-5-mini | AI narrative/VOI | Active |
+| Meta-Factory: Job Matching | Job classification | Stub |
+| Meta-Factory: Pay Factory | Salary structure | Stub |
+| Meta-Factory: Comp Modeling | Scenario cost | Stub |
+| Meta-Factory: Segmentation | Population segment | Stub |
+
+## Key Features
+
+10 pages in three groups: Decision Flow, Analysis, Data Management.
+
+### Decision Flow
+
+- Dashboard (/) - Guided workflow steps, summary stats (strategies, scenarios, VOI), recent strategies with status badges, metrics overview grid
+- Strategy Builder (/strategy) - Multi-tab form: Basics, Business Context, Governance, Market Targets with budget constraints. Zod validation, audit trail
+- 100 Pennies (/pennies) - Visual 100-point allocation across compensation categories with interactive sliders, real-time tracking, bulk save
+- Action Library (/actions) - Compensation actions catalog with category, impact, effort, cost. Filtering and search
+- Scenarios (/scenarios) - Combines actions, tracks projected results, AI narrative generation via OpenAI gpt-5-mini, side-by-side comparison
+
+### Analysis
+
+- VOI Analysis (/voi) - EVPI/EVSI calculations via AI. Shows baseline, perfect info, sample info values, gap percentage, recommendation
+- Pay Structures (/pay-structures) - Salary grade visualization with min/mid/max ranges and market position overlay
+- Metrics (/metrics) - KPI dashboard: Compensation, Equity, Retention, Market categories. 8 pre-seeded metrics
+
+### Data Management
+
+- Data Intake (/data-intake) - Dataset registration (employee, market_survey). Field Exchange validation auto-maps fields. Validation reports
+- Audit Trail (/audit) - Timeline of all events with entity type, ID, event type, actor (user/system/ai/hub), JSON details
+
+## API Reference
+
+All routes in server/routes.ts. POST endpoints use Zod validation. All mutations create audit_events. Port 5000.
+
+### Hub Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /health | Health check: status, app, version, uptime |
+| GET | /api/specifications | Capabilities, endpoints, integrations |
+| POST | /api/hub-webhook | Receive Hub events (X-API-Key auth) |
+| GET | /api/hub/status | Check Hub connectivity |
+| POST | /api/hub/register | Manual registration trigger |
+
+### Strategy Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/strategies | List all strategies |
+| GET | /api/strategies/:id | Get by ID |
+| POST | /api/strategies | Create (InsertStrategy body) |
+| PATCH | /api/strategies/:id | Partial update |
+
+### Penny Allocation Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/pennies | List (filter: ?strategyId=N) |
+| POST | /api/pennies/bulk | Bulk replace for strategy |
+
+### Action Library Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/actions | List all |
+| POST | /api/actions | Create (InsertAction body) |
+
+### Scenario Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/scenarios | List all |
+| POST | /api/scenarios | Create (InsertScenario body) |
+| POST | /api/scenarios/:id/narrative | Generate AI narrative |
+
+### VOI Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/voi | List all |
+| POST | /api/voi | Create (InsertVoi body) |
+| POST | /api/voi/:id/run | Execute AI VOI calculation |
+
+### Dataset Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/datasets | List all |
+| POST | /api/datasets | Register (InsertDataset body) |
+| POST | /api/datasets/:id/validate | Field Exchange validation |
+
+### Metrics and Audit Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | /api/metrics | List all metrics |
+| POST | /api/metrics | Create metric |
+| GET | /api/audit | Last 100 audit events |
+
+### Error Format
+
+All errors: { "error": "message" }. Status codes: 400 (validation), 404 (not found), 401 (unauthorized), 500 (internal).
+
+## Database Schema
+
+PostgreSQL with Drizzle ORM. All schemas in shared/schema.ts with createInsertSchema, $inferSelect types, and relation definitions. 8 tables.
+
+### compensation_strategies
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| name | text | NOT NULL | Name |
+| description | text | nullable | Description |
+| status | text | DEFAULT draft | draft/active/archived |
+| business_context | jsonb | nullable | industry, companySize, growthStage, competitivePosition |
+| governance_philosophy | jsonb | nullable | payTransparency, equityFocus, marketAlignment |
+| market_position_targets | jsonb | nullable | basePay, totalCash, totalRewards percentiles |
+| constraints | jsonb | nullable | totalBudget, currency, maxIncrease, minIncrease |
+| created_at | timestamp | DEFAULT now | Created |
+| updated_at | timestamp | DEFAULT now | Updated |
+
+### penny_allocations
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| strategy_id | integer | FK strategies | Parent strategy |
+| category | text | NOT NULL | Category name |
+| label | text | NOT NULL | Display label |
+| allocation | real | DEFAULT 0 | Points (sum to 100) |
+| color | text | nullable | Hex color |
+| description | text | nullable | Description |
+
+### action_library
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| strategy_id | integer | FK strategies | Optional parent |
+| name | text | NOT NULL | Action name |
+| category | text | NOT NULL | merit/equity/market/promotion/bonus |
+| impact | text | nullable | low/medium/high |
+| effort | text | nullable | low/medium/high |
+| cost_estimate | real | nullable | Dollar cost |
+| status | text | DEFAULT available | available/in-use/deprecated |
+| parameters | jsonb | nullable | Config |
+
+### scenarios
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| strategy_id | integer | FK strategies | Parent strategy |
+| name | text | NOT NULL | Name |
+| status | text | DEFAULT draft | draft/active/archived |
+| selected_actions | jsonb | DEFAULT [] | Action IDs |
+| results | jsonb | nullable | totalCost, avgIncrease, scores |
+| ai_narrative | text | nullable | AI executive summary |
+
+### voi_analyses
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| strategy_id | integer | FK strategies | Optional parent |
+| scenario_id | integer | FK scenarios | Optional link |
+| name | text | NOT NULL | Name |
+| decision_type | text | NOT NULL | Decision type |
+| evpi_value | real | nullable | EVPI |
+| evsi_value | real | nullable | EVSI |
+| results | jsonb | nullable | baselineValue, perfectInfoValue, sampleInfoValue, informationGap, recommendation |
+
+### audit_events
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| entity_type | text | NOT NULL | strategy/scenario/action/voi_analysis/dataset/hub_webhook/pennies |
+| entity_id | integer | NOT NULL | Entity ID |
+| event_type | text | NOT NULL | create/update/ai_narrative/analyze/validate/bulk_update/webhook |
+| actor | text | DEFAULT system | user/system/ai/hub |
+| details | jsonb | nullable | Metadata |
+
+### datasets
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| name | text | NOT NULL | Name |
+| type | text | NOT NULL | employee/market_survey |
+| status | text | DEFAULT pending | pending/validated/error |
+| record_count | integer | DEFAULT 0 | Records |
+| field_mappings | jsonb | nullable | Source to canonical mapping |
+| validation_report | jsonb | nullable | isValid, errors, warnings |
+
+### metrics
+
+| Column | Type | Constraints | Description |
+|--------|------|-------------|-------------|
+| id | serial | PK | Auto ID |
+| name | text | NOT NULL | Metric name |
+| category | text | NOT NULL | compensation/equity/retention/market |
+| value | real | nullable | Current value |
+| target | real | nullable | Target |
+| unit | text | nullable | % or $ or P |
+| trend | text | nullable | up/down/stable |
+
+### Relations
+
+```typescript
+compensationStrategies has many: pennyAllocations, actionLibrary, scenarios, voiAnalyses, metrics
+pennyAllocations belongs to: compensationStrategies
+scenarios belongs to: compensationStrategies; has many: voiAnalyses
+voiAnalyses belongs to: compensationStrategies, scenarios
+```
+
+## Data Contracts
+
+AnyComp produces and consumes structured JSON data for Hub ecosystem integration and HRIS data sources.
+
+### Field Exchange Canonical Mapping
+
+66 canonical fields across 385+ aliases and 10 platforms. During validation (POST /api/datasets/:id/validate):
+
+| Source Field (Employee) | Canonical Name | Type |
+|------------------------|----------------|------|
+| employee_id | canonical:employee_identifier | string |
+| base_salary | canonical:base_compensation | number |
+| job_title | canonical:job_title | string |
+| department | canonical:department | string |
+| hire_date | canonical:hire_date | date |
+| location | canonical:work_location | string |
+
+| Source Field (Market) | Canonical Name | Type |
+|----------------------|----------------|------|
+| job_code | canonical:job_code | string |
+| base_25th | canonical:base_pay_p25 | number |
+| base_50th | canonical:base_pay_p50 | number |
+| base_75th | canonical:base_pay_p75 | number |
+| tcc_50th | canonical:total_cash_p50 | number |
+
+### Hub Registration Payload
+
+```json
+{ "slug": "anycomp", "name": "AnyComp", "version": "1.0.0", "capabilities": ["compensation-strategy", "100-pennies-allocation", "action-library", "scenario-modeling", "voi-analysis", "field-exchange", "audit-trail"] }
+```
+
+### AI Output Contracts
+
+- Scenario Narratives: 2-3 paragraph executive summaries in scenarios.ai_narrative via gpt-5-mini
+- VOI Results: { baselineValue, perfectInfoValue, sampleInfoValue, informationGap, recommendation } in voi_analyses.results
+
+## Instance Data
+
+Current PostgreSQL database snapshot:
+
+| Table | Records | Status | Notes |
+|-------|---------|--------|-------|
+| compensation_strategies | 1 | Active | Draft: Test Strategy 2026 |
+| penny_allocations | 0 | Empty | No distributions |
+| action_library | 0 | Empty | Seed recommended |
+| scenarios | 0 | Empty | Needs actions |
+| voi_analyses | 0 | Empty | Needs strategies |
+| audit_events | 1 | Active | Strategy creation |
+| datasets | 0 | Empty | Field Exchange ready |
+| metrics | 8 | Seeded | 8 KPIs, 4 categories |
+
+### Pre-Seeded Metrics
+
+| Metric | Category | Value | Target | Trend |
+|--------|----------|-------|--------|-------|
+| Compa-Ratio | compensation | 0.97 | 1.00 | up |
+| Range Penetration | compensation | 62% | 50% | up |
+| Pay Equity Gap | equity | 3.2% | 0% | down |
+| Gender Pay Ratio | equity | 0.95 | 1.00 | up |
+| Voluntary Turnover | retention | 12.5% | 10% | down |
+| Offer Acceptance Rate | retention | 88% | 90% | up |
+| Market Position | market | P52 | P50 | stable |
+| Total Comp Spend | market | 24500000 | 25000000 | up |
+
+## Health & Status
+
+AnyComp is fully operational with all core services running.
+
+### Health Endpoint
+
+```json
+{ "status": "ok", "app": "anycomp", "version": "1.0.0", "timestamp": "2026-02-10T...", "uptime": 12345 }
+```
+
+### Readiness
+
+| Component | Status |
+|-----------|--------|
+| GET /health | Ready |
+| GET /api/specifications | Ready |
+| POST /api/hub-webhook | Ready (X-API-Key auth) |
+| Hub auto-registration | Ready (3s after startup) |
+| Database (8 tables) | Ready |
+| AI narrative (gpt-5-mini) | Ready |
+| VOI engine (EVPI/EVSI) | Ready |
