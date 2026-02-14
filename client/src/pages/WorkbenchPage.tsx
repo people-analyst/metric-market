@@ -35,6 +35,8 @@ const CHART_TYPE_LABELS: Record<string, string> = {
   sparkline_rows: "Sparkline Rows",
   stacked_area: "Stacked Area",
   range_strip: "Range Strip",
+  range_strip_aligned: "Range Strip (Aligned)",
+  interactive_range_strip: "Interactive Range Strip",
 };
 
 function BundleBrowserSection() {

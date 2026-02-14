@@ -1050,7 +1050,193 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
       ],
     },
     exampleConfig: {},
-    documentation: "Visualize pay ranges, percentile bands, or any segmented range data. Each row shows a strip of sequential blocks where highlighted segments form a contiguous range. Use for pay structure visualization, market positioning, range overlap analysis, and quartile/percentile breakdowns. Blocks can represent percentiles (P10-P90), quartiles (Q1-Q4), deciles, or custom slices. Add markers to show reference points like Market Reference Point (MRP) or employee position. Rows can be drilled into as individual cards for detailed analysis.",
+    documentation: "Visualize pay ranges, percentile bands, or any segmented range data. Each row shows a strip of sequential blocks where highlighted segments form a contiguous range. Use for pay structure visualization, market positioning, range overlap analysis, and quartile/percentile breakdowns. Blocks can represent percentiles (P10-P90), quartiles (Q1-Q4), deciles, or custom slices. Rows can be drilled into as individual cards for detailed analysis.",
     infrastructureNotes: "Requires D3.js. Designed for compensation range visualization but applicable to any segmented range data.",
+  },
+  {
+    key: "range_strip_aligned",
+    chartType: "range_strip_aligned",
+    displayName: "Aligned Range Strip",
+    description: "Range strips on a shared numeric scale so percentile positions float independently per row. Enables visual comparison of where different job levels sit on a common compensation axis.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "percentile", "aligned", "pay-structure", "comparison"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "points"],
+            properties: {
+              label: { type: "string", description: "Row label (e.g., job level)" },
+              points: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["value"],
+                  properties: {
+                    label: { type: "string", description: "Point label (e.g., P25, P50)" },
+                    value: { type: "number", description: "Numeric position on the shared scale" },
+                    highlighted: { type: "boolean", description: "Whether this point is within the active range" },
+                    tooltip: { type: "string", description: "Hover tooltip text" },
+                  },
+                },
+                description: "Data points positioned on a shared numeric scale. Highlighted points define the range band.",
+              },
+            },
+          },
+        },
+        scaleMin: { type: "number", description: "Minimum value for the shared scale (auto-detected if omitted)" },
+        scaleMax: { type: "number", description: "Maximum value for the shared scale (auto-detected if omitted)" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        highlightColor: { type: "string", description: "Color for highlighted range band" },
+        baseColor: { type: "string", description: "Color for the full range background" },
+        segmentHeight: { type: "number", description: "Height of each row strip in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels" },
+        showScale: { type: "boolean", description: "Show the shared scale axis" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG aligned range strip chart" },
+    defaults: {
+      highlightColor: "#0f69ff",
+      baseColor: "#e0e4e9",
+      segmentHeight: 18,
+      showLabels: true,
+      showScale: true,
+    },
+    exampleData: {
+      rows: [
+        {
+          label: "Eng III",
+          points: [
+            { label: "P10", value: 95000 },
+            { label: "P25", value: 110000, highlighted: true },
+            { label: "P50", value: 125000, highlighted: true },
+            { label: "P75", value: 140000, highlighted: true },
+            { label: "P90", value: 160000 },
+          ],
+        },
+        {
+          label: "Eng IV",
+          points: [
+            { label: "P10", value: 120000 },
+            { label: "P25", value: 138000, highlighted: true },
+            { label: "P50", value: 158000, highlighted: true },
+            { label: "P75", value: 178000, highlighted: true },
+            { label: "P90", value: 200000 },
+          ],
+        },
+        {
+          label: "Eng V",
+          points: [
+            { label: "P10", value: 155000 },
+            { label: "P25", value: 175000, highlighted: true },
+            { label: "P50", value: 198000, highlighted: true },
+            { label: "P75", value: 220000, highlighted: true },
+            { label: "P90", value: 250000 },
+          ],
+        },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Visualize compensation ranges on a shared numeric scale. All rows share the same x-axis so percentile positions float independently, enabling direct visual comparison across job levels. Eng III P50 appears visually below Eng IV P50 on the same scale. Use for level-over-level range comparison, market data benchmarking, and pay equity analysis.",
+    infrastructureNotes: "Requires D3.js.",
+  },
+  {
+    key: "interactive_range_strip",
+    chartType: "interactive_range_strip",
+    displayName: "Interactive Range Strip",
+    description: "Clickable range strip where analysts can toggle individual segments on/off to experiment with range adjustments and see how changes affect coverage.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "interactive", "toggle", "range-builder", "cost-analysis"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "segments"],
+            properties: {
+              label: { type: "string", description: "Row label (e.g., job title)" },
+              segments: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    value: { type: "number", description: "Numeric value for cost calculation" },
+                    active: { type: "boolean", description: "Whether this segment is currently active in the range" },
+                    tooltip: { type: "string", description: "Hover tooltip text" },
+                  },
+                },
+                description: "Narrow clickable blocks. Click to toggle active/inactive. Active blocks form the range.",
+              },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        activeColor: { type: "string", description: "Color for active segments" },
+        inactiveColor: { type: "string", description: "Color for inactive segments" },
+        segmentHeight: { type: "number", description: "Height of each segment block" },
+        gap: { type: "number", description: "Gap between segments" },
+        showLabels: { type: "boolean", description: "Show row labels" },
+        showCost: { type: "boolean", description: "Show active/total count" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered interactive SVG range strip chart" },
+    defaults: {
+      activeColor: "#0f69ff",
+      inactiveColor: "#e0e4e9",
+      segmentHeight: 22,
+      gap: 2,
+      showLabels: true,
+      showCost: true,
+    },
+    exampleData: {
+      rows: [
+        {
+          label: "Eng III",
+          segments: [
+            { active: false }, { active: false }, { active: true }, { active: true },
+            { active: true }, { active: true }, { active: true }, { active: false },
+            { active: false }, { active: false }, { active: false }, { active: false },
+          ],
+        },
+        {
+          label: "Eng IV",
+          segments: [
+            { active: false }, { active: false }, { active: false }, { active: true },
+            { active: true }, { active: true }, { active: true }, { active: true },
+            { active: false }, { active: false }, { active: false }, { active: false },
+          ],
+        },
+        {
+          label: "Eng V",
+          segments: [
+            { active: false }, { active: false }, { active: false }, { active: false },
+            { active: true }, { active: true }, { active: true }, { active: true },
+            { active: true }, { active: false }, { active: false }, { active: false },
+          ],
+        },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Interactive range builder for compensation analysis. Each row shows narrow clickable blocks that analysts can toggle on/off to experiment with range widths. Click segments to activate/deactivate them and see how range changes affect coverage. Use for range modeling, cost impact analysis, and what-if compensation planning.",
+    infrastructureNotes: "Requires React state management. No D3 dependency.",
   },
 ];

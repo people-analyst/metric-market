@@ -61,5 +61,11 @@ export type { StackedAreaSeries, StackedAreaChartProps } from "./StackedAreaChar
 export { RangeStripChart } from "./RangeStripChart";
 export type { RangeStripRow, RangeStripSegment, RangeStripChartProps } from "./RangeStripChart";
 
+export { RangeStripAlignedChart } from "./RangeStripAlignedChart";
+export type { AlignedRangeRow, AlignedRangePoint, RangeStripAlignedChartProps } from "./RangeStripAlignedChart";
+
+export { InteractiveRangeStripChart } from "./InteractiveRangeStripChart";
+export type { InteractiveRangeRow, InteractiveSegment, InteractiveRangeStripChartProps } from "./InteractiveRangeStripChart";
+
 export { TILE_PRESETS } from "./tilePresets";
 export type { TilePreset } from "./tilePresets";

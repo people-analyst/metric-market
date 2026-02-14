@@ -23,6 +23,8 @@ import {
   SparklineRowsChart,
   StackedAreaChart,
   RangeStripChart,
+  RangeStripAlignedChart,
+  InteractiveRangeStripChart,
   TILE_PRESETS,
 } from "@/components/charts";
 import type { TilePreset } from "@/components/charts";
@@ -45,6 +47,8 @@ import type {
   SparklineRow,
   StackedAreaSeries,
   RangeStripRow,
+  AlignedRangeRow,
+  InteractiveRangeRow,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -417,6 +421,66 @@ const RANGE_STRIP_ROWS: RangeStripRow[] = [
   },
 ];
 
+const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
+  {
+    label: "Eng III",
+    points: [
+      { label: "P10", value: 95000 },
+      { label: "P25", value: 110000, highlighted: true },
+      { label: "P50", value: 125000, highlighted: true },
+      { label: "P75", value: 140000, highlighted: true },
+      { label: "P90", value: 160000 },
+    ],
+  },
+  {
+    label: "Eng IV",
+    points: [
+      { label: "P10", value: 120000 },
+      { label: "P25", value: 138000, highlighted: true },
+      { label: "P50", value: 158000, highlighted: true },
+      { label: "P75", value: 178000, highlighted: true },
+      { label: "P90", value: 200000 },
+    ],
+  },
+  {
+    label: "Eng V",
+    points: [
+      { label: "P10", value: 155000 },
+      { label: "P25", value: 175000, highlighted: true },
+      { label: "P50", value: 198000, highlighted: true },
+      { label: "P75", value: 220000, highlighted: true },
+      { label: "P90", value: 250000 },
+    ],
+  },
+];
+
+const INTERACTIVE_RANGE_ROWS: InteractiveRangeRow[] = [
+  {
+    label: "Eng III",
+    segments: [
+      { active: false }, { active: false }, { active: true }, { active: true },
+      { active: true }, { active: true }, { active: true }, { active: false },
+      { active: false }, { active: false }, { active: false }, { active: false },
+    ],
+  },
+  {
+    label: "Eng IV",
+    segments: [
+      { active: false }, { active: false }, { active: false }, { active: true },
+      { active: true }, { active: true }, { active: true }, { active: true },
+      { active: false }, { active: false }, { active: false }, { active: false },
+    ],
+  },
+  {
+    label: "Eng V",
+    segments: [
+      { active: false }, { active: false }, { active: false }, { active: false },
+      { active: true }, { active: true }, { active: true }, { active: true },
+      { active: true }, { active: false }, { active: false }, { active: false },
+    ],
+  },
+];
+
 const STACKED_AREA: StackedAreaSeries[] = [
   { label: "Engineering", values: [120, 130, 110, 140, 100, 80, 150, 120, 180, 140, 100, 130], color: "#232a31" },
   { label: "Sales", values: [80, 100, 120, 90, 110, 130, 100, 120, 80, 110, 100, 90], color: "#5b636a" },
@@ -543,8 +607,18 @@ const CHARTS = [
   },
   {
     title: "Range Strip",
-    description: "Compensation range bands with percentile segments and MRP markers",
+    description: "Compensation range bands with percentile segments forming contiguous ranges",
     component: <RangeStripChart rows={RANGE_STRIP_ROWS} />,
+  },
+  {
+    title: "Aligned Range Strip",
+    description: "Shared numeric scale with floating percentile positions per job level",
+    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} />,
+  },
+  {
+    title: "Interactive Range Strip",
+    description: "Click segments to toggle on/off and experiment with range adjustments",
+    component: <InteractiveRangeStripChart rows={INTERACTIVE_RANGE_ROWS} />,
   },
   {
     title: "Stacked Area",

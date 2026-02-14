@@ -39,6 +39,8 @@ export const CHART_TYPES = [
   "sparkline_rows",
   "stacked_area",
   "range_strip",
+  "range_strip_aligned",
+  "interactive_range_strip",
 ] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];
