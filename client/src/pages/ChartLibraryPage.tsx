@@ -607,7 +607,7 @@ const CHARTS = [
   {
     title: "Aligned Range Strip",
     description: "Percentile rows (P10-P90) with level markers (P1-P5) placed at their dollar positions on a shared scale",
-    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={450000} width={400} />,
+    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={450000} />,
   },
   {
     title: "Interactive Range Strip",

@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 
 export interface AlignedRangeMarker {
   label: string;
@@ -31,7 +31,7 @@ export interface RangeStripAlignedChartProps {
 
 export function RangeStripAlignedChart({
   rows,
-  width = 360,
+  width: widthProp,
   segmentHeight = 20,
   gap = 2,
   markerColor = "#0f69ff",
@@ -44,6 +44,24 @@ export function RangeStripAlignedChart({
   stepSize = 25000,
   formatValue = (v) => `$${Math.round(v / 1000)}k`,
 }: RangeStripAlignedChartProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [measuredWidth, setMeasuredWidth] = useState(widthProp ?? 360);
+
+  useEffect(() => {
+    if (widthProp) return;
+    const el = containerRef.current;
+    if (!el) return;
+    const obs = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setMeasuredWidth(entry.contentRect.width);
+      }
+    });
+    obs.observe(el);
+    setMeasuredWidth(el.clientWidth);
+    return () => obs.disconnect();
+  }, [widthProp]);
+
+  const width = widthProp ?? measuredWidth;
   const labelWidth = labelWidthProp ?? (showLabels ? 36 : 0);
   const stripWidth = width - labelWidth - 4;
 
@@ -77,8 +95,8 @@ export function RangeStripAlignedChart({
 
   const ticks = useMemo(() => {
     const result: { value: number; boxIndex: number }[] = [];
-    const pixelsPerBox = stripWidth / Math.max(1, Math.ceil((scaleMax - scaleMin) / stepSize));
-    const minTickPixels = 40;
+    const pixelsPerBox = stripWidth / Math.max(1, boxCount);
+    const minTickPixels = 45;
     const boxesPerTick = Math.max(1, Math.ceil(minTickPixels / pixelsPerBox));
     const tickStep = stepSize * boxesPerTick;
     let v = Math.ceil(scaleMin / tickStep) * tickStep;
@@ -88,91 +106,115 @@ export function RangeStripAlignedChart({
       v += tickStep;
     }
     return result;
-  }, [scaleMin, scaleMax, stepSize]);
+  }, [scaleMin, scaleMax, stepSize, stripWidth, boxCount]);
 
   const markerColors = ["#0f69ff", "#1a8cff", "#4da3ff", "#7fbfff", "#b3d9ff"];
 
   return (
-    <svg width={width} height={totalHeight} className="block" data-testid="chart-range-strip-aligned">
-      {showScale && (
-        <g>
-          <line
-            x1={labelWidth}
-            y1={scaleHeight - 4}
-            x2={labelWidth + stripWidth}
-            y2={scaleHeight - 4}
-            stroke="#e0e4e9"
-            strokeWidth={0.5}
-          />
-          {ticks.map((t) => {
-            const tx = labelWidth + t.boxIndex * (boxWidth + gap);
-            return (
-              <g key={t.value}>
-                <line
-                  x1={tx}
-                  y1={scaleHeight - 6}
-                  x2={tx}
-                  y2={scaleHeight - 2}
-                  stroke="#e0e4e9"
-                  strokeWidth={0.5}
-                />
+    <div ref={containerRef} className="w-full" data-testid="chart-range-strip-aligned-wrapper">
+      <svg width={width} height={totalHeight} className="block max-w-full" data-testid="chart-range-strip-aligned">
+        {showScale && (
+          <g>
+            <line
+              x1={labelWidth}
+              y1={scaleHeight - 4}
+              x2={labelWidth + stripWidth}
+              y2={scaleHeight - 4}
+              stroke="#e0e4e9"
+              strokeWidth={0.5}
+            />
+            {ticks.map((t) => {
+              const tx = labelWidth + t.boxIndex * (boxWidth + gap);
+              return (
+                <g key={t.value}>
+                  <line
+                    x1={tx}
+                    y1={scaleHeight - 6}
+                    x2={tx}
+                    y2={scaleHeight - 2}
+                    stroke="#e0e4e9"
+                    strokeWidth={0.5}
+                  />
+                  <text
+                    x={tx}
+                    y={scaleHeight - 8}
+                    textAnchor="middle"
+                    fontSize={7}
+                    fill="#5b636a"
+                  >
+                    {formatValue(t.value)}
+                  </text>
+                </g>
+              );
+            })}
+          </g>
+        )}
+
+        {rows.map((row, ri) => {
+          const ry = scaleHeight + ri * rowTotalHeight + 2;
+
+          const rowMarkers = row.markers ?? row.points ?? [];
+          const range = scaleMax - scaleMin;
+          const boxMap = new Map<number, { markers: AlignedRangeMarker[]; indices: number[] }>();
+          rowMarkers.forEach((m, mi) => {
+            const idx = range > 0
+              ? Math.min(boxCount - 1, Math.max(0, Math.floor((m.value - scaleMin) / stepSize)))
+              : 0;
+            if (!boxMap.has(idx)) boxMap.set(idx, { markers: [], indices: [] });
+            boxMap.get(idx)!.markers.push(m);
+            boxMap.get(idx)!.indices.push(mi);
+          });
+
+          return (
+            <g key={`row-${ri}`} data-testid={`aligned-strip-row-${ri}`}>
+              {showLabels && (
                 <text
-                  x={tx}
-                  y={scaleHeight - 8}
-                  textAnchor="middle"
-                  fontSize={7}
+                  x={labelWidth - 6}
+                  y={ry + segmentHeight / 2}
+                  dy="0.35em"
+                  textAnchor="end"
                   fill="#5b636a"
+                  fontSize={9}
+                  fontWeight={600}
+                  data-testid={`aligned-strip-label-${ri}`}
                 >
-                  {formatValue(t.value)}
+                  {row.label}
                 </text>
-              </g>
-            );
-          })}
-        </g>
-      )}
+              )}
 
-      {rows.map((row, ri) => {
-        const ry = scaleHeight + ri * rowTotalHeight + 2;
+              {Array.from({ length: boxCount }).map((_, i) => {
+                const sx = labelWidth + i * (boxWidth + gap);
+                const boxStart = scaleMin + i * stepSize;
+                const boxEnd = boxStart + stepSize;
+                const entry = boxMap.get(i);
+                const isOccupied = !!entry;
+                const isFirst = i === 0 || !boxMap.has(i - 1);
+                const isLast = i === boxCount - 1 || !boxMap.has(i + 1);
 
-        const rowMarkers = row.markers ?? row.points ?? [];
-        const range = scaleMax - scaleMin;
-        const boxMap = new Map<number, { markers: AlignedRangeMarker[]; indices: number[] }>();
-        rowMarkers.forEach((m, mi) => {
-          const idx = range > 0
-            ? Math.min(boxCount - 1, Math.max(0, Math.floor((m.value - scaleMin) / stepSize)))
-            : 0;
-          if (!boxMap.has(idx)) boxMap.set(idx, { markers: [], indices: [] });
-          boxMap.get(idx)!.markers.push(m);
-          boxMap.get(idx)!.indices.push(mi);
-        });
+                if (!isOccupied) {
+                  return (
+                    <g key={i} data-testid={`aligned-strip-box-${ri}-${i}`}>
+                      <rect
+                        x={sx}
+                        y={ry}
+                        width={boxWidth}
+                        height={segmentHeight}
+                        fill={baseColor}
+                        fillOpacity={0.3}
+                        rx={0}
+                      >
+                        <title>{formatValue(boxStart)} - {formatValue(boxEnd)}</title>
+                      </rect>
+                    </g>
+                  );
+                }
 
-        return (
-          <g key={`row-${ri}`} data-testid={`aligned-strip-row-${ri}`}>
-            {showLabels && (
-              <text
-                x={labelWidth - 6}
-                y={ry + segmentHeight / 2}
-                dy="0.35em"
-                textAnchor="end"
-                fill="#5b636a"
-                fontSize={9}
-                fontWeight={600}
-                data-testid={`aligned-strip-label-${ri}`}
-              >
-                {row.label}
-              </text>
-            )}
+                const firstIdx = entry.indices[0];
+                const fill = entry.markers[0].color ?? markerColor ?? markerColors[firstIdx % markerColors.length];
+                const combinedLabel = entry.markers.map((m) => m.label).join("/");
+                const tooltip = entry.markers.map((m) => `${m.label}: ${formatValue(m.value)}`).join(", ");
+                const rx = isFirst || isLast ? 2 : 0;
 
-            {Array.from({ length: boxCount }).map((_, i) => {
-              const sx = labelWidth + i * (boxWidth + gap);
-              const boxStart = scaleMin + i * stepSize;
-              const boxEnd = boxStart + stepSize;
-              const entry = boxMap.get(i);
-              const isOccupied = !!entry;
-              const isFirst = i === 0 || !boxMap.has(i - 1);
-              const isLast = i === boxCount - 1 || !boxMap.has(i + 1);
-
-              if (!isOccupied) {
                 return (
                   <g key={i} data-testid={`aligned-strip-box-${ri}-${i}`}>
                     <rect
@@ -180,56 +222,34 @@ export function RangeStripAlignedChart({
                       y={ry}
                       width={boxWidth}
                       height={segmentHeight}
-                      fill={baseColor}
-                      fillOpacity={0.3}
-                      rx={0}
+                      fill={fill}
+                      rx={rx}
+                      stroke="rgba(255,255,255,0.3)"
+                      strokeWidth={0.5}
                     >
-                      <title>{formatValue(boxStart)} - {formatValue(boxEnd)}</title>
+                      <title>{tooltip}</title>
                     </rect>
+                    {boxWidth >= 14 && (
+                      <text
+                        x={sx + boxWidth / 2}
+                        y={ry + segmentHeight / 2}
+                        dy="0.35em"
+                        textAnchor="middle"
+                        fill="#ffffff"
+                        fontSize={Math.min(10, boxWidth * 0.45)}
+                        fontWeight={700}
+                        data-testid={`aligned-strip-marker-${ri}-${firstIdx}`}
+                      >
+                        {combinedLabel}
+                      </text>
+                    )}
                   </g>
                 );
-              }
-
-              const firstIdx = entry.indices[0];
-              const fill = entry.markers[0].color ?? markerColor ?? markerColors[firstIdx % markerColors.length];
-              const combinedLabel = entry.markers.map((m) => m.label).join("/");
-              const tooltip = entry.markers.map((m) => `${m.label}: ${formatValue(m.value)}`).join(", ");
-              const rx = isFirst || isLast ? 2 : 0;
-
-              return (
-                <g key={i} data-testid={`aligned-strip-box-${ri}-${i}`}>
-                  <rect
-                    x={sx}
-                    y={ry}
-                    width={boxWidth}
-                    height={segmentHeight}
-                    fill={fill}
-                    rx={rx}
-                    stroke="rgba(255,255,255,0.3)"
-                    strokeWidth={0.5}
-                  >
-                    <title>{tooltip}</title>
-                  </rect>
-                  {boxWidth >= 14 && (
-                    <text
-                      x={sx + boxWidth / 2}
-                      y={ry + segmentHeight / 2}
-                      dy="0.35em"
-                      textAnchor="middle"
-                      fill="#ffffff"
-                      fontSize={Math.min(10, boxWidth * 0.45)}
-                      fontWeight={700}
-                      data-testid={`aligned-strip-marker-${ri}-${firstIdx}`}
-                    >
-                      {combinedLabel}
-                    </text>
-                  )}
-                </g>
-              );
-            })}
-          </g>
-        );
-      })}
-    </svg>
+              })}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
