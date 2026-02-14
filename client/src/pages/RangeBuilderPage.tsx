@@ -312,7 +312,7 @@ export function RangeBuilderPage() {
       <div>
         <h1 className="text-lg font-bold text-foreground" data-testid="text-page-title">Range Builder</h1>
         <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-page-description">
-          Adjust compensation ranges and see real-time impact on cost, pay equity, competitiveness, and affected employees
+          Adjust compensation ranges and see real-time impact on cost, peer equity, competitiveness, and stability
         </p>
       </div>
 

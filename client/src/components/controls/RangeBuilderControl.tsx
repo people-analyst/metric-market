@@ -16,8 +16,8 @@ export interface RangeBuilderRow {
 export interface RangeBuilderKPIs {
   totalCostImpact: number;
   costChangePercent: number;
-  payEquityScore: number;
-  payEquityChange: number;
+  peerEquityScore: number;
+  peerEquityChange: number;
   competitivenessRatio: number;
   competitivenessChange: number;
   employeesAffected: number;
@@ -146,8 +146,8 @@ function computeKPIs(
   return {
     totalCostImpact: costImpact,
     costChangePercent: costChangePct,
-    payEquityScore: newEquity,
-    payEquityChange: equityChange,
+    peerEquityScore: newEquity,
+    peerEquityChange: equityChange,
     competitivenessRatio: newComp,
     competitivenessChange: compChange,
     employeesAffected: affectedEmployees,
@@ -303,65 +303,94 @@ export function RangeBuilderControl({
 
   const formatPct = (v: number) => `${v >= 0 ? "+" : ""}${(v * 100).toFixed(1)}%`;
 
+  const costIndex = Math.round(Math.max(0, Math.min(100, 100 - Math.abs(kpis.costChangePercent) * 10)));
+  const peerEquityIndex = Math.round(kpis.peerEquityScore * 100);
+  const compIndex = Math.round(Math.max(0, Math.min(100, 100 - Math.abs(kpis.competitivenessRatio - 1) * 200)));
+  const affectedPct = kpis.totalEmployees > 0 ? kpis.employeesAffected / kpis.totalEmployees : 0;
+  const stabilityIndex = Math.round(Math.max(0, Math.min(100, (1 - affectedPct) * 100)));
+
+  const indexColor = (idx: number) => {
+    if (idx >= 80) return "text-green-600";
+    if (idx >= 60) return "text-foreground";
+    if (idx >= 40) return "text-amber-600";
+    return "text-red-600";
+  };
+
   return (
     <div className="space-y-3" data-testid="range-builder-control">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-testid="range-builder-kpis">
         <Card data-testid="kpi-cost-impact">
           <CardContent className="p-3">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <DollarSign className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Cost Impact</span>
             </div>
-            <div className="text-lg font-bold text-foreground leading-none" data-testid="kpi-cost-value">
-              {formatCurrency(kpis.totalCostImpact)}
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-xl font-bold leading-none ${indexColor(costIndex)}`} data-testid="kpi-cost-index">{costIndex}</span>
+              <span className="text-[10px] text-muted-foreground">/100</span>
             </div>
-            <div className={`text-[10px] font-medium mt-0.5 ${kpis.costChangePercent >= 0 ? "text-red-600" : "text-green-600"}`} data-testid="kpi-cost-change">
-              {kpis.costChangePercent >= 0 ? "+" : ""}{kpis.costChangePercent.toFixed(1)}% annual
+            <div className="mt-1.5 space-y-0.5">
+              <div className="text-xs font-medium text-foreground" data-testid="kpi-cost-value">{formatCurrency(kpis.totalCostImpact)}</div>
+              <div className={`text-[10px] font-medium ${kpis.costChangePercent >= 0 ? "text-red-600" : "text-green-600"}`} data-testid="kpi-cost-change">
+                {kpis.costChangePercent >= 0 ? "+" : ""}{kpis.costChangePercent.toFixed(1)}% annual
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="kpi-pay-equity">
+        <Card data-testid="kpi-peer-equity">
           <CardContent className="p-3">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <Scale className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Pay Equity</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Peer Equity</span>
             </div>
-            <div className="text-lg font-bold text-foreground leading-none" data-testid="kpi-equity-value">
-              {(kpis.payEquityScore * 100).toFixed(0)}%
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-xl font-bold leading-none ${indexColor(peerEquityIndex)}`} data-testid="kpi-equity-index">{peerEquityIndex}</span>
+              <span className="text-[10px] text-muted-foreground">/100</span>
             </div>
-            <div className={`text-[10px] font-medium mt-0.5 ${kpis.payEquityChange >= 0 ? "text-green-600" : "text-red-600"}`} data-testid="kpi-equity-change">
-              {formatPct(kpis.payEquityChange)} vs baseline
+            <div className="mt-1.5 space-y-0.5">
+              <div className="text-xs font-medium text-foreground" data-testid="kpi-equity-value">{(kpis.peerEquityScore * 100).toFixed(1)}% alignment</div>
+              <div className={`text-[10px] font-medium ${kpis.peerEquityChange >= 0 ? "text-green-600" : "text-red-600"}`} data-testid="kpi-equity-change">
+                {formatPct(kpis.peerEquityChange)} vs baseline
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card data-testid="kpi-competitiveness">
           <CardContent className="p-3">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <Target className="w-3.5 h-3.5 text-muted-foreground" />
               <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Competitiveness</span>
             </div>
-            <div className="text-lg font-bold text-foreground leading-none" data-testid="kpi-comp-value">
-              {(kpis.competitivenessRatio * 100).toFixed(0)}%
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-xl font-bold leading-none ${indexColor(compIndex)}`} data-testid="kpi-comp-index">{compIndex}</span>
+              <span className="text-[10px] text-muted-foreground">/100</span>
             </div>
-            <div className={`text-[10px] font-medium mt-0.5 ${kpis.competitivenessChange >= 0 ? "text-green-600" : "text-red-600"}`} data-testid="kpi-comp-change">
-              {formatPct(kpis.competitivenessChange)} vs market
+            <div className="mt-1.5 space-y-0.5">
+              <div className="text-xs font-medium text-foreground" data-testid="kpi-comp-value">{(kpis.competitivenessRatio * 100).toFixed(0)}% of market</div>
+              <div className={`text-[10px] font-medium ${kpis.competitivenessChange >= 0 ? "text-green-600" : "text-red-600"}`} data-testid="kpi-comp-change">
+                {formatPct(kpis.competitivenessChange)} vs baseline
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card data-testid="kpi-employees">
+        <Card data-testid="kpi-stability">
           <CardContent className="p-3">
-            <div className="flex items-center gap-1.5 mb-1">
+            <div className="flex items-center gap-1.5 mb-1.5">
               <Users className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Affected</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Stability</span>
             </div>
-            <div className="text-lg font-bold text-foreground leading-none" data-testid="kpi-affected-value">
-              {kpis.employeesAffected}
+            <div className="flex items-baseline gap-1.5">
+              <span className={`text-xl font-bold leading-none ${indexColor(stabilityIndex)}`} data-testid="kpi-stability-index">{stabilityIndex}</span>
+              <span className="text-[10px] text-muted-foreground">/100</span>
             </div>
-            <div className="text-[10px] font-medium text-muted-foreground mt-0.5" data-testid="kpi-affected-total">
-              of {kpis.totalEmployees} employees
+            <div className="mt-1.5 space-y-0.5">
+              <div className="text-xs font-medium text-foreground" data-testid="kpi-affected-value">{kpis.employeesAffected} affected</div>
+              <div className="text-[10px] font-medium text-muted-foreground" data-testid="kpi-affected-total">
+                of {kpis.totalEmployees} employees
+              </div>
             </div>
           </CardContent>
         </Card>

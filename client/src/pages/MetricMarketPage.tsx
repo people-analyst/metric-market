@@ -55,7 +55,7 @@ const METRIC_CATEGORIES: { name: string; icon: string; metrics: MetricDefinition
     metrics: [
       { key: "avg_salary", label: "Avg Salary", category: "Compensation & Value", unit: "$" },
       { key: "compa_ratio", label: "Compa-Ratio", category: "Compensation & Value", unit: "ratio", defaultSelected: true },
-      { key: "pay_equity_ratio", label: "Pay Equity Ratio", category: "Compensation & Value", unit: "ratio" },
+      { key: "peer_equity_ratio", label: "Peer Equity Ratio", category: "Compensation & Value", unit: "ratio" },
       { key: "benefits_cost_per_ee", label: "Benefits Cost / Employee", category: "Compensation & Value", unit: "$" },
       { key: "total_rewards", label: "Total Rewards", category: "Compensation & Value", unit: "$" },
       { key: "salary_range_penetration", label: "Salary Range Penetration", category: "Compensation & Value", unit: "%" },

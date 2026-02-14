@@ -2,7 +2,7 @@
 
 ## Purpose & Vision
 
-The Range Builder is an interactive **compensation range simulation tool** within the People Analytics Toolbox ("Metric Market") ecosystem. It enables compensation analysts to model target pay ranges across a job architecture, visualize how those ranges relate to market data and actual employee pay, and immediately see the downstream impact on cost, pay equity, competitiveness, and structural health metrics.
+The Range Builder is an interactive **compensation range simulation tool** within the People Analytics Toolbox ("Metric Market") ecosystem. It enables compensation analysts to model target pay ranges across a job architecture, visualize how those ranges relate to market data and actual employee pay, and immediately see the downstream impact on cost, peer equity (internal equity), competitiveness, and structural health metrics.
 
 The core interaction paradigm: a user selects a slice of the job architecture (by Super Job Function and Level Type), then clicks individual boxes on a segmented strip to extend or shrink target ranges for each level. Every click triggers a real-time recalculation of KPIs and statistics across all connected data sources.
 
@@ -74,14 +74,25 @@ interface RangeBuilderChangeEvent {
 interface RangeBuilderKPIs {
   totalCostImpact: number;          // Dollar cost change from baseline
   costChangePercent: number;        // % change in annual cost
-  payEquityScore: number;           // 0-1 score (deviation of avg pay from range midpoint)
-  payEquityChange: number;          // Change from baseline equity
+  peerEquityScore: number;          // 0-1 score (deviation of avg pay from range midpoint) — "Peer Equity" aka Internal Equity, distinct from Gender/Ethnic Pay Equity
+  peerEquityChange: number;         // Change from baseline peer equity
   competitivenessRatio: number;     // Range midpoint / market P50
   competitivenessChange: number;    // Change from baseline competitiveness
   employeesAffected: number;        // Employees whose pay falls outside new range
   totalEmployees: number;           // Total employee count
 }
 ```
+
+**Terminology note:** "Peer Equity" (also called Internal Equity) measures how well employees at the same level are centered within their pay range. This is explicitly distinct from Gender Pay Equity, Ethnic Pay Equity, or other protected-status equity metrics, which are separate legal constructs with their own defined calculations. Those will be added to the environment separately.
+
+**KPI Index system:** Each KPI card displays a bold **Index (0-100)** representing "goodness" — higher is always better. The index is color-coded: green (80+), default (60-79), amber (40-59), red (below 40). Below the index, the card shows the actual calculated measure and a change delta.
+
+| KPI | Index Formula | Meta Facts Shown |
+|---|---|---|
+| **Cost Impact** | `100 - abs(costChange%) * 10` — perfect score at zero cost change, degrades as cost impact grows | Dollar amount, % annual change |
+| **Peer Equity** | `peerEquityScore * 100` — direct mapping from the 0-1 alignment score | Alignment %, change vs baseline |
+| **Competitiveness** | `100 - abs(ratio - 1.0) * 200` — perfect at 100% of market, degrades symmetrically above/below | % of market, change vs baseline |
+| **Stability** | `(1 - affectedEmployees/totalEmployees) * 100` — perfect when no employees are affected by range changes | Count affected, total employees |
 
 **Granularity toggle:** The page provides a step size selector ($2.5K, $5K, $10K, $15K, $20K) that controls how large each clickable box is. Default is $10K. Changing the step size resets the control and re-initializes box states from the underlying range data.
 

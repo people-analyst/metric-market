@@ -1292,8 +1292,8 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
           properties: {
             totalCostImpact: { type: "number", description: "Net change in total compensation cost (positive = increase)" },
             costChangePercent: { type: "number", description: "Percentage change in total compensation cost" },
-            payEquityScore: { type: "number", description: "Pay equity score (0-1), measures how centered employees are within their ranges" },
-            payEquityChange: { type: "number", description: "Change in pay equity vs baseline" },
+            peerEquityScore: { type: "number", description: "Peer equity (internal equity) score (0-1), measures how centered employees are within their ranges" },
+            peerEquityChange: { type: "number", description: "Change in peer equity vs baseline" },
             competitivenessRatio: { type: "number", description: "Ratio of range midpoints to market P50 (1.0 = at market)" },
             competitivenessChange: { type: "number", description: "Change in competitiveness vs baseline" },
             employeesAffected: { type: "number", description: "Number of employees whose pay falls outside the new range boundaries" },
@@ -1333,9 +1333,9 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
 
 **KPI Cards (top section):**
 - Cost Impact: Net change in total compensation cost when employees outside new range boundaries are adjusted
-- Pay Equity: How centered employees are within their ranges (0-100%)
+- Peer Equity: How centered employees are within their ranges (0-100%), aka Internal Equity — distinct from Gender/Ethnic Pay Equity
 - Competitiveness: Ratio of range midpoints to market P50 benchmarks (100% = at market)
-- Employees Affected: Count of employees whose current pay falls outside the adjusted range
+- Stability: Proportion of employees unaffected by range changes
 
 **How it works:**
 1. Each row represents a job level with a compensation range shown as toggleable boxes
@@ -1347,7 +1347,7 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
 - Input: rows[] with label, rangeMin, rangeMax, currentEmployees, avgCurrentPay
 - Input: marketData[] with p50, p75 per level (for competitiveness calculation)
 - Output: activeRanges[] with adjusted min/max per level
-- Output: kpis{} with totalCostImpact, payEquityScore, competitivenessRatio, employeesAffected
+- Output: kpis{} with totalCostImpact, peerEquityScore, competitivenessRatio, employeesAffected
 
 **Integration pattern:**
 - Mount as a form control inside a card or standalone page
