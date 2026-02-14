@@ -92,9 +92,23 @@ interface RangeBuilderKPIs {
 | **Cost Impact** | `100 - abs(costChange%) * 10` — perfect score at zero cost change, degrades as cost impact grows | Dollar amount, % annual change |
 | **Peer Equity** | `peerEquityScore * 100` — direct mapping from the 0-1 alignment score | Alignment %, change vs baseline |
 | **Competitiveness** | `100 - abs(ratio - 1.0) * 200` — perfect at 100% of market, degrades symmetrically above/below | % of market, change vs baseline |
-| **Stability** | `(1 - affectedEmployees/totalEmployees) * 100` — perfect when no employees are affected by range changes | Count affected, total employees |
+| **People Impact** | `(1 - affectedEmployees/totalEmployees) * 100` — perfect when no employees are affected by range changes | Count affected, total employees |
 
 **Granularity toggle:** The page provides a step size selector ($2.5K, $5K, $10K, $15K, $20K) that controls how large each clickable box is. Default is $10K. Changing the step size resets the control and re-initializes box states from the underlying range data.
+
+**Custom Level Structure:** The page includes a Level Structure selector that allows the user to choose between:
+- **Standard** — uses the market-defined levels exactly as they exist in the source data (e.g., P1-P6, M1-M6)
+- **Custom (2-10)** — partitions the overall compensation range into N evenly-spaced levels with ~15% overlap between adjacent levels
+
+When a custom count is selected:
+1. The system finds the overall floor (lowest market P50 minus spread) and ceiling (highest market P75) across all source levels
+2. Divides this total span into N equal-width partitions with slight overlap
+3. Interpolates market P50/P75 at each partition's fractional position through the source data
+4. Distributes total employees and job counts proportionally across the new levels
+5. Labels levels as L1 (lowest) through LN (highest), displayed highest-first
+6. Resets all Range Builder and KPI state
+
+Changing super function or level type resets level structure back to Standard. The custom level count is independent of step size — both can be combined freely.
 
 ### 2. RangeTargetBulletChart (Read-Only Chart)
 **File:** `client/src/components/charts/RangeTargetBulletChart.tsx`

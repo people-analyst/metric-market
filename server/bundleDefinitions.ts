@@ -1335,7 +1335,7 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
 - Cost Impact: Net change in total compensation cost when employees outside new range boundaries are adjusted
 - Peer Equity: How centered employees are within their ranges (0-100%), aka Internal Equity — distinct from Gender/Ethnic Pay Equity
 - Competitiveness: Ratio of range midpoints to market P50 benchmarks (100% = at market)
-- Stability: Proportion of employees unaffected by range changes
+- People Impact: Proportion of employees unaffected by range changes
 
 **How it works:**
 1. Each row represents a job level with a compensation range shown as toggleable boxes

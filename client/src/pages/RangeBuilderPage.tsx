@@ -162,41 +162,152 @@ const JOB_STRUCTURE_DATA: Record<SuperFunction, Record<LevelType, Record<number,
 const SUPER_FUNCTIONS: SuperFunction[] = ["R&D", "GTM", "OPS", "G&A"];
 const LEVEL_TYPES: LevelType[] = ["Professional", "Manager", "Executive", "Support"];
 
-function getLevelDataForSelection(superFn: SuperFunction, levelType: LevelType) {
+type LevelStructureMode = "standard" | number;
+
+function getStandardLevelCount(levelType: LevelType): number {
+  return LEVEL_TYPE_CONFIG[levelType].levels.length;
+}
+
+function getSourceLevelsAscending(superFn: SuperFunction, levelType: LevelType) {
   const cfg = LEVEL_TYPE_CONFIG[levelType];
   const fnData = JOB_STRUCTURE_DATA[superFn]?.[levelType] || {};
-  const levels = cfg.levels.filter((l) => fnData[l]);
+  const ascending = [...cfg.levels].reverse();
+  const result: (LevelData & { level: number })[] = [];
+  for (const lvl of ascending) {
+    const d = fnData[lvl];
+    if (d) result.push({ ...d, level: lvl });
+  }
+  return result;
+}
+
+function interpolateAtFraction(sources: (LevelData & { level: number })[], fraction: number) {
+  const n = sources.length;
+  if (n === 0) return null;
+  if (n === 1) return sources[0];
+  const pos = fraction * (n - 1);
+  const lo = Math.floor(pos);
+  const hi = Math.min(lo + 1, n - 1);
+  const t = pos - lo;
+  const a = sources[lo];
+  const b = sources[hi];
+  const lerp = (va: number, vb: number) => va + (vb - va) * t;
+  return {
+    marketP50: lerp(a.marketP50, b.marketP50),
+    marketP75: lerp(a.marketP75, b.marketP75),
+    avgCurrentPay: lerp(a.avgCurrentPay, b.avgCurrentPay),
+    actualMin: lerp(a.actualMin, b.actualMin),
+    actualMax: lerp(a.actualMax, b.actualMax),
+  };
+}
+
+function getLevelDataForSelection(superFn: SuperFunction, levelType: LevelType, customLevelCount?: number) {
+  const cfg = LEVEL_TYPE_CONFIG[levelType];
+  const fnData = JOB_STRUCTURE_DATA[superFn]?.[levelType] || {};
+
+  if (!customLevelCount) {
+    const levels = cfg.levels.filter((l) => fnData[l]);
+    const rows: RangeBuilderRow[] = [];
+    const marketData: { p50: number; p75: number }[] = [];
+    const actuals: { actualMin: number; actualMax: number }[] = [];
+    const jobCounts: number[] = [];
+
+    for (const lvl of levels) {
+      const d = fnData[lvl];
+      if (!d) continue;
+      rows.push({
+        label: `${cfg.prefix}${lvl}`,
+        rangeMin: d.rangeMin,
+        rangeMax: d.rangeMax,
+        currentEmployees: d.currentEmployees,
+        avgCurrentPay: d.avgCurrentPay,
+      });
+      marketData.push({ p50: d.marketP50, p75: d.marketP75 });
+      actuals.push({ actualMin: d.actualMin, actualMax: d.actualMax });
+      jobCounts.push(d.jobCount);
+    }
+
+    let globalMin = Infinity, globalMax = -Infinity;
+    for (const d of Object.values(fnData)) {
+      globalMin = Math.min(globalMin, d.rangeMin, d.actualMin, d.marketP50 - (d.marketP75 - d.marketP50));
+      globalMax = Math.max(globalMax, d.rangeMax, d.actualMax, d.marketP75);
+    }
+    const pad = (globalMax - globalMin) * 0.1;
+    const scaleMin = Math.floor((globalMin - pad) / 5000) * 5000;
+    const scaleMax = Math.ceil((globalMax + pad) / 5000) * 5000;
+
+    return { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom: false };
+  }
+
+  const sources = getSourceLevelsAscending(superFn, levelType);
+  if (sources.length === 0) {
+    return { rows: [], marketData: [], actuals: [], jobCounts: [], scaleMin: 0, scaleMax: 100000, isCustom: true };
+  }
+
+  const totalEmployees = sources.reduce((s, d) => s + d.currentEmployees, 0);
+  const totalJobs = sources.reduce((s, d) => s + d.jobCount, 0);
+
+  const overallMin = Math.min(...sources.map((d) => d.marketP50 - (d.marketP75 - d.marketP50)));
+  const overallMax = Math.max(...sources.map((d) => d.marketP75));
+
+  const N = customLevelCount;
+  const totalSpan = overallMax - overallMin;
+  const baseWidth = totalSpan / N;
+  const overlapFraction = 0.15;
+  const overlap = baseWidth * overlapFraction;
 
   const rows: RangeBuilderRow[] = [];
   const marketData: { p50: number; p75: number }[] = [];
   const actuals: { actualMin: number; actualMax: number }[] = [];
   const jobCounts: number[] = [];
 
-  for (const lvl of levels) {
-    const d = fnData[lvl];
-    if (!d) continue;
+  for (let i = 0; i < N; i++) {
+    const rangeMin = Math.round((overallMin + i * baseWidth - (i > 0 ? overlap / 2 : 0)) / 1000) * 1000;
+    const rangeMax = Math.round((overallMin + (i + 1) * baseWidth + (i < N - 1 ? overlap / 2 : 0)) / 1000) * 1000;
+    const fraction = N > 1 ? i / (N - 1) : 0.5;
+
+    const interp = interpolateAtFraction(sources, fraction);
+    const empCount = i < N - 1
+      ? Math.round(totalEmployees / N)
+      : totalEmployees - Math.round(totalEmployees / N) * (N - 1);
+    const baseJobCount = Math.max(1, Math.round(totalJobs / N));
+    const jobCount = i < N - 1
+      ? baseJobCount
+      : Math.max(1, totalJobs - baseJobCount * (N - 1));
+
+    const mid = (rangeMin + rangeMax) / 2;
+    const p50 = interp ? Math.round(interp.marketP50) : mid;
+    const p75 = interp ? Math.round(interp.marketP75) : rangeMax;
+
     rows.push({
-      label: `${cfg.prefix}${lvl}`,
-      rangeMin: d.rangeMin,
-      rangeMax: d.rangeMax,
-      currentEmployees: d.currentEmployees,
-      avgCurrentPay: d.avgCurrentPay,
+      label: `L${i + 1}`,
+      rangeMin,
+      rangeMax,
+      currentEmployees: Math.max(1, empCount),
+      avgCurrentPay: interp ? Math.round(interp.avgCurrentPay) : mid,
     });
-    marketData.push({ p50: d.marketP50, p75: d.marketP75 });
-    actuals.push({ actualMin: d.actualMin, actualMax: d.actualMax });
-    jobCounts.push(d.jobCount);
+    marketData.push({ p50, p75 });
+    actuals.push({
+      actualMin: interp ? Math.round(interp.actualMin) : rangeMin - Math.round(baseWidth * 0.03),
+      actualMax: interp ? Math.round(interp.actualMax) : rangeMax + Math.round(baseWidth * 0.03),
+    });
+    jobCounts.push(jobCount);
   }
 
   let globalMin = Infinity, globalMax = -Infinity;
-  for (const d of Object.values(fnData)) {
-    globalMin = Math.min(globalMin, d.rangeMin, d.actualMin, d.marketP50 - (d.marketP75 - d.marketP50));
-    globalMax = Math.max(globalMax, d.rangeMax, d.actualMax, d.marketP75);
+  for (let i = 0; i < N; i++) {
+    globalMin = Math.min(globalMin, rows[i].rangeMin, actuals[i].actualMin, marketData[i].p50 - (marketData[i].p75 - marketData[i].p50));
+    globalMax = Math.max(globalMax, rows[i].rangeMax, actuals[i].actualMax, marketData[i].p75);
   }
   const pad = (globalMax - globalMin) * 0.1;
   const scaleMin = Math.floor((globalMin - pad) / 5000) * 5000;
   const scaleMax = Math.ceil((globalMax + pad) / 5000) * 5000;
 
-  return { rows, marketData, actuals, jobCounts, scaleMin, scaleMax };
+  rows.reverse();
+  marketData.reverse();
+  actuals.reverse();
+  jobCounts.reverse();
+
+  return { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom: true };
 }
 
 interface TargetRangeStats {
@@ -245,25 +356,37 @@ function computeTargetRangeStats(activeRanges: { label: string; min: number; max
   });
 }
 
+const CUSTOM_LEVEL_OPTIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+
 export function RangeBuilderPage() {
   const [superFn, setSuperFn] = useState<SuperFunction>("R&D");
   const [levelType, setLevelType] = useState<LevelType>("Professional");
   const STEP_OPTIONS = [2500, 5000, 10000, 15000, 20000] as const;
   const [stepSize, setStepSize] = useState<number>(10000);
   const [lastEvent, setLastEvent] = useState<RangeBuilderChangeEvent | null>(null);
+  const [levelStructure, setLevelStructure] = useState<LevelStructureMode>("standard");
 
-  const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax } = useMemo(
-    () => getLevelDataForSelection(superFn, levelType),
-    [superFn, levelType]
+  const standardCount = getStandardLevelCount(levelType);
+
+  const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom } = useMemo(
+    () => getLevelDataForSelection(superFn, levelType, levelStructure === "standard" ? undefined : levelStructure),
+    [superFn, levelType, levelStructure]
   );
 
   const handleSuperFnChange = useCallback((fn: SuperFunction) => {
     setSuperFn(fn);
+    setLevelStructure("standard");
     setLastEvent(null);
   }, []);
 
   const handleLevelTypeChange = useCallback((lt: LevelType) => {
     setLevelType(lt);
+    setLevelStructure("standard");
+    setLastEvent(null);
+  }, []);
+
+  const handleLevelStructureChange = useCallback((mode: LevelStructureMode) => {
+    setLevelStructure(mode);
     setLastEvent(null);
   }, []);
 
@@ -312,7 +435,7 @@ export function RangeBuilderPage() {
       <div>
         <h1 className="text-lg font-bold text-foreground" data-testid="text-page-title">Range Builder</h1>
         <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-page-description">
-          Adjust compensation ranges and see real-time impact on cost, peer equity, competitiveness, and stability
+          Adjust compensation ranges and see real-time impact on cost, peer equity, competitiveness, and people impact
         </p>
       </div>
 
@@ -353,8 +476,35 @@ export function RangeBuilderPage() {
                 ))}
               </div>
             </div>
+            <div>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide" data-testid="label-level-structure">Level Structure</span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-1" data-testid="filter-level-structure">
+                <Button
+                  size="sm"
+                  variant={levelStructure === "standard" ? "default" : "outline"}
+                  className={`text-xs h-7 px-3 ${levelStructure === "standard" ? "bg-[#0f69ff]" : ""}`}
+                  onClick={() => handleLevelStructureChange("standard")}
+                  data-testid="button-structure-standard"
+                >
+                  Standard ({standardCount})
+                </Button>
+                <span className="text-[10px] text-muted-foreground mx-1">or</span>
+                {CUSTOM_LEVEL_OPTIONS.map((n) => (
+                  <Button
+                    key={n}
+                    size="sm"
+                    variant={levelStructure === n ? "default" : "outline"}
+                    className={`text-xs h-7 px-2 min-w-[32px] ${levelStructure === n ? "bg-[#0f69ff]" : ""}`}
+                    onClick={() => handleLevelStructureChange(n)}
+                    data-testid={`button-structure-${n}`}
+                  >
+                    {n}
+                  </Button>
+                ))}
+              </div>
+            </div>
             <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground pt-1 border-t border-border" data-testid="filter-summary">
-              <span>Viewing: <span className="font-semibold text-foreground">{superFn}</span> <span className="font-semibold text-foreground">{LEVEL_TYPE_CONFIG[levelType].prefix}-levels</span></span>
+              <span>Viewing: <span className="font-semibold text-foreground">{superFn}</span> <span className="font-semibold text-foreground">{isCustom ? `${rows.length} custom` : LEVEL_TYPE_CONFIG[levelType].prefix + "-levels"}</span></span>
               <span>{rows.length} levels</span>
               <span>{totalJobs} jobs</span>
               <span>{totalEmployees} employees</span>
@@ -366,7 +516,7 @@ export function RangeBuilderPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1 pt-3 px-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground" data-testid="text-section-title">{superFn} {LEVEL_TYPE_CONFIG[levelType].prefix}-Level Pay Ranges</h3>
+            <h3 className="text-sm font-semibold text-foreground" data-testid="text-section-title">{superFn} {isCustom ? `Custom ${rows.length}-Level` : `${LEVEL_TYPE_CONFIG[levelType].prefix}-Level`} Pay Ranges</h3>
             <p className="text-[10px] text-muted-foreground mt-0.5">Click boxes to extend or shrink compensation ranges</p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -389,7 +539,7 @@ export function RangeBuilderPage() {
         </CardHeader>
         <CardContent className="px-4 pb-4 pt-1">
           <RangeBuilderControl
-            key={`${superFn}-${levelType}-${stepSize}`}
+            key={`${superFn}-${levelType}-${stepSize}-${levelStructure}`}
             rows={rows}
             stepSize={stepSize}
             scaleMin={scaleMin}

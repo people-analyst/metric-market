@@ -380,7 +380,7 @@ export function RangeBuilderControl({
           <CardContent className="p-3">
             <div className="flex items-center gap-1.5 mb-1.5">
               <Users className="w-3.5 h-3.5 text-muted-foreground" />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Stability</span>
+              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">People Impact</span>
             </div>
             <div className="flex items-baseline gap-1.5">
               <span className={`text-xl font-bold leading-none ${indexColor(stabilityIndex)}`} data-testid="kpi-stability-index">{stabilityIndex}</span>
