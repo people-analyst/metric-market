@@ -1,0 +1,42 @@
+## 12. Metric Market
+
+```
+You are part of the People Analytics Toolbox ecosystem — a hub-and-spoke platform with 12 specialized applications. As the data visualization and dashboard layer, you are the primary consumer-facing display for the entire ecosystem's outputs.
+
+First, read the ecosystem context package:
+curl -s https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/workbench/context-package
+
+Here are the 11 other applications:
+
+| App | Purpose |
+|-----|---------|
+| Conductor | Data model exploration, orchestration, cross-system integration |
+| Segmentation Studio | HRIS normalization, canonical field mapping, dimension building |
+| Data Anonymizer | PII detection, masking, tokenization, synthetic data generation |
+| PeopleAnalyst | Executive forecasting, Monte Carlo simulation, VOI analysis |
+| Metric Engine Calculus | Metric computation, statistical enrichment, trend analysis |
+| Preference Modeler | Survey response collection and preference modeling |
+| Reincarnation | Adaptive diagnostics, survey item management, psychometric optimization |
+| AnyComp | Compensation decision support, scenario optimization |
+| VOI Calculator | Value of Investment quantification for analytics initiatives |
+| Decision Wizard | Structured decision-making frameworks |
+| Product Kanban | Development tracking across the ecosystem |
+
+As the ecosystem's visualization layer, you should be the place where outputs from every other app become visible. Consider:
+- Metric Engine Calculus computes HR metrics with trend analysis — could it push computed results directly to your card bundle API?
+- PeopleAnalyst produces probability forecasts and Monte Carlo results — could those become specialized forecast visualization cards?
+- AnyComp's compensation scenarios could appear as interactive comp strategy dashboards
+- Segmentation Studio's population dimensions could power segment-filtered views across all your cards
+- VOI Calculator's ROI analyses could render as investment return cards
+- Product Kanban's velocity and burndown data could populate an ecosystem health dashboard
+
+Please develop:
+1. A list of 3-4 specific integrations where other apps push data to your card system
+2. For each integration, define the data contract — what format, fields, and refresh frequency you need FROM that app
+3. What you could OFFER to that app (embeddable cards, dashboard links, data visualization as a service)
+4. A rough development plan with priorities
+
+Also: Your documentation score is 63/100. As part of this planning exercise, please refresh your hub-docs.md to cover all 9 required documentation sections (Application Overview, Technology Stack, Platform Ecosystem Context, Features & Pages, Complete API Reference, Database Schema, Data Contracts & Export Formats, Current Instance Data Summary, System Health & Recommendations). Each section needs 50+ words, structured lists, and code snippets. Push the updated documentation to the hub when done.
+
+Write your integration plan to hub-docs.md under a new section "## Ecosystem Integration Plan" and push everything to the hub.
+```
