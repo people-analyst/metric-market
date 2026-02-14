@@ -944,4 +944,113 @@ export const BUNDLE_DEFINITIONS: InsertCardBundle[] = [
     documentation: "Show how total composition changes over time. Each layer represents a category stacking on previous ones. Use for workforce composition trends, budget allocation over time.",
     infrastructureNotes: "Requires D3.js.",
   },
+  {
+    key: "range_strip",
+    chartType: "range_strip",
+    displayName: "Range Strip Chart",
+    description: "Sequential rectangular blocks with highlighting to visualize ranges. Blocks represent percentiles, quartiles, or custom slices with highlighted segments forming a contiguous range.",
+    version: 1,
+    category: "Compensation",
+    tags: ["range", "compensation", "percentile", "quartile", "distribution", "pay-structure"],
+    dataSchema: {
+      type: "object",
+      required: ["rows"],
+      properties: {
+        rows: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["label", "segments"],
+            properties: {
+              label: { type: "string", description: "Row label (e.g., job title, department, grade)" },
+              segments: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    label: { type: "string", description: "Segment label (e.g., P10, Q1, $50K)" },
+                    value: { type: "number", description: "Numeric value for the segment" },
+                    highlighted: { type: "boolean", description: "Whether this segment is part of the active range" },
+                    color: { type: "string", description: "Override color for this segment" },
+                    tooltip: { type: "string", description: "Hover tooltip text" },
+                  },
+                },
+                description: "Sequential blocks forming the strip. Highlighted segments define the range.",
+              },
+              rangeStart: { type: "number", description: "Index of the first highlighted segment (auto-detected if omitted)" },
+              rangeEnd: { type: "number", description: "Index of the last highlighted segment (auto-detected if omitted)" },
+              markerPosition: { type: "number", description: "Segment index for a reference marker (e.g., current position, MRP)" },
+              markerLabel: { type: "string", description: "Label for the reference marker" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        highlightColor: { type: "string", description: "Color for highlighted range segments" },
+        baseColor: { type: "string", description: "Color for non-highlighted segments" },
+        markerColor: { type: "string", description: "Color for reference markers" },
+        segmentHeight: { type: "number", description: "Height of each segment block in pixels" },
+        gap: { type: "number", description: "Gap between segments in pixels" },
+        showLabels: { type: "boolean", description: "Show row labels on the left" },
+        showValues: { type: "boolean", description: "Show range fraction on the right" },
+        labelWidth: { type: "number", description: "Width allocated for row labels" },
+        width: { type: "number" },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG range strip chart" },
+    defaults: {
+      highlightColor: "#0f69ff",
+      baseColor: "#e0e4e9",
+      markerColor: "#232a31",
+      segmentHeight: 18,
+      gap: 1,
+      showLabels: true,
+      showValues: true,
+    },
+    exampleData: {
+      rows: [
+        {
+          label: "Eng IC",
+          segments: [
+            { label: "P10" }, { label: "P20" }, { label: "P25", highlighted: true },
+            { label: "P30", highlighted: true }, { label: "P40", highlighted: true },
+            { label: "P50", highlighted: true }, { label: "P60", highlighted: true },
+            { label: "P70", highlighted: true }, { label: "P75" }, { label: "P90" },
+          ],
+          markerPosition: 4,
+          markerLabel: "MRP",
+        },
+        {
+          label: "Eng Mgr",
+          segments: [
+            { label: "P10" }, { label: "P20" }, { label: "P25" },
+            { label: "P30", highlighted: true }, { label: "P40", highlighted: true },
+            { label: "P50", highlighted: true }, { label: "P60", highlighted: true },
+            { label: "P70", highlighted: true }, { label: "P75", highlighted: true },
+            { label: "P90" },
+          ],
+          markerPosition: 5,
+          markerLabel: "MRP",
+        },
+        {
+          label: "Eng Dir",
+          segments: [
+            { label: "P10" }, { label: "P20" }, { label: "P25" },
+            { label: "P30" }, { label: "P40", highlighted: true },
+            { label: "P50", highlighted: true }, { label: "P60", highlighted: true },
+            { label: "P70", highlighted: true }, { label: "P75", highlighted: true },
+            { label: "P90", highlighted: true },
+          ],
+          markerPosition: 6,
+          markerLabel: "MRP",
+        },
+      ],
+    },
+    exampleConfig: {},
+    documentation: "Visualize pay ranges, percentile bands, or any segmented range data. Each row shows a strip of sequential blocks where highlighted segments form a contiguous range. Use for pay structure visualization, market positioning, range overlap analysis, and quartile/percentile breakdowns. Blocks can represent percentiles (P10-P90), quartiles (Q1-Q4), deciles, or custom slices. Add markers to show reference points like Market Reference Point (MRP) or employee position. Rows can be drilled into as individual cards for detailed analysis.",
+    infrastructureNotes: "Requires D3.js. Designed for compensation range visualization but applicable to any segmented range data.",
+  },
 ];

@@ -38,6 +38,7 @@ export const CHART_TYPES = [
   "bump",
   "sparkline_rows",
   "stacked_area",
+  "range_strip",
 ] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];

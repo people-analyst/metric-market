@@ -14,6 +14,8 @@ export interface TileCartogramChartProps {
   width?: number;
   colorRange?: [string, string];
   sectionLabels?: Record<number, string>;
+  tileSize?: number;
+  gap?: number;
 }
 
 export function TileCartogramChart({
@@ -21,13 +23,18 @@ export function TileCartogramChart({
   width = 300,
   colorRange = ["#e0e4e9", "#0f69ff"],
   sectionLabels,
+  tileSize,
+  gap = 2,
 }: TileCartogramChartProps) {
   const maxCol = Math.max(...tiles.map((t) => t.col));
   const maxRow = Math.max(...tiles.map((t) => t.row));
   const cols = maxCol + 1;
-  const rows = maxRow + 1;
-  const gap = 2;
-  const cellSize = Math.floor((width - gap * (cols - 1)) / cols);
+
+  const maxCellForWidth = Math.floor((width - gap * (cols - 1)) / cols);
+  const cellSize = tileSize ?? Math.min(36, maxCellForWidth);
+
+  const naturalWidth = cols * (cellSize + gap) - gap;
+  const actualWidth = Math.min(naturalWidth, width);
 
   const labelH = 14;
   const labelRows = sectionLabels ? Object.keys(sectionLabels).map(Number).sort((a, b) => a - b) : [];
@@ -53,7 +60,7 @@ export function TileCartogramChart({
   }, [tiles, colorRange]);
 
   return (
-    <svg width={width} height={totalHeight} className="block" data-testid="chart-tile-cartogram">
+    <svg width={actualWidth} height={totalHeight} className="block" data-testid="chart-tile-cartogram">
       {sectionLabels &&
         Object.entries(sectionLabels).map(([rowStr, label]) => {
           const row = Number(rowStr);

@@ -23,6 +23,7 @@ import {
   BumpChart,
   SparklineRowsChart,
   StackedAreaChart,
+  RangeStripChart,
 } from "@/components/charts";
 
 const CHART_COMPONENT_MAP: Record<ChartType, React.ComponentType<any>> = {
@@ -46,6 +47,7 @@ const CHART_COMPONENT_MAP: Record<ChartType, React.ComponentType<any>> = {
   bump: BumpChart,
   sparkline_rows: SparklineRowsChart,
   stacked_area: StackedAreaChart,
+  range_strip: RangeStripChart,
 };
 
 export interface CardWrapperProps {

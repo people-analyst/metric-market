@@ -7,7 +7,7 @@ Metric Market is the **card workbench** of the People Analytics Toolbox ecosyste
 The core value proposition lies in **standardized, machine-readable card bundles**. These self-contained definitions declare data schemas, configuration options, output representations, documentation, and example data. This approach ensures consistent UI/UX across the ecosystem and facilitates AI agent discovery and automated card assembly. Each bundle uses JSON Schema contracts, allowing spoke applications to discover data requirements, push conforming payloads, and render visualizations without manual integration.
 
 Key capabilities include:
-- 20 distinct D3-powered SVG chart types.
+- 21 distinct D3-powered SVG chart types (including Range Strip for compensation range visualization).
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs.
 - Machine-readable data contracts (`dataSchema`, `configSchema`, `outputSchema`) for inter-application data exchange.
 - Hub-and-spoke integration for cross-application coordination, directive processing, and documentation management.
