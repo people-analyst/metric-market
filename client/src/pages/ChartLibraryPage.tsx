@@ -22,6 +22,7 @@ import {
   BumpChart,
   SparklineRowsChart,
   StackedAreaChart,
+  RangeStripChart,
   TILE_PRESETS,
 } from "@/components/charts";
 import type { TilePreset } from "@/components/charts";
@@ -43,6 +44,7 @@ import type {
   BumpChartItem,
   SparklineRow,
   StackedAreaSeries,
+  RangeStripRow,
 } from "@/components/charts";
 
 const CONFIDENCE_DATA: ConfidenceBandDatum[] = (() => {
@@ -376,6 +378,45 @@ const SPARKLINE_ROWS: SparklineRow[] = [
   { label: "D", value: 85, data: [82, 83, 84, 84, 85, 86, 88, 90, 89, 87, 85] },
 ];
 
+const RANGE_STRIP_ROWS: RangeStripRow[] = [
+  {
+    label: "Eng III",
+    segments: [
+      { label: "P10", highlighted: false, tooltip: "P10: $95k" },
+      { label: "P25", highlighted: true, tooltip: "P25: $110k" },
+      { label: "P50", highlighted: true, tooltip: "P50: $125k" },
+      { label: "P75", highlighted: true, tooltip: "P75: $140k" },
+      { label: "P90", highlighted: false, tooltip: "P90: $160k" },
+    ],
+    markerPosition: 2,
+    markerLabel: "MRP",
+  },
+  {
+    label: "Eng IV",
+    segments: [
+      { label: "P10", highlighted: false, tooltip: "P10: $120k" },
+      { label: "P25", highlighted: false, tooltip: "P25: $135k" },
+      { label: "P50", highlighted: true, tooltip: "P50: $155k" },
+      { label: "P75", highlighted: true, tooltip: "P75: $175k" },
+      { label: "P90", highlighted: true, tooltip: "P90: $195k" },
+    ],
+    markerPosition: 3,
+    markerLabel: "MRP",
+  },
+  {
+    label: "Mgr II",
+    segments: [
+      { label: "P10", highlighted: false, tooltip: "P10: $130k" },
+      { label: "P25", highlighted: true, tooltip: "P25: $150k" },
+      { label: "P50", highlighted: true, tooltip: "P50: $170k" },
+      { label: "P75", highlighted: false, tooltip: "P75: $190k" },
+      { label: "P90", highlighted: false, tooltip: "P90: $210k" },
+    ],
+    markerPosition: 1,
+    markerLabel: "MRP",
+  },
+];
+
 const STACKED_AREA: StackedAreaSeries[] = [
   { label: "Engineering", values: [120, 130, 110, 140, 100, 80, 150, 120, 180, 140, 100, 130], color: "#232a31" },
   { label: "Sales", values: [80, 100, 120, 90, 110, 130, 100, 120, 80, 110, 100, 90], color: "#5b636a" },
@@ -499,6 +540,11 @@ const CHARTS = [
     title: "Sparkline Rows",
     description: "Labeled rows with individual sparklines for quick comparison",
     component: <SparklineRowsChart rows={SPARKLINE_ROWS} />,
+  },
+  {
+    title: "Range Strip",
+    description: "Compensation range bands with percentile segments and MRP markers",
+    component: <RangeStripChart rows={RANGE_STRIP_ROWS} />,
   },
   {
     title: "Stacked Area",

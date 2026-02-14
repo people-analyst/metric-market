@@ -34,6 +34,7 @@ const CHART_TYPE_LABELS: Record<string, string> = {
   bump: "Bump Chart",
   sparkline_rows: "Sparkline Rows",
   stacked_area: "Stacked Area",
+  range_strip: "Range Strip",
 };
 
 function BundleBrowserSection() {

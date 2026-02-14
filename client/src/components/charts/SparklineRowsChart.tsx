@@ -25,7 +25,7 @@ export function SparklineRowsChart({
   labelColor = "#232a31",
   dividerColor = "#e0e4e9",
 }: SparklineRowsChartProps) {
-  const pad = { l: 80, r: 16 };
+  const pad = { l: 80, r: 50 };
   const sparkW = width - pad.l - pad.r;
   const totalH = rows.length * rowHeight;
   const sparkH = rowHeight * 0.55;
@@ -45,6 +45,8 @@ export function SparklineRowsChart({
         firstY: yScale(row.data[0]),
         lastX: xScale(row.data.length - 1),
         lastY: yScale(row.data[row.data.length - 1]),
+        firstVal: row.data[0],
+        lastVal: row.data[row.data.length - 1],
       };
     });
   }, [rows, sparkW, sparkH]);
@@ -79,13 +81,24 @@ export function SparklineRowsChart({
               fontSize={11}
               fill="#5b636a"
             >
-              {row.value}
+              {p.firstVal}
             </text>
             <g transform={`translate(${pad.l},${(rowHeight - sparkH) / 2})`}>
               <path d={p.path} fill="none" stroke={color} strokeWidth={1.5} />
               <circle cx={p.firstX} cy={p.firstY} r={2.5} fill={color} />
               <circle cx={p.lastX} cy={p.lastY} r={2.5} fill={color} />
             </g>
+            <text
+              x={pad.l + sparkW + 10}
+              y={rowHeight / 2 + 1}
+              textAnchor="start"
+              dominantBaseline="central"
+              fontSize={11}
+              fill={labelColor}
+              fontWeight={700}
+            >
+              {p.lastVal}
+            </text>
           </g>
         );
       })}
