@@ -34,7 +34,7 @@ interface RegistryEntry {
 interface IntegrationTarget {
   app: string;
   slug: string;
-  role: "consumer" | "producer";
+  role: "consumer" | "producer" | "bidirectional";
   description: string;
   dataContract: Record<string, any>;
 }
@@ -279,10 +279,10 @@ function ComponentDetail({ componentKey, onBack }: { componentKey: string; onBac
                     <Link2 className="w-4 h-4 text-[#0f69ff]" />
                     <h4 className="text-sm font-semibold">{target.app}</h4>
                     <Badge
-                      variant={target.role === "producer" ? "default" : "secondary"}
+                      variant={target.role === "producer" ? "default" : target.role === "bidirectional" ? "outline" : "secondary"}
                       className="text-[9px]"
                     >
-                      {target.role === "producer" ? "Sends Data" : "Receives Data"}
+                      {target.role === "producer" ? "Sends Data" : target.role === "bidirectional" ? "Sends & Receives" : "Receives Data"}
                     </Badge>
                   </div>
                   <Badge variant="outline" className="text-[9px] font-mono">{target.slug}</Badge>

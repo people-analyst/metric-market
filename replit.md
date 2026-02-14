@@ -15,7 +15,7 @@ Key capabilities include:
 - Hub-and-spoke integration for cross-application coordination, directive processing, and documentation management.
 - A scoring and prioritization system for cards.
 - Configurable refresh tracking with policies (`manual`, `scheduled`, `on_push`) and cadences.
-- **Component Export System** — Discoverable component registry (`GET /api/components`) and export packaging (`GET /api/export/:key`) for cross-app integration. Includes formal data contracts between Conductor (market data producer) and AnyComp (KPI output consumer), with field mappings, example payloads, and integration guides. Frontend at `/export`.
+- **Component Export System** — Discoverable component registry (`GET /api/components`) and export packaging (`GET /api/export/:key`) for cross-app integration. Includes formal data contracts between Conductor (market data producer), AnyComp (KPI output consumer), and Metric Engine (bidirectional metric definition standardization and computed value exchange), with field mappings, example payloads, and integration guides. Frontend at `/export`.
 
 ## User Preferences
 

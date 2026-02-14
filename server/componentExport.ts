@@ -9,7 +9,7 @@ const APP_URL = process.env.REPLIT_DEV_DOMAIN
 interface IntegrationTarget {
   app: string;
   slug: string;
-  role: "consumer" | "producer";
+  role: "consumer" | "producer" | "bidirectional";
   description: string;
   dataContract: Record<string, any>;
 }
@@ -146,6 +146,75 @@ const INTEGRATION_TARGETS: Record<string, IntegrationTarget[]> = {
         ],
       },
     },
+    {
+      app: "Metric Engine",
+      slug: "metric-engine",
+      role: "bidirectional",
+      description: "Standardizes metric definitions used by Range Builder and consumes computed KPI values back into the metric definition library. Provides canonical metric schemas, thresholds, and formulas; receives real-time computed values for benchmarking and trend analysis.",
+      dataContract: {
+        description: "Metric Engine exchanges metric definitions and computed values with Metric Market",
+        inbound: {
+          description: "Metric Engine supplies standardized metric definitions to Metric Market",
+          endpoint: "GET /api/metric-definitions (Metric Engine endpoint)",
+          payload: {
+            metricDefinitions: {
+              type: "array",
+              description: "Canonical metric definitions that Range Builder KPIs are based on",
+              itemSchema: {
+                metricKey: "string — Unique identifier (e.g., 'cost_impact', 'peer_equity', 'competitiveness', 'people_impact')",
+                displayName: "string — Human-readable name for UI display",
+                category: "string — Metric category (e.g., 'compensation', 'equity', 'market_positioning')",
+                formula: "string — Canonical formula expression used for computation",
+                unit: "string — Output unit ('currency', 'percentage', 'ratio', 'index_0_100')",
+                direction: "string — 'higher_is_better' | 'lower_is_better' | 'target_is_best'",
+                thresholds: {
+                  critical: "number — Below this value triggers alert",
+                  warning: "number — Below this value triggers caution",
+                  target: "number — Ideal target value",
+                },
+                dataRequirements: "string[] — Required input fields (e.g., ['rangeMin', 'rangeMax', 'avgCurrentPay', 'market_p50'])",
+                version: "number — Definition version for compatibility tracking",
+              },
+            },
+          },
+          fieldMappings: {
+            metricKey: { canonicalField: "metric_identifier", source: "Metric Definition Library" },
+            formula: { canonicalField: "metric_formula", source: "Metric Definition Library" },
+            thresholds: { canonicalField: "metric_thresholds", source: "Metric Definition Library / Org Config" },
+          },
+        },
+        outbound: {
+          description: "Metric Market sends computed metric values back to Metric Engine",
+          eventName: "MetricComputationEvent",
+          endpoint: "POST /api/metric-values (Metric Engine endpoint)",
+          payload: {
+            computedMetrics: {
+              type: "array",
+              description: "Computed KPI values from Range Builder sessions",
+              itemSchema: {
+                metricKey: "string — References metric definition key",
+                value: "number — Computed raw value",
+                indexScore: "number — Normalized 0-100 goodness index",
+                context: {
+                  jobFunction: "string — Super Job Function filter applied (GTM, R&D, OPS, G&A, or 'all')",
+                  levelType: "string — Level type filter applied (Professional, Manager, Executive, Support, or 'all')",
+                  levelStructure: "string — 'standard' or 'custom_N' (e.g., 'custom_5')",
+                  scenarioId: "string — Optional scenario identifier for multi-scenario comparison",
+                },
+                computedAt: "string — ISO 8601 timestamp",
+              },
+            },
+          },
+          integrationPatterns: [
+            "Push computed KPI values after each Range Builder session for historical tracking",
+            "Use metric definitions to validate that Range Builder formulas match canonical definitions",
+            "Sync threshold updates from Metric Engine to update KPI index scoring",
+            "Feed computed values into Metric Engine trend analysis and benchmarking",
+            "Use Metric Engine definition versions to detect formula drift across ecosystem",
+          ],
+        },
+      },
+    },
   ],
   range_target_bullet: [
     {
@@ -184,17 +253,21 @@ Cost Impact, Peer Equity, Competitiveness, and People Impact.
 ## Data Flow Architecture
 
 \`\`\`
-┌──────────────┐         ┌──────────────┐         ┌──────────────┐
-│  Conductor   │────────►│ Metric Market │────────►│   AnyComp    │
-│  (Producer)  │  Input  │ Range Builder │ Output  │  (Consumer)  │
-│              │  Data   │   Control     │ Events  │              │
-└──────────────┘         └──────────────┘         └──────────────┘
-     │                         │                         │
-     │ • HRIS snapshots        │ • Interactive UI         │ • Strategy modeling
-     │ • Market surveys        │ • KPI computation        │ • Scenario comparison
-     │ • Job architecture      │ • Custom level modes     │ • Executive dashboards
-     │ • Field Exchange        │ • Range adjustments      │ • Budget constraints
-     └─────────────────────────┘─────────────────────────┘
+                        ┌────────────────┐
+                        │ Metric Engine  │
+                        │ (Bidirectional)│
+                        └──────┬───┬─────┘
+              Definitions ↓   ↑ Computed Values
+┌──────────────┐    ┌─────▼───┴──────┐         ┌──────────────┐
+│  Conductor   │───►│  Metric Market  │────────►│   AnyComp    │
+│  (Producer)  │    │  Range Builder  │ Output  │  (Consumer)  │
+│              │    │    Control      │ Events  │              │
+└──────────────┘    └────────────────┘         └──────────────┘
+     │                      │                         │
+     │ • HRIS snapshots     │ • Interactive UI         │ • Strategy modeling
+     │ • Market surveys     │ • KPI computation        │ • Scenario comparison
+     │ • Job architecture   │ • Custom level modes     │ • Executive dashboards
+     │ • Field Exchange     │ • Range adjustments      │ • Budget constraints
 \`\`\`
 
 ## Step 1: Conductor → Metric Market (Input Data)
@@ -294,6 +367,73 @@ For executive dashboard display, each KPI has a normalized 0-100 "goodness" inde
 4. **100 Pennies**: Map kpiIndices to penny allocation weights
 5. **VOI Analysis**: Use KPI deltas to estimate Value of Information for comp research
 
+## Step 2b: Metric Engine ↔ Metric Market (Definition Standardization)
+
+Metric Engine serves as the canonical source for metric definitions across the People Analytics Toolbox ecosystem. 
+It provides standardized schemas, formulas, thresholds, and versioning — and receives computed values back.
+
+### Inbound: Metric Definitions → Range Builder
+Metric Engine supplies the canonical definitions that Range Builder KPIs are built on:
+
+\`\`\`json
+{
+  "metricDefinitions": [
+    {
+      "metricKey": "cost_impact",
+      "displayName": "Cost Impact",
+      "category": "compensation",
+      "formula": "sum(max(0, newRangeMin - currentPay) * employees)",
+      "unit": "currency",
+      "direction": "lower_is_better",
+      "thresholds": { "critical": 500000, "warning": 100000, "target": 0 },
+      "dataRequirements": ["rangeMin", "rangeMax", "avgCurrentPay", "currentEmployees"],
+      "version": 2
+    },
+    {
+      "metricKey": "peer_equity",
+      "displayName": "Peer Equity",
+      "category": "equity",
+      "formula": "1 - avg(abs(currentPay - midpoint) / (rangeMax - rangeMin))",
+      "unit": "ratio",
+      "direction": "higher_is_better",
+      "thresholds": { "critical": 0.5, "warning": 0.7, "target": 0.9 },
+      "dataRequirements": ["rangeMin", "rangeMax", "avgCurrentPay"],
+      "version": 2
+    }
+  ]
+}
+\`\`\`
+
+### Outbound: Computed Values → Metric Engine
+After each Range Builder adjustment, computed metric values are sent back:
+
+\`\`\`json
+{
+  "computedMetrics": [
+    {
+      "metricKey": "cost_impact",
+      "value": 45000,
+      "indexScore": 88,
+      "context": {
+        "jobFunction": "R&D",
+        "levelType": "Professional",
+        "levelStructure": "standard",
+        "scenarioId": "scenario_q2_2026"
+      },
+      "computedAt": "2026-02-14T15:30:00Z"
+    }
+  ]
+}
+\`\`\`
+
+### Integration Patterns for Metric Engine
+
+1. **Definition Sync**: Pull metric definitions on Range Builder initialization to ensure formula consistency
+2. **Version Tracking**: Compare local formula versions vs Metric Engine versions to detect drift
+3. **Threshold Updates**: Metric Engine threshold changes propagate to KPI index scoring in Range Builder
+4. **Historical Benchmarks**: Computed values feed Metric Engine trend analysis across all spoke apps
+5. **Cross-App Standardization**: Same metric definitions used by AnyComp, Conductor, and other spokes
+
 ## Step 3: Custom Level Structure
 
 The Range Builder supports two level structure modes:
@@ -314,6 +454,8 @@ of which level structure mode was used.
 | GET | /api/export/:key | Export package with schemas, docs, integration guide |
 | POST | /api/cards/:id/data | Push data payload (Conductor → Metric Market) |
 | GET | /api/bundles/key/:key | Get bundle definition with schemas |
+| GET | /api/metric-definitions | Pull metric definitions (Metric Engine → Metric Market) |
+| POST | /api/metric-values | Push computed values (Metric Market → Metric Engine) |
 
 ## Demo
 
