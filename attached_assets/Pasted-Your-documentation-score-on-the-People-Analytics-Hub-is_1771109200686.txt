@@ -1,0 +1,52 @@
+Your documentation score on the People Analytics Hub is 63/100 — it needs to be 80+ across all sections. Please perform a full documentation refresh and hub sync.
+## Step 1: Verify your Hub connection
+Make sure these environment variables are set in your Secrets tab:
+- HUB_API_KEY: pat_bd10eceb8568a0c3a5de974f30e2589acc220560dab711cd
+- HUB_URL: https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev
+## Step 2: Preserve and expand documentation
+Copy your current documentation to the stable file:
+cp replit.md hub-docs.md
+Then expand hub-docs.md to cover ALL 9 required sections. Each section must have 50+ words, use bullet lists or tables, and include code snippets or technical terms. Here are your weak sections that need attention:
+- **Application Overview** (60/100): Expand to 50+ words with bullet lists covering purpose, core capabilities, key value proposition
+- **Technology Stack** (40/100): List frontend, backend, database, infrastructure with specific versions. Use bullet lists.
+- **Features & Pages** (65/100): Document every page with its purpose, features, and current state. Use a table.
+- **Data Contracts & Export Formats** (40/100): Document JSON schemas, CSV formats, API request/response shapes with code blocks
+- **Current Instance Data Summary** (40/100): Describe what data exists in the deployed instance — how many cards, bundles, chart types, metrics tracked
+- **System Health & Recommendations** (40/100): Include readiness metrics, validation warnings, known issues, uptime status
+The sections must use these exact H2 headings in hub-docs.md:
+## Application Overview
+## Technology Stack
+## Platform Ecosystem Context
+## Features & Pages
+## Complete API Reference
+## Database Schema
+## Data Contracts & Export Formats
+## Current Instance Data Summary
+## System Health & Recommendations
+## Step 3: Push documentation to the hub
+After updating hub-docs.md, push it using the SDK:
+node -e "
+const sdk = require('./hub-sdk.cjs');
+const fs = require('fs');
+const doc = fs.readFileSync('hub-docs.md', 'utf-8');
+sdk.pushDocumentation(doc, 'v2.0').then(r => console.log('Push result:', JSON.stringify(r))).catch(e => console.error(e.message));
+"
+If your SDK file is hub-sdk.js (not .cjs), adjust the require path accordingly.
+## Step 4: Mark the pending directive as completed
+Fetch and complete the pending SDK directive:
+node -e "
+const sdk = require('./hub-sdk.cjs');
+sdk.fetchDirectives().then(async dirs => {
+  const pending = dirs.filter(d => d.status !== 'completed' && d.status !== 'rejected');
+  for (const d of pending) {
+    await sdk.updateDirective(d.id, 'completed', 'Documentation refreshed and pushed to hub');
+    console.log('Completed directive #' + d.id);
+  }
+}).catch(e => console.error(e.message));
+"
+## Step 5: Configure webhook for real-time updates
+Register your webhook URL with the hub so you receive directives automatically:
+curl -X PATCH "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/registry/13" \
+  -H "Content-Type: application/json" \
+  -d '{"webhookUrl": "https://metric-market.replit.app/api/hub-webhook"}'
+Target: Get all 9 documentation sections to 80+ so the overall score reaches 80%+.
