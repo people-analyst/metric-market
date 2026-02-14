@@ -77,7 +77,10 @@ export function RangeStripAlignedChart({
 
   const ticks = useMemo(() => {
     const result: { value: number; boxIndex: number }[] = [];
-    const tickStep = stepSize <= 10000 ? 20000 : stepSize <= 30000 ? stepSize : 100000;
+    const pixelsPerBox = stripWidth / Math.max(1, Math.ceil((scaleMax - scaleMin) / stepSize));
+    const minTickPixels = 40;
+    const boxesPerTick = Math.max(1, Math.ceil(minTickPixels / pixelsPerBox));
+    const tickStep = stepSize * boxesPerTick;
     let v = Math.ceil(scaleMin / tickStep) * tickStep;
     while (v <= scaleMax) {
       const idx = (v - scaleMin) / stepSize;

@@ -417,18 +417,6 @@ const RANGE_STRIP_ROWS: RangeStripRow[] = [
 
 const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
   {
-    label: "P10",
-    markers: [
-      { label: "P1", value: 62000 },
-      { label: "P2", value: 88000 },
-      { label: "P3", value: 115000 },
-      { label: "P4", value: 150000 },
-      { label: "P5", value: 188000 },
-      { label: "P6", value: 240000 },
-      { label: "P7", value: 310000 },
-    ],
-  },
-  {
     label: "P25",
     markers: [
       { label: "P1", value: 72000 },
@@ -462,18 +450,6 @@ const ALIGNED_RANGE_ROWS: AlignedRangeRow[] = [
       { label: "P5", value: 262000 },
       { label: "P6", value: 330000 },
       { label: "P7", value: 420000 },
-    ],
-  },
-  {
-    label: "P90",
-    markers: [
-      { label: "P1", value: 105000 },
-      { label: "P2", value: 140000 },
-      { label: "P3", value: 185000 },
-      { label: "P4", value: 238000 },
-      { label: "P5", value: 295000 },
-      { label: "P6", value: 370000 },
-      { label: "P7", value: 462000 },
     ],
   },
 ];
@@ -631,7 +607,7 @@ const CHARTS = [
   {
     title: "Aligned Range Strip",
     description: "Percentile rows (P10-P90) with level markers (P1-P5) placed at their dollar positions on a shared scale",
-    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={475000} width={400} />,
+    component: <RangeStripAlignedChart rows={ALIGNED_RANGE_ROWS} stepSize={25000} scaleMin={50000} scaleMax={450000} width={400} />,
   },
   {
     title: "Interactive Range Strip",
