@@ -172,6 +172,8 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | `POST` | `/api/ingest/metric-engine` | Receive computed HR metrics from Metric Engine; auto-discovers bundles, creates metric definitions and cards |
 | `POST` | `/api/ingest/anycomp` | Receive compensation optimization results from AnyComp; creates scenario comparison, recommendation, and score cards |
 | `POST` | `/api/ingest/people-analyst` | Receive Monte Carlo forecasts and VOI analyses from PeopleAnalyst; creates confidence_band and bubble_scatter cards |
+| `POST` | `/api/ingest/voi-calculator` | Receive ROI analyses and investment projections from VOI Calculator; creates bullet_bar and confidence_band cards |
+| `POST` | `/api/ingest/product-kanban` | Receive velocity, burndown, and app health data from Product Kanban; creates multi_line, heatmap, and stacked_area cards |
 | `GET` | `/api/ingest/status` | Ingestion status: card counts by source, endpoint readiness |
 
 ### System

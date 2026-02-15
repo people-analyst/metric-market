@@ -397,6 +397,193 @@ export function registerIngestRoutes(app: Express) {
     }
   });
 
+  app.post("/api/ingest/voi-calculator", async (req, res) => {
+    try {
+      const parsed = z.object({
+        payload: z.object({
+          analysisType: z.string().optional(),
+          title: z.string().optional(),
+          investmentName: z.string().optional(),
+          roi: z.number().optional(),
+          npv: z.number().optional(),
+          paybackMonths: z.number().optional(),
+          scenarios: z.array(z.object({
+            name: z.string(),
+            probability: z.number().optional(),
+            value: z.number().optional(),
+          })).optional(),
+          sensitivityData: z.array(z.unknown()).optional(),
+          timeSeriesProjection: z.array(z.unknown()).optional(),
+        }),
+        periodLabel: z.string().optional(),
+        effectiveAt: z.string().optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+      const { payload, periodLabel, effectiveAt } = parsed.data;
+
+      const results: any[] = [];
+
+      if (payload.scenarios && payload.scenarios.length > 0) {
+        const scenarioCard = await findOrCreateCard({
+          bundleKey: "bullet_bar",
+          title: payload.title || `ROI Analysis — ${payload.investmentName || "Investment"}`,
+          subtitle: `VOI Calculator (ROI: ${payload.roi !== undefined ? (payload.roi * 100).toFixed(1) + "%" : "N/A"})`,
+          source: "VOI Calculator",
+          refreshPolicy: "on_demand",
+          tags: ["voi-calculator", "roi", "investment"],
+        });
+        if (scenarioCard) {
+          const data = await storage.pushCardData({
+            cardId: scenarioCard.id,
+            payload: { scenarios: payload.scenarios, roi: payload.roi, npv: payload.npv, paybackMonths: payload.paybackMonths },
+            periodLabel: periodLabel || `ROI ${payload.investmentName || "Analysis"}`,
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(scenarioCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: scenarioCard.id, cardTitle: scenarioCard.title, dataId: data.id, bundleKey: "bullet_bar" });
+        }
+      }
+
+      if (payload.timeSeriesProjection) {
+        const projCard = await findOrCreateCard({
+          bundleKey: "confidence_band",
+          title: `Investment Projection — ${payload.investmentName || "Forecast"}`,
+          subtitle: `NPV: ${payload.npv !== undefined ? "$" + payload.npv.toLocaleString() : "N/A"}`,
+          source: "VOI Calculator",
+          refreshPolicy: "on_demand",
+          tags: ["voi-calculator", "projection", "forecast"],
+        });
+        if (projCard) {
+          const data = await storage.pushCardData({
+            cardId: projCard.id,
+            payload: { timeSeriesProjection: payload.timeSeriesProjection },
+            periodLabel: periodLabel || `Projection ${payload.investmentName || ""}`.trim(),
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(projCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: projCard.id, cardTitle: projCard.title, dataId: data.id, bundleKey: "confidence_band" });
+        }
+      }
+
+      res.status(201).json({
+        source: "voi-calculator",
+        cardsUpdated: results.length,
+        results,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/ingest/product-kanban", async (req, res) => {
+    try {
+      const parsed = z.object({
+        payload: z.object({
+          sprintName: z.string().optional(),
+          velocity: z.array(z.object({
+            sprint: z.string(),
+            planned: z.number().optional(),
+            completed: z.number().optional(),
+          })).optional(),
+          burndown: z.array(z.object({
+            day: z.union([z.string(), z.number()]),
+            remaining: z.number(),
+            ideal: z.number().optional(),
+          })).optional(),
+          appHealth: z.array(z.object({
+            app: z.string(),
+            score: z.number().optional(),
+            status: z.string().optional(),
+            docScore: z.number().optional(),
+          })).optional(),
+          summary: z.object({
+            totalCards: z.number().optional(),
+            completed: z.number().optional(),
+            inProgress: z.number().optional(),
+            blocked: z.number().optional(),
+          }).optional(),
+        }),
+        periodLabel: z.string().optional(),
+        effectiveAt: z.string().optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+      const { payload, periodLabel, effectiveAt } = parsed.data;
+
+      const results: any[] = [];
+
+      if (payload.velocity) {
+        const velCard = await findOrCreateCard({
+          bundleKey: "multi_line",
+          title: "Ecosystem Velocity",
+          subtitle: `Sprint: ${payload.sprintName || "current"}`,
+          source: "Product Kanban",
+          refreshPolicy: "scheduled",
+          tags: ["product-kanban", "velocity", "ecosystem-health"],
+        });
+        if (velCard) {
+          const data = await storage.pushCardData({
+            cardId: velCard.id,
+            payload: { velocity: payload.velocity },
+            periodLabel: periodLabel || `Sprint ${payload.sprintName || "current"}`,
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(velCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: velCard.id, cardTitle: velCard.title, dataId: data.id, bundleKey: "multi_line" });
+        }
+      }
+
+      if (payload.appHealth) {
+        const healthCard = await findOrCreateCard({
+          bundleKey: "heatmap",
+          title: "Ecosystem App Health",
+          subtitle: `${payload.appHealth.length} apps monitored`,
+          source: "Product Kanban",
+          refreshPolicy: "scheduled",
+          tags: ["product-kanban", "health", "ecosystem"],
+        });
+        if (healthCard) {
+          const data = await storage.pushCardData({
+            cardId: healthCard.id,
+            payload: { appHealth: payload.appHealth },
+            periodLabel: periodLabel || "Ecosystem Health",
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(healthCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: healthCard.id, cardTitle: healthCard.title, dataId: data.id, bundleKey: "heatmap" });
+        }
+      }
+
+      if (payload.burndown) {
+        const burnCard = await findOrCreateCard({
+          bundleKey: "stacked_area",
+          title: "Sprint Burndown",
+          subtitle: `Sprint: ${payload.sprintName || "current"}`,
+          source: "Product Kanban",
+          refreshPolicy: "scheduled",
+          tags: ["product-kanban", "burndown", "sprint"],
+        });
+        if (burnCard) {
+          const data = await storage.pushCardData({
+            cardId: burnCard.id,
+            payload: { burndown: payload.burndown },
+            periodLabel: periodLabel || `Burndown ${payload.sprintName || "current"}`,
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(burnCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: burnCard.id, cardTitle: burnCard.title, dataId: data.id, bundleKey: "stacked_area" });
+        }
+      }
+
+      res.status(201).json({
+        source: "product-kanban",
+        cardsUpdated: results.length,
+        results,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get("/api/ingest/status", async (_req, res) => {
     const allCards = await storage.listCards();
     const bySource: Record<string, number> = {};
@@ -412,6 +599,8 @@ export function registerIngestRoutes(app: Express) {
         { path: "/api/ingest/metric-engine", method: "POST", status: "ready" },
         { path: "/api/ingest/anycomp", method: "POST", status: "ready" },
         { path: "/api/ingest/people-analyst", method: "POST", status: "ready" },
+        { path: "/api/ingest/voi-calculator", method: "POST", status: "ready" },
+        { path: "/api/ingest/product-kanban", method: "POST", status: "ready" },
       ],
     });
   });
