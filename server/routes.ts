@@ -13,8 +13,11 @@ import {
 } from "@shared/schema";
 import * as hub from "./hub-client";
 import { getComponentRegistry, getComponentDetail } from "./componentExport";
+import { registerIngestRoutes } from "./ingest";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  registerIngestRoutes(app);
 
   app.get("/api/bundles", async (_req, res) => {
     const bundles = await storage.listCardBundles();

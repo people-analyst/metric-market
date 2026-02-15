@@ -165,6 +165,15 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | `GET` | `/api/components/:key` | Full component detail with schemas and integration guide |
 | `GET` | `/api/export/:key` | Download export package for cross-app embedding |
 
+### Spoke Ingestion (Ecosystem Data Pipeline)
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/ingest/conductor` | Receive market compensation data from Conductor; auto-creates range_strip, range_strip_aligned, range_target_bullet cards |
+| `POST` | `/api/ingest/metric-engine` | Receive computed HR metrics from Metric Engine; auto-discovers bundles, creates metric definitions and cards |
+| `POST` | `/api/ingest/anycomp` | Receive compensation optimization results from AnyComp; creates scenario comparison, recommendation, and score cards |
+| `POST` | `/api/ingest/people-analyst` | Receive Monte Carlo forecasts and VOI analyses from PeopleAnalyst; creates confidence_band and bubble_scatter cards |
+| `GET` | `/api/ingest/status` | Ingestion status: card counts by source, endpoint readiness |
+
 ### System
 | Method | Endpoint | Description |
 |---|---|---|
@@ -407,10 +416,10 @@ The deployed Metric Market instance at `metric-market.replit.app` contains the f
 | Resource | Count | Description |
 |---|---|---|
 | **Card Bundles** | 25 | Complete bundle definitions covering all 23 chart types + range_builder control + range_target_bullet |
-| **Metric Definitions** | 1 | Initial metric definitions for workforce analytics |
+| **Metric Definitions** | 13 | Standard people analytics metrics: attrition_rate, compa_ratio, time_to_fill, voluntary_turnover_rate, headcount, span_of_control, revenue_per_employee, training_hours, offer_acceptance_rate, internal_mobility_rate, engagement_score, pay_equity_gap, benefits_participation_rate |
 | **Chart Configurations** | 0 | No preset configurations created yet (bundles use inline defaults) |
-| **Cards** | 0 | No assembled card instances yet (workbench ready for card creation) |
-| **Card Data** | 0 | No data snapshots pushed yet (awaiting Conductor integration) |
+| **Cards** | 9 | Active card instances from 4 sources: Conductor (3 compensation range cards), Metric Engine (1 attrition trend card), AnyComp (3 scenario/recommendation/score cards), PeopleAnalyst (2 forecast/VOI cards) |
+| **Card Data** | 9 | Data snapshots from all 4 spoke integrations, pushed via ingestion endpoints |
 | **Card Relations** | 0 | No inter-card relations defined yet |
 
 **Bundle Coverage by Chart Type:**
@@ -765,10 +774,9 @@ Data is pushed via `POST /api/cards/{cardId}/data`. The card's `refreshPolicy` (
 | Database tables | 7 | 6+ | Met |
 
 ### Known Issues & Limitations
-- **No card instances created yet:** Bundles are defined but no assembled cards exist. Card creation is ready via the Workbench UI and `POST /api/cards` API.
-- **Conductor data integration pending:** Market data (P50/P75 percentiles, BLS OES wages) is not yet flowing from Conductor. Range Builder uses simulated data for demonstration.
-- **AnyComp event emission not yet wired:** `RangeBuilderChangeEvent` webhook delivery to AnyComp is defined in the integration spec but not yet implemented in production code.
-- **Single metric definition:** Only 1 metric definition exists. The metric registry should be expanded as Conductor integration completes.
+- **Ingestion endpoints use sample data:** 9 card instances exist from integration testing but contain sample payloads. Live data flow depends on Conductor, Metric Engine, AnyComp, and PeopleAnalyst coming online with their push integrations.
+- **Range Builder uses simulated data:** Market data (P50/P75 percentiles, BLS OES wages) is not yet flowing from Conductor's live BigQuery pipeline. Range Builder renders with simulated data for demonstration.
+- **AnyComp event emission not yet wired:** `RangeBuilderChangeEvent` webhook delivery to AnyComp is defined in the integration spec but not yet implemented in production code. Awaiting AnyComp's `POST /api/range-events` endpoint.
 - **No scheduled refresh:** Refresh policies are defined in the schema but no cron-based refresh automation is implemented yet.
 
 ### Validation Warnings
@@ -777,8 +785,9 @@ Data is pushed via `POST /api/cards/{cardId}/data`. The card's `refreshPolicy` (
 - Card status transitions (draft -> active -> archived -> needs_refresh) are not enforced at the database level; application logic manages state
 
 ### Recommendations
-1. **Priority 1:** Complete Conductor integration to enable live market data flow into Range Builder and card data pushes
-2. **Priority 2:** Implement `RangeBuilderChangeEvent` emission to AnyComp for scenario modeling
-3. **Priority 3:** Expand metric definitions registry with standard people analytics metrics (attrition rate, compa-ratio, time-to-fill, etc.)
-4. **Priority 4:** Create initial card instances from existing bundles to demonstrate full card lifecycle
+1. **Priority 1:** Wire Conductor to push live BigQuery market data to `POST /api/ingest/conductor` (endpoint ready, awaiting live data)
+2. **Priority 2:** Wire Metric Engine to push computed metrics to `POST /api/ingest/metric-engine` (endpoint ready, 13 metric definitions seeded)
+3. **Priority 3:** Implement `RangeBuilderChangeEvent` emission to AnyComp and wire AnyComp to push optimization results back to `POST /api/ingest/anycomp`
+4. **Priority 4:** Wire PeopleAnalyst to push Monte Carlo/VOI results to `POST /api/ingest/people-analyst` (endpoint ready)
 5. **Priority 5:** Implement scheduled refresh automation using the refresh_policy/refresh_cadence fields
+6. **Priority 6:** Add Segmentation Studio dimension filtering across all card types
