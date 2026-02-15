@@ -5,13 +5,10 @@ import { Button } from "@/components/ui/button";
 import {
   TrendingUp,
   TrendingDown,
-  ArrowUp,
-  ArrowDown,
   ChevronRight,
   PlusCircle,
   BarChart3,
   Calendar,
-  Users,
   Eye,
 } from "lucide-react";
 import { OrgMetricCard } from "@/components/OrgMetricCard";
@@ -19,6 +16,8 @@ import { ResearchCard } from "@/components/ResearchCard";
 import { AnalysisSummaryCard } from "@/components/AnalysisSummaryCard";
 import { ActionPlanCard } from "@/components/ActionPlanCard";
 import { CompetitiveIntelCard } from "@/components/CompetitiveIntelCard";
+import { MetricTicker, TrendIndicator, SectionHeader, formatMetricValue, MetricCard } from "@/components/pa-design-kit";
+import type { MetricTickerData, MetricCardData } from "@/components/pa-design-kit";
 
 function seeded(key: string) {
   let s = 0;
@@ -31,39 +30,30 @@ function seeded(key: string) {
 
 const MARKET_TABS = ["All", "Workforce", "Compensation", "Performance", "Attrition", "Engagement"];
 
-interface IndexTicker {
-  label: string;
-  value: string;
-  change: string;
-  changeAbs: string;
-  positive: boolean;
-}
-
-const INDEX_TICKERS: IndexTicker[] = [
-  { label: "Headcount", value: "12,847", change: "+0.56%", changeAbs: "+72", positive: true },
-  { label: "Turnover", value: "14.2%", change: "-1.13%", changeAbs: "-1.6", positive: false },
-  { label: "Engagement", value: "78.5", change: "+1.11%", changeAbs: "+0.87", positive: true },
-  { label: "eNPS", value: "32", change: "-0.07%", changeAbs: "-0.02", positive: false },
-  { label: "Compa-Ratio", value: "0.98", change: "-0.20%", changeAbs: "-0.002", positive: false },
+const INDEX_TICKERS: MetricTickerData[] = [
+  { key: "headcount", label: "Headcount", value: 12847, unitType: "count", delta: { value: 72, percent: 0.56, direction: "up" } },
+  { key: "turnover", label: "Turnover", value: 14.2, unitType: "percent", delta: { value: -1.6, percent: -1.13, direction: "down" } },
+  { key: "engagement", label: "Engagement", value: 78.5, unitType: "score", delta: { value: 0.87, percent: 1.11, direction: "up" } },
+  { key: "enps", label: "eNPS", value: 32, unitType: "score", delta: { value: -0.02, percent: -0.07, direction: "down" } },
+  { key: "compa-ratio", label: "Compa-Ratio", value: 0.98, unitType: "ratio", delta: { value: -0.002, percent: -0.20, direction: "down" } },
 ];
 
 interface SuggestedMetric {
   ticker: string;
   color: string;
   name: string;
-  value: string;
-  changeAbs: string;
-  changePct: string;
-  positive: boolean;
+  numericValue: number;
+  unitType: "percent" | "currency" | "count" | "ratio" | "score" | "days" | "custom";
+  delta: { value: number | null; percent: number | null; direction: "up" | "down" | "flat" };
 }
 
 const SUGGESTED_METRICS: SuggestedMetric[] = [
-  { ticker: "HC", color: "bg-blue-600", name: "Headcount (Global)", value: "12,847", changeAbs: "+72", changePct: "+0.56%", positive: true },
-  { ticker: "TURN", color: "bg-red-500", name: "Turnover Rate", value: "14.2%", changeAbs: "-1.6pp", changePct: "-1.13%", positive: false },
-  { ticker: "COMP", color: "bg-amber-500", name: "Avg Compensation", value: "$97,240", changeAbs: "-$800", changePct: "+0.82%", positive: true },
-  { ticker: "PERF", color: "bg-green-600", name: "Performance Rating (Avg)", value: "3.84", changeAbs: "+0.12", changePct: "+0.62%", positive: true },
-  { ticker: "DIV", color: "bg-purple-600", name: "Diversity Index", value: "0.72", changeAbs: "+0.01", changePct: "+0.52%", positive: true },
-  { ticker: "FILL", color: "bg-cyan-600", name: "Time to Fill", value: "38d", changeAbs: "-2d", changePct: "+0.40%", positive: true },
+  { ticker: "HC", color: "bg-blue-600", name: "Headcount (Global)", numericValue: 12847, unitType: "count", delta: { value: 72, percent: 0.56, direction: "up" } },
+  { ticker: "TURN", color: "bg-red-500", name: "Turnover Rate", numericValue: 14.2, unitType: "percent", delta: { value: -1.6, percent: -1.13, direction: "down" } },
+  { ticker: "COMP", color: "bg-amber-500", name: "Avg Compensation", numericValue: 97240, unitType: "currency", delta: { value: -800, percent: 0.82, direction: "up" } },
+  { ticker: "PERF", color: "bg-green-600", name: "Performance Rating (Avg)", numericValue: 3.84, unitType: "score", delta: { value: 0.12, percent: 0.62, direction: "up" } },
+  { ticker: "DIV", color: "bg-purple-600", name: "Diversity Index", numericValue: 0.72, unitType: "ratio", delta: { value: 0.01, percent: 0.52, direction: "up" } },
+  { ticker: "FILL", color: "bg-cyan-600", name: "Time to Fill", numericValue: 38, unitType: "days", delta: { value: -2, percent: 0.40, direction: "up" } },
 ];
 
 const TREND_TABS = ["Most active", "Gainers", "Losers"];
@@ -277,23 +267,13 @@ const FEED_CARDS: FeedCard[] = [
   },
 ];
 
-interface DiscoverCard {
-  ticker: string;
-  color: string;
-  label: string;
-  name: string;
-  value: string;
-  changePct: string;
-  positive: boolean;
-}
-
-const DISCOVER_CARDS: DiscoverCard[] = [
-  { ticker: "INDEX", color: "bg-blue-700", label: "INDEX", name: "Workforce Health Index", value: "84.2", changePct: "-1.30%", positive: false },
-  { ticker: "INDEX", color: "bg-blue-700", label: "INDEX", name: "Talent Pipeline Score", value: "71.8", changePct: "-1.30%", positive: false },
-  { ticker: "COMP", color: "bg-amber-500", label: "COMP", name: "Total Rewards Value", value: "$128,500", changePct: "+4.51%", positive: true },
-  { ticker: "INDEX", color: "bg-blue-700", label: "INDEX", name: "Culture Alignment", value: "76.4", changePct: "-1.30%", positive: false },
-  { ticker: "PERF", color: "bg-green-600", label: "PERF", name: "Productivity Index", value: "92.1", changePct: "+4.51%", positive: true },
-  { ticker: "HC", color: "bg-blue-600", label: "HC", name: "Contractor Ratio", value: "18.3%", changePct: "-1.30%", positive: false },
+const DISCOVER_CARDS: MetricCardData[] = [
+  { key: "whi", label: "Workforce Health Index", value: 84.2, unitType: "score", delta: { value: null, percent: -1.30, direction: "down" } },
+  { key: "tps", label: "Talent Pipeline Score", value: 71.8, unitType: "score", delta: { value: null, percent: -1.30, direction: "down" } },
+  { key: "trv", label: "Total Rewards Value", value: 128500, unitType: "currency", delta: { value: null, percent: 4.51, direction: "up" } },
+  { key: "ca", label: "Culture Alignment", value: 76.4, unitType: "score", delta: { value: null, percent: -1.30, direction: "down" } },
+  { key: "pi", label: "Productivity Index", value: 92.1, unitType: "score", delta: { value: null, percent: 4.51, direction: "up" } },
+  { key: "cr", label: "Contractor Ratio", value: 18.3, unitType: "percent", delta: { value: null, percent: -1.30, direction: "down" } },
 ];
 
 function TickerBadge({ ticker, color }: { ticker: string; color: string }) {
@@ -411,33 +391,7 @@ export function GoogleFinancePage() {
 
       <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-none" data-testid="section-index-tickers">
         {INDEX_TICKERS.map((t) => (
-          <div
-            key={t.label}
-            className="flex items-center gap-2 shrink-0 px-3 py-2 border rounded-md bg-card"
-            data-testid={`index-ticker-${t.label.toLowerCase().replace(/\s+/g, "-")}`}
-          >
-            <div className={`flex items-center justify-center h-5 w-5 rounded-full ${t.positive ? "bg-green-100 dark:bg-green-900" : "bg-red-100 dark:bg-red-900"}`}>
-              {t.positive ? (
-                <ArrowUp className="h-3 w-3 text-green-600 dark:text-green-400" />
-              ) : (
-                <ArrowDown className="h-3 w-3 text-red-600 dark:text-red-400" />
-              )}
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium">{t.label}</span>
-                <span className={`text-xs font-medium ${t.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                  {t.change}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground tabular-nums">{t.value}</span>
-                <span className={`text-xs tabular-nums ${t.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                  {t.changeAbs}
-                </span>
-              </div>
-            </div>
-          </div>
+          <MetricTicker key={t.key} metric={t} showClassification={false} showSparkline={false} />
         ))}
       </div>
 
@@ -454,7 +408,7 @@ export function GoogleFinancePage() {
       <div className="flex gap-6 flex-col lg:flex-row">
         <div className="flex-1 min-w-0 space-y-6">
           <div data-testid="section-suggested-metrics">
-            <h2 className="text-sm font-semibold mb-3">You may be interested in</h2>
+            <SectionHeader section={{ id: "suggested", label: "You may be interested in", icon: Eye, color: "text-muted-foreground", metricCount: SUGGESTED_METRICS.length }} className="mb-3" />
             <div className="space-y-0">
               {SUGGESTED_METRICS.map((m) => (
                 <div
@@ -467,16 +421,8 @@ export function GoogleFinancePage() {
                     <span className="text-sm truncate">{m.name}</span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-medium tabular-nums">{m.value}</span>
-                    <span className="text-xs text-muted-foreground tabular-nums w-14 text-right">{m.changeAbs}</span>
-                    <span
-                      className={`text-xs font-medium tabular-nums w-16 text-right ${
-                        m.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                      }`}
-                    >
-                      {m.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                      {m.changePct}
-                    </span>
+                    <span className="text-sm font-medium tabular-nums">{formatMetricValue(m.numericValue, m.unitType)}</span>
+                    <TrendIndicator delta={m.delta} size="sm" />
                   </div>
                 </div>
               ))}
@@ -484,7 +430,7 @@ export function GoogleFinancePage() {
           </div>
 
           <div data-testid="section-feed">
-            <h2 className="text-sm font-semibold mb-3">Today's people analytics feed</h2>
+            <SectionHeader section={{ id: "feed", label: "Today's people analytics feed", icon: BarChart3, color: "text-muted-foreground", metricCount: filteredFeed.length }} className="mb-3" />
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {FEED_TABS.map((tab) => (
                 <Badge
@@ -554,17 +500,10 @@ export function GoogleFinancePage() {
                         <p className="text-[10px] text-muted-foreground">{item.followers}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span
-                        className={`text-xs font-medium tabular-nums ${
-                          item.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                        }`}
-                      >
-                        {item.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                        {item.changePct}
-                      </span>
-                      <PlusCircle className="h-4 w-4 text-muted-foreground cursor-pointer" />
-                    </div>
+                    <TrendIndicator
+                      delta={{ value: null, percent: parseFloat(item.changePct), direction: item.positive ? "up" : "down" }}
+                      size="sm"
+                    />
                   </div>
                 ))}
               </div>
@@ -574,7 +513,7 @@ export function GoogleFinancePage() {
       </div>
 
       <div data-testid="section-market-trends-full">
-        <h2 className="text-lg font-semibold mb-3">Metric trends</h2>
+        <SectionHeader section={{ id: "trends", label: "Metric trends", icon: BarChart3, color: "text-muted-foreground", metricCount: currentTrends.length }} className="mb-3" />
         <div className="flex items-center gap-2 mb-4">
           {TREND_TABS.map((tab) => (
             <Badge
@@ -613,14 +552,10 @@ export function GoogleFinancePage() {
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-sm font-medium tabular-nums">{item.value}</span>
-                <span
-                  className={`text-xs font-medium tabular-nums w-16 text-right ${
-                    item.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                  }`}
-                >
-                  {item.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                  {item.changePct}
-                </span>
+                <TrendIndicator
+                  delta={{ value: null, percent: parseFloat(item.changePct), direction: item.positive ? "up" : "down" }}
+                  size="sm"
+                />
                 <PlusCircle className="h-4 w-4 text-muted-foreground cursor-pointer" />
               </div>
             </div>
@@ -629,32 +564,13 @@ export function GoogleFinancePage() {
       </div>
 
       <div data-testid="section-discover-more">
-        <h2 className="text-lg font-semibold mb-1">Discover more</h2>
+        <SectionHeader section={{ id: "discover", label: "Discover more", icon: PlusCircle, color: "text-muted-foreground", metricCount: DISCOVER_CARDS.length }} className="mb-1" />
         <p className="text-xs text-muted-foreground mb-3">You may be interested in</p>
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
           {DISCOVER_CARDS.map((card, i) => (
-            <Card
-              key={card.name + i}
-              className="shrink-0 w-[160px] hover-elevate cursor-pointer"
-              data-testid={`discover-card-${i}`}
-            >
-              <CardContent className="p-3">
-                <TickerBadge ticker={card.label} color={card.color} />
-                <p className="text-xs font-medium mt-2 mb-1 leading-tight">{card.name}</p>
-                <p className="text-sm font-bold tabular-nums">{card.value}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  <span
-                    className={`text-xs font-medium tabular-nums ${
-                      card.positive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {card.positive ? <TrendingUp className="h-3 w-3 inline mr-0.5" /> : <TrendingDown className="h-3 w-3 inline mr-0.5" />}
-                    {card.changePct}
-                  </span>
-                  <PlusCircle className="h-3.5 w-3.5 text-muted-foreground ml-auto cursor-pointer" />
-                </div>
-              </CardContent>
-            </Card>
+            <div key={card.key + i} className="shrink-0 w-[160px]">
+              <MetricCard metric={card} expandable={false} />
+            </div>
           ))}
           <div className="shrink-0 flex items-center px-2">
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
