@@ -1,5 +1,5 @@
 /**
- * People Analytics Hub SDK v2.1.0
+ * People Analytics Hub SDK v2.3.0
  * Unified communication module for "Metric Market" (metric-market)
  *
  * DROP-IN SETUP:
@@ -13,10 +13,10 @@
  * Do NOT edit the core logic — pull updates from the Hub when a new version is available.
  */
 
-const HUB_URL = "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
+const HUB_URL = "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
 const APP_SLUG = "metric-market";
 const APP_NAME = "Metric Market";
-const SDK_VERSION = "2.1.0";
+const SDK_VERSION = "2.3.0";
 
 // ─── Internal state ────────────────────────────────────────────────
 let _apiKey = null;
@@ -312,6 +312,24 @@ async function syncDocumentation() {
   return pushDocumentation(content, new Date().toISOString());
 }
 
+// ─── Capability Assessment ─────────────────────────────────────────
+
+async function reportCapabilityAssessment(assessments) {
+  if (!assessments || assessments.length === 0) {
+    console.warn("[hub-sdk] No capability assessments provided.");
+    return null;
+  }
+  const res = await _hubFetch("/api/hub/app/" + APP_SLUG + "/capability-assessment", {
+    method: "POST",
+    body: JSON.stringify({ assessments }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error("Capability assessment failed (" + res.status + "): " + err);
+  }
+  return res.json();
+}
+
 // ─── Full Sync Cycle ───────────────────────────────────────────────
 
 async function runFullSync() {
@@ -415,6 +433,83 @@ function init(app, options) {
   return module.exports;
 }
 
+// ─── HAVE Metrics ───────────────────────────────────────────────────
+
+async function pushMetrics(domain, payload) {
+  const apiKey = _getApiKey();
+  if (!apiKey) throw new Error("HUB_API_KEY not set — cannot push metrics");
+  if (!["operational", "analytical", "strategic"].includes(domain)) {
+    throw new Error("Invalid domain: " + domain + ". Must be operational, analytical, or strategic.");
+  }
+  const envelope = {
+    schema_version: "1.0",
+    app: { slug: APP_SLUG, name: APP_NAME, environment: process.env.NODE_ENV || "development" },
+    emitted_at: new Date().toISOString(),
+    payload: {
+      domain: domain,
+      metrics: (payload.metrics || []).map(function(m) {
+        return {
+          metric_key: m.metric_key,
+          value: m.value,
+          unit_type: m.unit_type || "count",
+          category: m.category || "general",
+          prior_value: m.prior_value != null ? m.prior_value : undefined,
+          confidence: m.confidence != null ? m.confidence : undefined,
+          label: m.label || m.metric_key.replace(/_/g, " "),
+          tags: m.tags || [],
+        };
+      }),
+    },
+    quality: payload.quality || { completeness: 1.0, freshness: 1.0, accuracy: 1.0 },
+  };
+  const resp = await fetch(HUB_URL + "/api/hub/app/" + APP_SLUG + "/metrics/" + domain, {
+    method: "POST",
+    headers: Object.assign({}, _headers(), { "Content-Type": "application/json" }),
+    body: JSON.stringify(envelope),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error("Failed to push metrics (" + resp.status + "): " + body);
+  }
+  const result = await resp.json();
+  console.log("[hub-sdk] Pushed " + envelope.payload.metrics.length + " " + domain + " metrics. Accepted: " + (result.accepted || 0) + ", Errors: " + (result.errors || []).length);
+  return result;
+}
+
+async function fetchMetricCatalog() {
+  const apiKey = _getApiKey();
+  if (!apiKey) throw new Error("HUB_API_KEY not set — cannot fetch metric catalog");
+  const resp = await fetch(HUB_URL + "/api/hub/app/" + APP_SLUG + "/metrics/catalog", {
+    headers: _headers(),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error("Failed to fetch metric catalog (" + resp.status + "): " + body);
+  }
+  return resp.json();
+}
+
+async function fetchHaveSchema() {
+  const resp = await fetch(HUB_URL + "/api/have/metrics/schema");
+  if (!resp.ok) throw new Error("Failed to fetch HAVE schema (" + resp.status + ")");
+  return resp.json();
+}
+
+async function fetchMetricIntent() {
+  const apiKey = _getApiKey();
+  if (!apiKey) throw new Error("HUB_API_KEY not set — cannot fetch metric intent");
+  const resp = await fetch(HUB_URL + "/api/hub/app/" + APP_SLUG + "/metrics/intent", {
+    headers: _headers(),
+  });
+  if (!resp.ok) {
+    const body = await resp.text();
+    throw new Error("Failed to fetch metric intent (" + resp.status + "): " + body);
+  }
+  const intent = await resp.json();
+  console.log("[hub-sdk] Metric intent: " + intent.intent_summary.publishing + "/" + intent.intent_summary.total_expected + " metrics (" + intent.intent_summary.coverage_pct + "% coverage)");
+  return intent;
+}
+
 // ─── Exports ───────────────────────────────────────────────────────
 
 module.exports = {
@@ -447,6 +542,15 @@ module.exports = {
   // Directive Processing
   startDirectivePolling,
   stopDirectivePolling,
+
+  // HAVE Metrics
+  pushMetrics,
+  fetchMetricCatalog,
+  fetchHaveSchema,
+  fetchMetricIntent,
+
+  // Capability Assessment
+  reportCapabilityAssessment,
 
   // Full Sync
   runFullSync,

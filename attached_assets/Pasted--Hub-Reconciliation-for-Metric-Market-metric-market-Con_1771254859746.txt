@@ -1,0 +1,66 @@
+# Hub Reconciliation for Metric Market (metric-market)
+
+**Connection Status**: Struggling
+**Hub URL**: http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev
+**API Key**: Configured (set as HUB_API_KEY in Secrets)
+**Doc Score**: 98/100
+**Active Directives**: 3 (2 pending, 1 acknowledged)
+**Completed Directives**: 2
+
+## Steps to Reconcile
+
+1. **Download Hub Sync Agent**: Run:
+   curl -o hub-sync-agent.js http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/hub-sync-agent/metric-market
+   Then run: node hub-sync-agent.js --status
+
+2. **Acknowledge & implement 2 pending directive(s)**:
+  - [97] "Adopt Shared Capability SDKs" (instruction) — Install and integrate the shared capability SDK packages from the hub. Seven SDKs are now available: Kanbai Integration,
+  - [65] "Update Hub SDK to v2.3.0 and implement metric intent catalog" (instruction) — A new metric intent system is now available. Two actions required:
+
+1. UPDATE YOUR HUB SDK to v2.3.0:
+   curl -o hub-sdk
+
+   First acknowledge each pending directive:
+   ```js
+   const sdk = require("./hub-sdk");
+   await sdk.updateDirective(97, "acknowledged", "Reviewing directive");
+   await sdk.updateDirective(65, "acknowledged", "Reviewing directive");
+   ```
+   Then implement each directive and mark completed:
+   ```js
+   await sdk.updateDirective(97, "completed", "Implemented successfully");
+   await sdk.updateDirective(65, "completed", "Implemented successfully");
+   ```
+
+3. **Complete 1 acknowledged directive(s)** (already received, implement and mark done):
+  - [79] "Connect to Kanbai kanban system for automated task processing" (instruction) — Connect Metric Market to the Kanbai kanban system at https://people-analytics-kanban.replit.app. This enables Kanbai to 
+
+   Implement each, then mark completed:
+   ```js
+   const sdk = require("./hub-sdk");
+   await sdk.updateDirective(79, "completed", "Implemented successfully");
+   ```
+
+4. **Run Full Sync**: Execute a complete sync cycle:
+   node hub-sync-agent.js
+   This will fetch directives, push documentation, and report health status.
+
+5. **Report Capability Adoption** (if applicable): The Hub tracks shared capabilities (Kanbai, Documentation, Cockpit, Style Guide, Directive System, AI Developer, Component Library). Report your adoption via:
+   ```js
+   await sdk.reportCapabilityAssessment({
+     capabilities: {
+       "kanbai": { level: 0, notes: "Not yet integrated" },
+       "documentation": { level: 2, notes: "Hub reference docs available" },
+       // etc.
+     }
+   });
+   ```
+
+## Quick Reference
+
+- Hub SDK download: `curl -o hub-sdk.js http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/sdk/metric-market`
+- Sync agent download: `curl -o hub-sync-agent.js http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/hub-sync-agent/metric-market`
+- Check status: `node hub-sync-agent.js --status`
+- Full sync: `node hub-sync-agent.js`
+- Push docs only: `node hub-sync-agent.js --push-docs`
+- Agent prompt: http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/agent-prompt/metric-market?format=text
