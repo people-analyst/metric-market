@@ -1,0 +1,34 @@
+Both still returning HTML. The same pattern — Vite's catch-all is swallowing the API routes. Let me check their deployed apps more carefully to understand the exact situation. It could be a different port or a path prefix issue:
+
+Interesting findings! Both are running Express (x-powered-by: Express) and both are serving production builds (no /@vite/client scripts). MetaFactory was just re-published about 2 minutes ago (last-modified: 17:35:03). The issue is that Express is serving the static index.html for all routes — meaning the API routes exist but the catch-all is matched first.
+
+This is the classic Vite/Express setup issue. Both apps have the same problem: the server/vite.ts or static file serving middleware is catching /api/* and /health routes before Express API routes get a chance to handle them.
+
+Here's what to paste for both apps (same root cause):
+
+Both apps have the same issue: API routes are registered AFTER the static file/catch-all middleware
+
+I can confirm both apps are running Express in production mode — but the index.html catch-all is intercepting /api/* and /health requests before your API routes can handle them.
+
+The fix is about route registration order. In your server setup (likely server/index.ts or server/vite.ts), you need to ensure this exact order:
+
+// STEP 1: Register ALL API routes FIRST
+registerRoutes(app);   // This must come FIRST
+// STEP 2: THEN set up static files and the catch-all
+// In production:
+app.use(express.static("dist/public"));
+app.get("*", (req, res) => {
+  res.sendFile("index.html", { root: "dist/public" });
+});
+// In dev:
+// setupVite(app);  // Vite middleware goes LAST
+The catch-all app.get("*", ...) matches every GET request including /api/health and /health. If it's registered before your API routes, your API handlers never fire.
+
+Quick way to verify the order: Search your server startup file for where registerRoutes(app) is called vs where the static file serving or app.get("*", ...) is set up. registerRoutes must come first.
+
+After fixing the order, republish and verify with:
+
+curl https://your-app.replit.app/api/health
+It should return JSON, not HTML.
+
+This same message applies to both Metric Market and MetaFactory — they have the identical symptom.

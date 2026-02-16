@@ -47,7 +47,12 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  await seedBundles();
+  try {
+    await seedBundles();
+  } catch (e) {
+    log(`seedBundles failed (non-fatal): ${(e as Error).message}`);
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
@@ -56,6 +61,16 @@ app.use((req, res, next) => {
 
     res.status(status).json({ message });
     throw err;
+  });
+
+  // guard: if an /api/* or /health request reaches here, it was not handled
+  // by any registered route — return 404 JSON instead of falling through
+  // to the static file catch-all
+  app.use("/api/*", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found" });
+  });
+  app.get("/health", (_req: Request, res: Response) => {
+    res.json({ status: "ok", app: "metric-market", fallback: true });
   });
 
   // importantly only setup vite in development and after
