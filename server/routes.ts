@@ -15,6 +15,7 @@ import * as hub from "./hub-client";
 import { getComponentRegistry, getComponentDetail } from "./componentExport";
 import { getDesignSystemSpec, getDesignSystemComponent } from "./designSystemRegistry";
 import { registerIngestRoutes } from "./ingest";
+import { pushToGitHub, getSyncStatus, startAutoSync, stopAutoSync } from "./githubSync";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -310,6 +311,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const comp = getDesignSystemComponent(req.params.component);
     if (!comp) return res.status(404).json({ error: "Design system component not found", available: getDesignSystemSpec().components.map((c) => c.name) });
     res.json(comp);
+  });
+
+  // --- GitHub Sync API (internal only — requires X-Internal-Token header) ---
+
+  const INTERNAL_TOKEN = process.env.REPL_ID || "metric-market-internal";
+
+  function requireInternalAuth(req: any, res: any, next: any) {
+    const token = req.headers["x-internal-token"];
+    if (token !== INTERNAL_TOKEN) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    next();
+  }
+
+  app.get("/api/github/status", requireInternalAuth, async (_req, res) => {
+    try {
+      res.json(getSyncStatus());
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post("/api/github/push", requireInternalAuth, async (req, res) => {
+    try {
+      const message = req.body?.message;
+      const result = await pushToGitHub(message);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message });
+    }
+  });
+
+  app.post("/api/github/auto-sync/start", requireInternalAuth, async (_req, res) => {
+    startAutoSync();
+    res.json({ enabled: true, ...getSyncStatus() });
+  });
+
+  app.post("/api/github/auto-sync/stop", requireInternalAuth, async (_req, res) => {
+    stopAutoSync();
+    res.json({ enabled: false, ...getSyncStatus() });
   });
 
   const httpServer = createServer(app);

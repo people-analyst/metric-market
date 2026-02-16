@@ -5,6 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
 import { recordRequest, startMetricsPush } from "./hubMetrics";
+import { startAutoSync } from "./githubSync";
 
 const app = express();
 app.use(express.json());
@@ -78,5 +79,6 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     startMetricsPush(300000);
+    startAutoSync();
   });
 })();
