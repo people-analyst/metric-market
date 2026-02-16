@@ -30,6 +30,7 @@ Key capabilities include:
 - Two-audience design: admin workbench for superusers/AI, consumer dashboard for end users
 - Self-contained card bundles: composable, machine-readable, agent-accessible
 - No live drill-down: use database references between cards
+- GitHub sync via API: each application pushes to its own GitHub repo automatically. Metric Market syncs to `people-analyst/metric-market` every 5 minutes and on-demand via `/api/github/push`
 
 ## System Architecture
 

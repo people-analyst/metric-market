@@ -313,9 +313,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json(comp);
   });
 
-  // --- GitHub Sync API ---
+  // --- GitHub Sync API (internal only — requires X-Internal-Token header) ---
 
-  app.get("/api/github/status", async (_req, res) => {
+  const INTERNAL_TOKEN = process.env.REPL_ID || "metric-market-internal";
+
+  function requireInternalAuth(req: any, res: any, next: any) {
+    const token = req.headers["x-internal-token"];
+    if (token !== INTERNAL_TOKEN) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    next();
+  }
+
+  app.get("/api/github/status", requireInternalAuth, async (_req, res) => {
     try {
       res.json(getSyncStatus());
     } catch (err: any) {
@@ -323,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/github/push", async (req, res) => {
+  app.post("/api/github/push", requireInternalAuth, async (req, res) => {
     try {
       const message = req.body?.message;
       const result = await pushToGitHub(message);
@@ -333,12 +343,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/github/auto-sync/start", async (_req, res) => {
+  app.post("/api/github/auto-sync/start", requireInternalAuth, async (_req, res) => {
     startAutoSync();
     res.json({ enabled: true, ...getSyncStatus() });
   });
 
-  app.post("/api/github/auto-sync/stop", async (_req, res) => {
+  app.post("/api/github/auto-sync/stop", requireInternalAuth, async (_req, res) => {
     stopAutoSync();
     res.json({ enabled: false, ...getSyncStatus() });
   });
