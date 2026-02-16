@@ -73,6 +73,8 @@ async function listCardsAction(): Promise<AgentResponse> {
 }
 
 async function createBundleAction(req: AgentRequest): Promise<AgentResponse> {
+  const { CHART_TYPES, CONTROL_TYPES } = await import("@shared/schema");
+  const allowedTypes = [...CHART_TYPES, ...CONTROL_TYPES];
   const ctx = req.context || {};
   if (!ctx.key || !ctx.chartType || !ctx.displayName) {
     return {
@@ -80,17 +82,24 @@ async function createBundleAction(req: AgentRequest): Promise<AgentResponse> {
       result: "To create a bundle, provide context with: key, chartType, displayName, description, dataSchema, configSchema",
     };
   }
+  const key = String(ctx.key).replace(/[^a-z0-9_-]/gi, "").slice(0, 64);
+  if (!key) {
+    return { status: "error", result: "Invalid bundle key (must contain alphanumeric, dash, or underscore characters)" };
+  }
+  if (!allowedTypes.includes(ctx.chartType)) {
+    return { status: "error", result: `Invalid chartType "${ctx.chartType}". Allowed: ${allowedTypes.join(", ")}` };
+  }
   const bundle = await storage.createCardBundle({
-    key: ctx.key,
+    key,
     chartType: ctx.chartType,
-    displayName: ctx.displayName,
-    description: ctx.description || "",
+    displayName: String(ctx.displayName).slice(0, 128),
+    description: String(ctx.description || "").slice(0, 512),
     dataSchema: ctx.dataSchema || {},
     configSchema: ctx.configSchema || {},
   });
   return {
     status: "success",
-    result: `Bundle created: ${bundle.id} (${ctx.key})`,
+    result: `Bundle created: ${bundle.id} (${key})`,
     actions: ["created_bundle"],
   };
 }

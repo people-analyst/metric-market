@@ -30,6 +30,11 @@ export async function createKanbaiCard(opts: {
       console.log(`[kanbai] Failed to create card (${res.status})`);
       return null;
     }
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      console.log(`[kanbai] Create card: unexpected content-type (${ct})`);
+      return null;
+    }
     const card = await res.json();
     console.log(`[kanbai] Card created: ${card.id || "ok"} — ${opts.title}`);
     return card;
@@ -53,6 +58,8 @@ export async function updateKanbaiCard(cardId: string, updates: {
       console.log(`[kanbai] Failed to update card ${cardId} (${res.status})`);
       return null;
     }
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return null;
     return res.json();
   } catch (e: any) {
     console.log(`[kanbai] Update card error: ${e.message}`);
@@ -68,6 +75,8 @@ export async function listKanbaiCards(filters?: { source?: string; status?: stri
     const qs = params.toString() ? `?${params.toString()}` : "";
     const res = await fetch(`${KANBAI_URL}/api/cards${qs}`, { headers: headers() });
     if (!res.ok) return [];
+    const ct = res.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) return [];
     return res.json();
   } catch (e: any) {
     console.log(`[kanbai] List cards error: ${e.message}`);
