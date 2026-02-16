@@ -1,0 +1,257 @@
+# Hub Sync — Universal Agent Instructions
+# Application: Metric Market (metric-market)
+# Hub: http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev
+
+You are working on "Metric Market", a spoke application in the People Analytics Toolbox ecosystem. The hub at http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev coordinates all spoke apps through directives, documentation scoring, and shared architecture.
+
+## YOUR MISSION
+
+Run the full hub sync cycle. You MUST complete ALL of these steps:
+1. Install the Hub SDK (for communicating with the hub)
+2. Install the PA Design Kit (for ecosystem UI consistency) — download the components and refactor your UI to use them
+3. Fetch and process all pending directives from the hub
+4. Execute the requested changes in this codebase
+5. Refresh and improve the documentation (hub-docs.md — NOT replit.md, which is volatile)
+6. Push updated documentation back to the hub
+7. Report directive completion back to the hub
+
+**CRITICAL: Step 2 (PA Design Kit) is mandatory.** You must download the component files, install them, and refactor existing UI pages to use them. This is not informational — you must actually do it.
+
+## CURRENT STATUS
+
+- Documentation Score: 98/100 (target: 80+)
+- Pending Directives: 0
+- Webhook Configured: Yes
+- Documentation Pushed: Yes
+
+### All documentation sections meet threshold
+
+## STEP-BY-STEP PROCEDURE
+
+### Step 1: Install the Hub SDK
+Download the unified Hub SDK into your project root. This single file handles ALL hub communication:
+
+```bash
+curl -o hub-sdk.js "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/sdk/metric-market"
+```
+
+Then set the `HUB_API_KEY` environment variable in your Replit Secrets tab. Find your API key at: http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/registry (click your app, then Integration tab).
+
+If your app uses Express, add these two lines to your app entry point to register health, webhook, and specification endpoints automatically:
+
+```javascript
+const hubSdk = require("./hub-sdk");
+hubSdk.init(app); // registers GET /health, POST /api/hub-webhook, GET /api/specifications
+```
+
+### Step 2: Install the PA Design Kit (MANDATORY)
+Every spoke app MUST use the PA Design Kit for UI. This gives your app the same finance-style (Google/Yahoo Finance aesthetic) look as every other app in the ecosystem. DO THIS NOW — do not skip this step.
+
+**2a. Create the component directory:**
+```bash
+mkdir -p client/src/components/pa-design-kit
+```
+
+**2b. Download the design spec for reference:**
+```bash
+curl -s "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/design-kit/spec" -o docs/PA_Design_System.md
+```
+
+**2c. Download and extract all component files:**
+```bash
+curl -s "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/design-kit/components" -o /tmp/pa-kit.json
+node -e "
+const fs = require('fs');
+const kit = JSON.parse(fs.readFileSync('/tmp/pa-kit.json', 'utf-8'));
+const dir = 'client/src/components/pa-design-kit';
+for (const [fname, src] of Object.entries(kit.files)) {
+  fs.writeFileSync(dir + '/' + fname, src);
+  console.log('  Wrote ' + fname);
+}
+console.log('PA Design Kit v' + kit.version + ' installed (' + Object.keys(kit.files).length + ' files)');
+"
+```
+
+**2d. Install required peer dependencies** (skip any already installed):
+```bash
+npm install --save recharts lucide-react
+```
+
+**2e. Verify the kit is importable — read the index.ts barrel file:**
+```bash
+cat client/src/components/pa-design-kit/index.ts
+```
+
+You should see exports for MetricTicker, StatusDot, OutputCard, ResultsGrid, WorkflowSteps, formatMetricValue, etc.
+
+**2f. Refactor EXISTING UI pages to use the kit:**
+- Replace any large stat cards / hero sections with **MetricTicker** rows
+- Replace any lists of items/results with **OutputCard** inside **ResultsGrid**
+- Replace any status indicators with **StatusDot**
+- Replace any workflow/pipeline visuals with **WorkflowSteps**
+- Use **formatMetricValue()** for all number formatting (currency, percent, count)
+- Use **SectionHeader** for page section headers with icon + count badge
+- Use **MiniSparkline** for inline trend lines next to metrics
+- Use **TrendIndicator** for delta/change values (shows green up arrow or red down arrow)
+
+Import from:
+```tsx
+import { MetricTicker, StatusDot, OutputCard, ResultsGrid, WorkflowSteps, formatMetricValue, SectionHeader, MiniSparkline, TrendIndicator } from "@/components/pa-design-kit";
+```
+
+**This is not optional.** The hub audits UI consistency. If your app is not using the PA Design Kit, you will receive repeated directives until it is adopted.
+
+### Step 3: Fetch pending directives
+Run this command to see what the hub is asking for:
+
+```bash
+node -e "
+process.env.HUB_API_KEY = process.env.HUB_API_KEY || 'YOUR_API_KEY';
+const sdk = require('./hub-sdk');
+sdk.fetchDirectives().then(d => {
+  const active = d.filter(x => x.status !== 'completed' && x.status !== 'rejected');
+  console.log(JSON.stringify(active, null, 2));
+}).catch(e => console.error(e.message));
+"
+```
+
+### Step 4: Process each directive
+For each pending/acknowledged directive, read its type and description, then act:
+
+**For `doc_upgrade_request` directives:**
+1. Read the directive description — it lists exactly which sections need improvement
+2. Read your current `hub-docs.md` (this is the stable documentation file — see CRITICAL note below)
+3. Add or expand the missing/weak sections following the scoring criteria below
+4. Each section must have: 50+ words, bullet lists or tables, code snippets or technical terms
+5. Use the EXACT heading formats listed in the Documentation Sections guide below
+
+**For `requirement` directives:**
+1. Read the description for what's being asked
+2. Implement the required change in the codebase
+3. Test that it works
+4. Update hub-docs.md if the change affects documentation
+
+**For `instruction` directives:**
+1. Follow the instructions in the description
+2. These are typically configuration or integration tasks
+3. Implement and test
+
+### Step 5: Refresh documentation (hub-docs.md)
+
+**CRITICAL: Use `hub-docs.md`, NOT `replit.md`**
+
+The `replit.md` file is auto-regenerated by the Replit platform and WILL be overwritten. Any documentation you write there will be lost. Instead, write ALL hub-facing documentation to `hub-docs.md` in the project root. The SDK reads from `hub-docs.md` first, falling back to `replit.md` only if `hub-docs.md` doesn't exist.
+
+If you currently have good documentation in `replit.md`, copy it to `hub-docs.md` immediately to preserve it:
+```bash
+cp replit.md hub-docs.md
+```
+
+After processing directives, ensure your `hub-docs.md` covers ALL 9 required sections. The hub scores each section 0-100 using this rubric:
+
+**Scoring Criteria (per section):**
+- 20 points: Section exists with a matching heading
+- Up to 40 points: Word count (50+ words = full marks, 20+ = partial)
+- 20 points: Contains bullet lists, numbered lists, or tables
+- 20 points: Contains code snippets (```), inline code, or technical terms (type/interface/schema/table/column)
+
+**Required Documentation Sections:**
+- **Application Overview** (key: `overview`): Purpose, core capabilities, key value proposition
+- **Technology Stack** (key: `tech_stack`): Frontend, backend, infrastructure, AI integration
+- **Platform Ecosystem Context** (key: `ecosystem`): Position in architecture, connected apps, data contracts, integration patterns
+- **Features & Pages** (key: `features`): Every page with purpose, features, current state
+- **Complete API Reference** (key: `api_reference`): Every endpoint with method, path, purpose, request/response
+- **Database Schema** (key: `database`): Every table with columns, types, relationships
+- **Data Contracts & Export Formats** (key: `data_contracts`): Any data formats the app produces/consumes
+- **Current Instance Data Summary** (key: `instance_data`): What data currently exists
+- **System Health & Recommendations** (key: `health`): Readiness metrics, validation warnings
+
+**Heading Format:**
+Use H2 headings (`## Section Title`) that match the patterns the scorer looks for. Safe heading formats:
+- `## Application Overview` or `## Overview`
+- `## Technology Stack` or `## Tech Stack`
+- `## Platform Ecosystem Context` or `## Ecosystem Integration`
+- `## Features & Pages` or `## Key Features`
+- `## API Reference` or `## API Endpoints`
+- `## Database Schema` or `## Data Model`
+- `## Data Contracts & Export Formats`
+- `## Current Instance Data Summary` or `## Instance Data`
+- `## System Health & Recommendations` or `## Health & Status`
+
+### Step 6: Push documentation to hub
+After updating hub-docs.md, push it using the SDK (which has built-in reversion protection):
+
+```bash
+node -e "
+const sdk = require('./hub-sdk');
+sdk.syncDocumentation().then(r => {
+  if (r && !r.skipped) {
+    console.log('New score:', r.score, '/ 100');
+    console.log('Section scores:', JSON.stringify(r.sections, null, 2));
+  } else if (r && r.skipped) {
+    console.log('Skipped: documentation unchanged');
+  }
+}).catch(e => console.error(e.message));
+"
+```
+
+The SDK automatically prevents documentation reversion — if the new content would significantly lower the quality score, the hub will reject it and tell you what's missing.
+
+### Step 7: Mark directives complete
+For each directive you processed, report completion:
+
+```bash
+node -e "
+const sdk = require('./hub-sdk');
+sdk.updateDirective(DIRECTIVE_ID, 'completed', 'SUMMARY_OF_WHAT_YOU_DID').then(r => console.log('Updated:', r)).catch(e => console.error(e.message));
+"
+```
+
+Replace `DIRECTIVE_ID` with the actual ID and `SUMMARY_OF_WHAT_YOU_DID` with a brief description.
+
+## AUTOMATED ALTERNATIVE
+
+Instead of manual steps, you can run the full sync cycle with one command:
+
+```bash
+node -e "const sdk = require('./hub-sdk'); sdk.runFullSync().then(r => console.log('Results:', JSON.stringify(r, null, 2)));"
+```
+
+This fetches directives, processes doc upgrades, pushes documentation, and reports completion — all with reversion protection built in.
+
+## IMPORTANT RULES
+
+1. NEVER fabricate or hallucinate documentation content. Base everything on what actually exists in this codebase.
+2. When adding documentation sections, introspect the actual code — read route files, schema files, package.json, and existing features.
+3. Always push documentation AFTER making changes, not before.
+4. Always mark directives as completed with a descriptive response after you've done the work.
+5. If a directive asks for something you cannot do (e.g., major feature requiring human design decisions), mark it as acknowledged with an explanation, not completed.
+6. ALWAYS write documentation to `hub-docs.md`, NEVER to `replit.md`. The platform auto-regenerates `replit.md` and your work will be lost.
+7. When building or modifying UI, ALWAYS use the PA Design Kit components — download them if not already installed.
+
+## TROUBLESHOOTING
+
+### /health endpoint returns 500
+The most common cause is that `hubSdk.init(app)` is called before the Express app is fully configured, or a middleware is interfering. The SDK v2.1.0+ registers the health route with try/catch isolation — if you see this error, update your SDK:
+```bash
+curl -o hub-sdk.js "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/sdk/metric-market"
+```
+Also verify that `hubSdk.init(app)` is called AFTER Express JSON middleware (`app.use(express.json())`) but BEFORE error-handling middleware.
+
+### Documentation keeps resetting / score drops
+The `replit.md` file is volatile — the Replit platform auto-regenerates it. Your documentation MUST live in `hub-docs.md` instead. The SDK reads from `hub-docs.md` first. If your good documentation is currently in `replit.md`, copy it immediately:
+```bash
+cp replit.md hub-docs.md
+```
+
+### HUB_API_KEY not working
+1. Ensure the key is set in Replit Secrets (not a regular env var)
+2. The key format is `pat_` followed by a hex string
+3. Find your key at: http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/registry (click your app, then Integration tab)
+
+### SDK update available
+When the hub has a newer SDK version, update with:
+```bash
+curl -o hub-sdk.js "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/sdk/metric-market"
+```
+This preserves your app-specific configuration (hub URL, slug) while updating all the logic.

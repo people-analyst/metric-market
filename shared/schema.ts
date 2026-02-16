@@ -42,6 +42,7 @@ export const CHART_TYPES = [
   "range_strip_aligned",
   "interactive_range_strip",
   "range_target_bullet",
+  "range_dot_plot",
 ] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];

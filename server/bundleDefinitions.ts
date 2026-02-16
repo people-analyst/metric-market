@@ -1442,4 +1442,161 @@ A bullet-graph style visualization for compensation range analysis. Each row ove
 - Market data comes from benchmark surveys; actual data from HRIS employee records`,
     infrastructureNotes: "Pure SVG rendering with ResizeObserver for responsive width. No D3 dependency. Designed to pair with the range_builder control for interactive compensation analysis.",
   },
+  {
+    key: "range_dot_plot",
+    chartType: "range_dot_plot",
+    displayName: "Range Dot Plot",
+    description: "Dot strip chart showing individual employee positions within salary ranges by level. Each level displays a horizontal band representing the pay range (min to max), with dots for each employee color-coded as below range, in range, or above range. Ideal for identifying pay equity issues, mis-leveling, and range penetration at a glance.",
+    version: 1,
+    category: "Compensation",
+    tags: ["compensation", "range", "equity", "dot-plot", "employees", "salary", "levels"],
+    dataSchema: {
+      type: "object",
+      required: ["levels"],
+      properties: {
+        levels: {
+          type: "array",
+          items: {
+            type: "object",
+            required: ["level", "bandMin", "bandMax", "employees"],
+            properties: {
+              level: { type: "string", description: "Level label (e.g. 'Level 1', 'P3', 'M2')" },
+              bandMin: { type: "number", description: "Salary range minimum for this level" },
+              bandMax: { type: "number", description: "Salary range maximum for this level" },
+              employees: {
+                type: "array",
+                items: {
+                  type: "object",
+                  required: ["id", "salary"],
+                  properties: {
+                    id: { type: "string", description: "Employee identifier" },
+                    salary: { type: "number", description: "Employee base salary" },
+                    label: { type: "string", description: "Display label (name or anonymized ID)" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        width: { type: "number", description: "Chart width in pixels" },
+        height: { type: "number", description: "Chart height in pixels" },
+        dotRadius: { type: "number", default: 5, description: "Radius of employee dots" },
+        belowColor: { type: "string", default: "#e07020", description: "Color for employees below range" },
+        inRangeColor: { type: "string", default: "#9ca3af", description: "Color for employees in range" },
+        aboveColor: { type: "string", default: "#0f69ff", description: "Color for employees above range" },
+        bandColor: { type: "string", default: "#e8e8e8", description: "Background color for range bands" },
+        showLegend: { type: "boolean", default: true },
+        showAxis: { type: "boolean", default: true },
+      },
+    },
+    outputSchema: { type: "object", description: "Rendered SVG dot plot with employee positions within salary ranges" },
+    defaults: {
+      dotRadius: 5,
+      belowColor: "#e07020",
+      inRangeColor: "#9ca3af",
+      aboveColor: "#0f69ff",
+      bandColor: "#e8e8e8",
+      showLegend: true,
+      showAxis: true,
+    },
+    exampleData: {
+      levels: [
+        {
+          level: "Level 1",
+          bandMin: 45000,
+          bandMax: 65000,
+          employees: [
+            { id: "E001", salary: 48000 }, { id: "E002", salary: 52000 }, { id: "E003", salary: 55000 },
+            { id: "E004", salary: 58000 }, { id: "E005", salary: 50000 }, { id: "E006", salary: 62000 },
+            { id: "E007", salary: 43000 }, { id: "E008", salary: 56000 },
+          ],
+        },
+        {
+          level: "Level 2",
+          bandMin: 55000,
+          bandMax: 80000,
+          employees: [
+            { id: "E010", salary: 58000 }, { id: "E011", salary: 62000 }, { id: "E012", salary: 65000 },
+            { id: "E013", salary: 70000 }, { id: "E014", salary: 72000 }, { id: "E015", salary: 74000 },
+            { id: "E016", salary: 68000 }, { id: "E017", salary: 76000 }, { id: "E018", salary: 60000 },
+            { id: "E019", salary: 53000 }, { id: "E020", salary: 78000 },
+          ],
+        },
+        {
+          level: "Level 3",
+          bandMin: 70000,
+          bandMax: 100000,
+          employees: [
+            { id: "E021", salary: 72000 }, { id: "E022", salary: 78000 }, { id: "E023", salary: 82000 },
+            { id: "E024", salary: 85000 }, { id: "E025", salary: 88000 }, { id: "E026", salary: 92000 },
+            { id: "E027", salary: 95000 }, { id: "E028", salary: 75000 }, { id: "E029", salary: 98000 },
+            { id: "E030", salary: 68000 }, { id: "E031", salary: 102000 }, { id: "E032", salary: 80000 },
+          ],
+        },
+        {
+          level: "Level 4",
+          bandMin: 90000,
+          bandMax: 125000,
+          employees: [
+            { id: "E040", salary: 85000 }, { id: "E041", salary: 88000 }, { id: "E042", salary: 92000 },
+            { id: "E043", salary: 95000 }, { id: "E044", salary: 98000 }, { id: "E045", salary: 100000 },
+            { id: "E046", salary: 105000 }, { id: "E047", salary: 110000 }, { id: "E048", salary: 87000 },
+            { id: "E049", salary: 130000 },
+          ],
+        },
+        {
+          level: "Level 5",
+          bandMin: 115000,
+          bandMax: 160000,
+          employees: [
+            { id: "E050", salary: 118000 }, { id: "E051", salary: 125000 }, { id: "E052", salary: 132000 },
+            { id: "E053", salary: 140000 }, { id: "E054", salary: 145000 }, { id: "E055", salary: 150000 },
+            { id: "E056", salary: 155000 }, { id: "E057", salary: 162000 },
+          ],
+        },
+        {
+          level: "Level 6",
+          bandMin: 145000,
+          bandMax: 200000,
+          employees: [
+            { id: "E060", salary: 150000 }, { id: "E061", salary: 160000 }, { id: "E062", salary: 170000 },
+            { id: "E063", salary: 175000 }, { id: "E064", salary: 185000 }, { id: "E065", salary: 190000 },
+            { id: "E066", salary: 195000 }, { id: "E067", salary: 205000 },
+          ],
+        },
+      ],
+    },
+    exampleConfig: {},
+    documentation: `**Range Dot Plot**
+
+A dot strip visualization showing individual employee base compensation positions within salary ranges by job level. Inspired by compensation analytics best practices for identifying pay equity issues.
+
+**Visual Elements:**
+- **Gray bands** — Salary range (band minimum to band maximum) for each level
+- **Orange dots** — Employees paid below the range minimum
+- **Gray dots** — Employees within the range
+- **Blue dots** — Employees paid above the range maximum
+
+**Use Cases:**
+- Identify employees falling outside pay bands for remediation
+- Spot levels where employees cluster below midpoint (potential underpayment)
+- Detect mis-leveling (employees whose pay doesn't match their assigned level)
+- Visualize range penetration distribution across the organization
+
+**Data Sources:**
+- Band min/max from compensation structure (market survey or internal ranges)
+- Employee salaries from HRIS
+- Levels from job architecture / job evaluation
+
+**Integration:**
+- Pair with Range Builder control for interactive "what-if" band adjustment
+- Filter by Job Function, Department, or Super Job Function
+- Link to individual employee detail cards for drill-down`,
+    infrastructureNotes: "Pure SVG rendering. Dot collision avoidance via simple jitter algorithm. Supports any level naming convention (Level 1-6, P1-P6, M1-M6, etc.). Color-coding is automatic based on employee salary vs. band min/max.",
+  },
 ];

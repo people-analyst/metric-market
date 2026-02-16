@@ -17,6 +17,8 @@ import {
   Layers,
   ArrowRightLeft,
 } from "lucide-react";
+import { OutputCard, ResultsGrid, SectionHeader, StatusDot } from "@/components/pa-design-kit";
+import type { OutputCardData, SectionHeaderMeta } from "@/components/pa-design-kit";
 
 interface RegistryEntry {
   key: string;
@@ -360,7 +362,8 @@ export function ComponentExportPage() {
             Browse, preview, and export component packages for integration with AnyComp, Conductor, and other ecosystem tools.
           </p>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
+          <StatusDot status={components.length > 0 ? "healthy" : "unknown"} size="md" showLabel />
           <Badge variant="outline" className="text-[10px]">{components.length} components</Badge>
         </div>
       </div>
@@ -389,10 +392,15 @@ export function ComponentExportPage() {
 
       {withTargets.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <ArrowRightLeft className="w-3.5 h-3.5" />
-            INTEGRATED COMPONENTS
-          </h3>
+          <SectionHeader
+            section={{
+              id: "integrated",
+              label: "INTEGRATED COMPONENTS",
+              icon: ArrowRightLeft,
+              color: "text-[#0f69ff]",
+              metricCount: withTargets.length,
+            } as SectionHeaderMeta}
+          />
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {withTargets.map((comp) => (
               <Card
@@ -401,26 +409,20 @@ export function ComponentExportPage() {
                 onClick={() => setSelectedKey(comp.key)}
                 data-testid={`component-card-${comp.key}`}
               >
-                <CardContent className="p-3">
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <div className="flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-[#0f69ff]" />
-                      <span className="text-sm font-semibold text-[#232a31]">{comp.displayName}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="secondary" className="text-[9px]">{comp.category}</Badge>
-                      <Badge variant="outline" className="text-[9px]">v{comp.version}</Badge>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-[#5b636a] line-clamp-2 mb-2">{comp.description}</p>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1">
-                      {comp.integrationTargets.map((t) => (
-                        <Badge key={t} variant="outline" className="text-[9px] font-mono">{t}</Badge>
-                      ))}
-                    </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />
-                  </div>
+                <CardContent className="p-0">
+                  <OutputCard
+                    item={{
+                      id: comp.key,
+                      title: comp.displayName,
+                      description: comp.description,
+                      status: comp.category,
+                      statusVariant: "secondary",
+                      tags: comp.integrationTargets,
+                      metadata: [{ label: "Version", value: `v${comp.version}` }],
+                      timestamp: comp.lastUpdated,
+                      icon: Layers,
+                    } as OutputCardData}
+                  />
                 </CardContent>
               </Card>
             ))}
@@ -430,31 +432,34 @@ export function ComponentExportPage() {
 
       {standalone.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
-            <Package className="w-3.5 h-3.5" />
-            STANDALONE COMPONENTS
-          </h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-1.5">
-            {standalone.map((comp) => (
-              <button
-                key={comp.key}
-                onClick={() => setSelectedKey(comp.key)}
-                className="text-left p-2 rounded-md border text-xs hover-elevate"
-                data-testid={`component-tile-${comp.key}`}
-              >
-                <div className="flex items-center gap-1 mb-0.5">
-                  <Badge variant="secondary" className="text-[9px] shrink-0">{comp.category}</Badge>
-                  <span className="font-medium truncate text-[#232a31]">{comp.displayName}</span>
-                </div>
-                <p className="text-muted-foreground text-[10px] line-clamp-2">{comp.description}</p>
-                <div className="flex items-center gap-1 mt-1">
-                  {comp.tags.slice(0, 3).map((tag) => (
-                    <Badge key={tag} variant="outline" className="text-[8px]">{tag}</Badge>
-                  ))}
-                </div>
-              </button>
-            ))}
-          </div>
+          <SectionHeader
+            section={{
+              id: "standalone",
+              label: "STANDALONE COMPONENTS",
+              icon: Package,
+              color: "text-muted-foreground",
+              metricCount: standalone.length,
+            } as SectionHeaderMeta}
+          />
+          <ResultsGrid
+            items={standalone.map((comp): OutputCardData => ({
+              id: comp.key,
+              title: comp.displayName,
+              subtitle: comp.category,
+              description: comp.description,
+              status: comp.componentType,
+              statusVariant: comp.componentType === "chart" ? "default" : "secondary",
+              tags: comp.tags,
+              metadata: [{ label: "Version", value: `v${comp.version}` }],
+              timestamp: comp.lastUpdated,
+              icon: Package,
+              onClick: () => setSelectedKey(comp.key),
+            }))}
+            searchable
+            filterable
+            compact
+            emptyMessage="No standalone components found"
+          />
         </div>
       )}
 

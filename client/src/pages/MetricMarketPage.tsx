@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
-import { MiniSparkline } from "@/components/MiniSparkline";
+import { MetricCard, MetricGrid, SectionHeader, formatMetricValue, MiniSparkline } from "@/components/pa-design-kit";
+import type { MetricCardData, SectionHeaderMeta, TrendDelta } from "@/components/pa-design-kit";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,9 +15,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
-  TrendingUp,
-  TrendingDown,
-  Minus,
   Search,
   SlidersHorizontal,
   BarChart3,
@@ -119,6 +117,28 @@ const METRIC_CATEGORIES: { name: string; icon: string; metrics: MetricDefinition
 const ALL_METRICS = METRIC_CATEGORIES.flatMap((c) => c.metrics);
 const DEFAULT_SELECTED = new Set(ALL_METRICS.filter((m) => m.defaultSelected).map((m) => m.key));
 
+function mapUnitType(unit: string | undefined): MetricCardData["unitType"] {
+  if (!unit) return "custom";
+  if (unit === "$") return "currency";
+  if (unit === "%") return "percent";
+  if (unit === "employees" || unit === "FTE") return "count";
+  if (unit === "score") return "score";
+  if (unit === "ratio") return "ratio";
+  if (unit === "days") return "days";
+  return "custom";
+}
+
+function generateSparkline(key: string): number[] {
+  let seed = 0;
+  for (let i = 0; i < key.length; i++) seed += key.charCodeAt(i);
+  const points: number[] = [];
+  for (let i = 0; i < 12; i++) {
+    seed = (seed * 9301 + 49297) % 233280;
+    points.push(seed / 233280);
+  }
+  return points;
+}
+
 function generateMockValue(key: string): { value: number; change: number; unit: string } {
   let seed = 0;
   for (let i = 0; i < key.length; i++) seed += key.charCodeAt(i);
@@ -144,48 +164,29 @@ function generateMockValue(key: string): { value: number; change: number; unit: 
   return { value: Math.round(rand(10, 1000)), change: Math.round(rand(-5, 5) * 10) / 10, unit };
 }
 
-function formatValue(value: number, unit: string): string {
-  if (unit === "$") return `$${value.toLocaleString()}`;
-  if (unit === "%") return `${value}%`;
-  if (unit === "employees" || unit === "FTE") return value.toLocaleString();
-  return String(value);
-}
-
-function TickerCard({ metricKey }: { metricKey: string }) {
+function buildMetricCardData(metricKey: string): MetricCardData {
   const def = ALL_METRICS.find((m) => m.key === metricKey);
   const { value, change, unit } = generateMockValue(metricKey);
-  const isPositive = change > 0;
-  const isNegative = change < 0;
+  const unitType = mapUnitType(def?.unit);
+  const unitLabel = (unitType === "custom" && def?.unit) ? def.unit : undefined;
+  const direction: TrendDelta["direction"] = change > 0 ? "up" : change < 0 ? "down" : "flat";
 
-  return (
-    <Card className="hover-elevate" data-testid={`ticker-card-${metricKey}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider truncate" data-testid={`ticker-label-${metricKey}`}>
-              {def?.label || metricKey}
-            </p>
-            <p className="text-2xl font-bold tabular-nums mt-1" data-testid={`ticker-value-${metricKey}`}>
-              {formatValue(value, unit)}
-            </p>
-          </div>
-          <MiniSparkline seed={metricKey} />
-        </div>
-        <div className="flex items-center gap-2">
-          <div
-            className={`flex items-center gap-0.5 text-sm font-medium tabular-nums ${
-              isPositive ? "text-green-600 dark:text-green-400" : isNegative ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
-            }`}
-            data-testid={`ticker-change-${metricKey}`}
-          >
-            {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : isNegative ? <TrendingDown className="h-3.5 w-3.5" /> : <Minus className="h-3.5 w-3.5" />}
-            <span>{isPositive ? "+" : ""}{change}%</span>
-          </div>
-          <span className="text-xs text-muted-foreground">vs prior period</span>
-        </div>
-      </CardContent>
-    </Card>
-  );
+  const percentChange = value !== 0 ? (change / value) * 100 : change;
+
+  return {
+    key: metricKey,
+    label: def?.label || metricKey,
+    value,
+    unitType,
+    unitLabel,
+    delta: {
+      value: change,
+      percent: Math.round(percentChange * 10) / 10,
+      direction,
+    },
+    sparkline: generateSparkline(metricKey),
+    category: def?.category,
+  };
 }
 
 function ScreenerPanel({
@@ -286,6 +287,17 @@ export function MetricMarketPage() {
   const selectedKeys = Array.from(selected);
   const watchlistKeys = selectedKeys.filter((k) => watchlist.has(k));
 
+  const allMetricCards = useMemo(() => selectedKeys.map(buildMetricCardData), [selectedKeys]);
+  const watchlistMetricCards = useMemo(() => watchlistKeys.map(buildMetricCardData), [watchlistKeys]);
+
+  const allMetricsSectionHeader: SectionHeaderMeta = {
+    id: "all-metrics",
+    label: "All Metrics",
+    icon: Activity,
+    color: "text-muted-foreground",
+    metricCount: selectedKeys.length,
+  };
+
   return (
     <div className="p-5 space-y-5">
       <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -330,11 +342,11 @@ export function MetricMarketPage() {
             <Star className="h-4 w-4 text-yellow-500" />
             <h2 className="text-sm font-semibold">Watchlist</h2>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {watchlistKeys.map((key) => (
-              <TickerCard key={key} metricKey={key} />
-            ))}
-          </div>
+          <MetricGrid
+            metrics={watchlistMetricCards}
+            variant="card"
+            columns={4}
+          />
         </div>
       )}
 
@@ -352,17 +364,13 @@ export function MetricMarketPage() {
         </Card>
       ) : (
         <div>
-          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              All Metrics ({selectedKeys.length})
-            </h2>
-          </div>
+          <SectionHeader section={allMetricsSectionHeader} className="mb-3" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {selectedKeys.map((key) => {
-              const isWatched = watchlist.has(key);
+            {allMetricCards.map((metricData) => {
+              const isWatched = watchlist.has(metricData.key);
               return (
-                <div key={key} className="relative group">
-                  <TickerCard metricKey={key} />
+                <div key={metricData.key} className="relative group">
+                  <MetricCard metric={metricData} data-testid={`ticker-card-${metricData.key}`} />
                   <div
                     className="absolute top-1 right-1 flex items-center gap-0.5 group-hover:visible"
                     style={{ visibility: isWatched ? "visible" : "hidden" }}
@@ -370,8 +378,8 @@ export function MetricMarketPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => toggleWatchlist(key)}
-                      data-testid={`button-watchlist-${key}`}
+                      onClick={() => toggleWatchlist(metricData.key)}
+                      data-testid={`button-watchlist-${metricData.key}`}
                     >
                       <Star
                         className={`h-3.5 w-3.5 ${
@@ -382,8 +390,8 @@ export function MetricMarketPage() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      onClick={() => toggle(key)}
-                      data-testid={`button-remove-${key}`}
+                      onClick={() => toggle(metricData.key)}
+                      data-testid={`button-remove-${metricData.key}`}
                     >
                       <X className="h-3.5 w-3.5 text-muted-foreground" />
                     </Button>

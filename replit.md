@@ -7,7 +7,7 @@ Metric Market is the **card workbench** of the People Analytics Toolbox ecosyste
 The core value proposition lies in **standardized, machine-readable card bundles**. These self-contained definitions declare data schemas, configuration options, output representations, documentation, and example data. This approach ensures consistent UI/UX across the ecosystem and facilitates AI agent discovery and automated card assembly. Each bundle uses JSON Schema contracts, allowing spoke applications to discover data requirements, push conforming payloads, and render visualizations without manual integration.
 
 Key capabilities include:
-- 23 distinct D3-powered SVG chart types (including Range Strip, Aligned Range Strip, and Range Target Bullet for compensation range visualization).
+- 24 distinct D3-powered SVG chart types (including Range Strip, Aligned Range Strip, Range Target Bullet for compensation range visualization, and Range Dot Plot for employee position-in-range analysis).
 - **Range Builder form control** — a dedicated interactive control (not a chart) for compensation range simulation with real-time KPI Index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) each showing a 0-100 goodness index plus supporting metrics. Located at `/range-builder` and registered as `range_builder` control type. Supports job structure filtering by Super Job Function (GTM, R&D, OPS, G&A) and Level Type (Professional P1-P6, Manager M1-M6, Executive E1-E5, Support S1-S4). Includes Target Range Statistics table with Spread %, Min/Max Overlap %, Level Below/Above %, and Promo Opp %. **Custom Level Structure**: users can select Standard (market-defined levels) or custom level count (2-10) which partitions the overall compensation range into N evenly-spaced levels with interpolated market data and proportionally distributed employees.
 - Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals). See `CHART_TYPES` and `CONTROL_TYPES` in `shared/schema.ts`.
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs.
@@ -16,6 +16,7 @@ Key capabilities include:
 - A scoring and prioritization system for cards.
 - Configurable refresh tracking with policies (`manual`, `scheduled`, `on_push`) and cadences.
 - **Component Export System** — Discoverable component registry (`GET /api/components`) and export packaging (`GET /api/export/:key`) for cross-app integration. Includes formal data contracts between Conductor (market data producer), AnyComp (KPI output consumer), and Metric Engine (bidirectional metric definition standardization and computed value exchange), with field mappings, example payloads, and integration guides. Frontend at `/export`.
+- **PA Design Kit Distribution** — Design System specification API (`GET /api/design-system`) serving the full PA Design Kit v1.1.0 component catalog (15 components), data contracts (9 interfaces), style tokens (brand colors, classification, trends, status, spacing, typography), and spoke consumption guide. Individual components discoverable via `GET /api/design-system/:component`. Hub broadcast directive notifies all 14 spoke apps of design kit updates.
 
 ## User Preferences
 
@@ -60,7 +61,7 @@ The application is built as a full-stack TypeScript monorepo with shared type de
 ## External Dependencies
 
 - **PostgreSQL 16:** Primary relational database (Neon-backed via Replit).
-- **Hub SDK v2.1.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`). Documentation is read from `hub-docs.md` (stable) with fallback to `replit.md`.
+- **Hub SDK v2.3.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`), metric intent catalog, capability assessment, and HAVE metrics push. Documentation is read from `hub-docs.md` (stable) with fallback to `replit.md`.
 - **D3.js v7:** JavaScript library for producing dynamic, interactive data visualizations.
 - **Vite 5:** Frontend build tool.
 - **Tailwind CSS 3:** Utility-first CSS framework.
