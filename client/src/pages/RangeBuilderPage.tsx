@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { RangeBuilderControl, RangeBuilderChangeEvent, RangeBuilderRow } from "@/components/controls/RangeBuilderControl";
 import { RangeTargetBulletChart, BulletRangeRow } from "@/components/charts/RangeTargetBulletChart";
+import { RangeDotPlotChart, RangeDotPlotLevel } from "@/components/charts/RangeDotPlotChart";
 
 type SuperFunction = "R&D" | "GTM" | "OPS" | "G&A";
 type LevelType = "Professional" | "Manager" | "Executive" | "Support";
@@ -418,6 +419,34 @@ export function RangeBuilderPage() {
 
   const rangeStats = useMemo(() => computeTargetRangeStats(activeRanges), [activeRanges]);
 
+  const dotPlotLevels: RangeDotPlotLevel[] = useMemo(() => {
+    function seededRandom(seed: number) {
+      let s = seed;
+      return () => {
+        s = (s * 1103515245 + 12345) & 0x7fffffff;
+        return s / 0x7fffffff;
+      };
+    }
+
+    return rows.map((row, i) => {
+      const actual = actuals[i];
+      const range = activeRanges[i];
+      const bandMin = range?.min ?? row.rangeMin;
+      const bandMax = range?.max ?? row.rangeMax;
+      const count = row.currentEmployees ?? 10;
+      const aMin = actual.actualMin;
+      const aMax = actual.actualMax;
+      const rand = seededRandom(i * 1000 + bandMin);
+      const employees = [];
+      for (let j = 0; j < count; j++) {
+        const r = rand();
+        const salary = Math.round((aMin + r * (aMax - aMin)) / 500) * 500;
+        employees.push({ id: `${row.label}-E${j + 1}`, salary });
+      }
+      return { level: row.label, bandMin, bandMax, employees };
+    });
+  }, [rows, actuals, activeRanges]);
+
   const totalJobs = jobCounts.reduce((a, b) => a + b, 0);
   const totalEmployees = rows.reduce((a, r) => a + (r.currentEmployees ?? 0), 0);
 
@@ -652,6 +681,22 @@ export function RangeBuilderPage() {
               </tbody>
             </table>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2 pb-1 pt-3 px-4">
+          <div>
+            <h3 className="text-sm font-semibold text-foreground" data-testid="text-dotplot-title">Employee Position in Range</h3>
+            <p className="text-[10px] text-muted-foreground mt-0.5">Individual employee salaries relative to target range bands by level</p>
+          </div>
+          <Badge variant="secondary" className="text-[10px]" data-testid="badge-dotplot-type">Dot Plot</Badge>
+        </CardHeader>
+        <CardContent className="px-4 pb-4 pt-2">
+          <RangeDotPlotChart
+            levels={dotPlotLevels}
+            data-testid="chart-range-dot-plot"
+          />
         </CardContent>
       </Card>
     </div>

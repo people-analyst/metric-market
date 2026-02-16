@@ -240,6 +240,79 @@ const INTEGRATION_TARGETS: Record<string, IntegrationTarget[]> = {
       },
     },
   ],
+  range_dot_plot: [
+    {
+      app: "AnyComp",
+      slug: "anycomp",
+      role: "consumer",
+      description: "Renders employee position-in-range visualization for compensation analysis. Shows individual employee salaries as dots within salary band ranges by level, color-coded as below range, in range, or above range. Used alongside Range Builder to visualize the impact of range adjustments on employee positioning.",
+      dataContract: {
+        description: "AnyComp renders this chart using employee salary data and target/market range bands per level",
+        endpoint: "POST /api/cards/:id/data",
+        payload: {
+          levels: {
+            type: "array",
+            description: "One entry per job level with salary band and employee positions",
+            itemSchema: {
+              level: "string — Job level label (e.g., 'P3', 'M2', 'Level 4')",
+              bandMin: "number — Salary range minimum (from Range Builder activeRanges or compensation structure)",
+              bandMax: "number — Salary range maximum (from Range Builder activeRanges or compensation structure)",
+              employees: {
+                type: "array",
+                description: "Individual employee salary records at this level",
+                itemSchema: {
+                  id: "string — Employee identifier (anonymized or HRIS ID)",
+                  salary: "number — Employee base salary from HRIS",
+                  label: "string? — Optional display name for tooltip",
+                },
+              },
+            },
+          },
+        },
+        fieldMappings: {
+          level: { canonicalField: "job_level", source: "Job Architecture / Segmentation Studio" },
+          bandMin: { canonicalField: "salary_range_minimum", source: "Range Builder activeRanges or Compensation Structure" },
+          bandMax: { canonicalField: "salary_range_maximum", source: "Range Builder activeRanges or Compensation Structure" },
+          "employees[].id": { canonicalField: "employee_id", source: "HRIS (anonymized)" },
+          "employees[].salary": { canonicalField: "base_compensation", source: "HRIS Snapshot (Tier 1)" },
+        },
+        integrationPatterns: [
+          "Pair with Range Builder: when user adjusts ranges, update bandMin/bandMax and re-render to show how employees shift between below/in/above",
+          "Filter by Job Function or Department to focus on specific populations",
+          "Use alongside Range Target Bullet for complementary aggregate vs individual views",
+          "Feed into equity analysis by highlighting employees needing pay adjustments",
+          "Link employee dots to individual compensation detail cards for drill-down",
+        ],
+      },
+    },
+    {
+      app: "Conductor",
+      slug: "conductor",
+      role: "producer",
+      description: "Supplies employee salary records and compensation structure ranges that feed the Range Dot Plot visualization.",
+      dataContract: {
+        description: "Conductor produces the input data from HRIS snapshots and compensation structures",
+        payload: {
+          levels: {
+            type: "array",
+            description: "Conductor assembles levels from job architecture with employee salary data from HRIS",
+            itemSchema: {
+              level: "string — From job architecture",
+              bandMin: "number — From compensation structure",
+              bandMax: "number — From compensation structure",
+              employees: "array — Individual records from HRIS snapshot with id and salary fields",
+            },
+          },
+        },
+        fieldMappings: {
+          level: { canonicalField: "job_level", source: "Job Architecture" },
+          bandMin: { canonicalField: "salary_range_minimum", source: "Compensation Structure" },
+          bandMax: { canonicalField: "salary_range_maximum", source: "Compensation Structure" },
+          "employees[].salary": { canonicalField: "base_compensation", source: "HRIS Snapshot" },
+        },
+      },
+    },
+  ],
 };
 
 const INTEGRATION_GUIDE_RANGE_BUILDER = `# Range Builder — Integration Guide
