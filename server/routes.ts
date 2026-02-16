@@ -13,6 +13,7 @@ import {
 } from "@shared/schema";
 import * as hub from "./hub-client";
 import { getComponentRegistry, getComponentDetail } from "./componentExport";
+import { getDesignSystemSpec, getDesignSystemComponent } from "./designSystemRegistry";
 import { registerIngestRoutes } from "./ingest";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -299,6 +300,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!pkg) return res.status(404).json({ error: "Component not found" });
     res.setHeader("Content-Disposition", `attachment; filename="${req.params.key}-export.json"`);
     res.json(pkg);
+  });
+
+  app.get("/api/design-system", async (_req, res) => {
+    res.json(getDesignSystemSpec());
+  });
+
+  app.get("/api/design-system/:component", async (req, res) => {
+    const comp = getDesignSystemComponent(req.params.component);
+    if (!comp) return res.status(404).json({ error: "Design system component not found", available: getDesignSystemSpec().components.map((c) => c.name) });
+    res.json(comp);
   });
 
   const httpServer = createServer(app);

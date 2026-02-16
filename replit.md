@@ -16,6 +16,7 @@ Key capabilities include:
 - A scoring and prioritization system for cards.
 - Configurable refresh tracking with policies (`manual`, `scheduled`, `on_push`) and cadences.
 - **Component Export System** — Discoverable component registry (`GET /api/components`) and export packaging (`GET /api/export/:key`) for cross-app integration. Includes formal data contracts between Conductor (market data producer), AnyComp (KPI output consumer), and Metric Engine (bidirectional metric definition standardization and computed value exchange), with field mappings, example payloads, and integration guides. Frontend at `/export`.
+- **PA Design Kit Distribution** — Design System specification API (`GET /api/design-system`) serving the full PA Design Kit v1.1.0 component catalog (15 components), data contracts (9 interfaces), style tokens (brand colors, classification, trends, status, spacing, typography), and spoke consumption guide. Individual components discoverable via `GET /api/design-system/:component`. Hub broadcast directive notifies all 14 spoke apps of design kit updates.
 
 ## User Preferences
 

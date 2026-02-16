@@ -165,6 +165,12 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | `GET` | `/api/components/:key` | Full component detail with schemas and integration guide |
 | `GET` | `/api/export/:key` | Download export package for cross-app embedding |
 
+### Design System API
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/design-system` | Full PA Design Kit specification: components, data contracts, style tokens, usage guide |
+| `GET` | `/api/design-system/:component` | Individual component spec with props schema, data interface, dependencies, and usage example |
+
 ### Spoke Ingestion (Ecosystem Data Pipeline)
 | Method | Endpoint | Description |
 |---|---|---|
@@ -715,6 +721,100 @@ Data is pushed via `POST /api/cards/{cardId}/data`. The card's `refreshPolicy` (
 - Embeddable KPI index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) for inline scenario feedback
 - Interactive Range Builder component export for embedding directly in AnyComp's scenario UI
 - Card drill-down navigation from high-level compensation dashboards to per-job-code detail cards
+
+---
+
+### Design System: PA Design Kit v1.1.0
+
+**Purpose:** The PA Design Kit is the shared UI component library that establishes visual consistency across all 14 People Analytics Toolbox applications. It is authored and maintained in Metric Market and distributed via a machine-readable specification API.
+
+**Component Catalog (15 components):**
+
+| Component | Category | Description |
+|---|---|---|
+| `MetricTicker` | Data Display | Compact inline metric with label, value, trend, sparkline, classification badge |
+| `MetricCard` | Data Display | Expandable metric card with detail section (description, tags, confidence, data quality) |
+| `MetricGrid` | Layout | Responsive grid layout for MetricTicker or MetricCard arrays (1-4 columns) |
+| `TrendIndicator` | Data Display | Directional trend with arrow icon + percentage change (emerald/red/muted) |
+| `TrendIcon` | Data Display | Standalone directional arrow icon with trend coloring |
+| `SectionHeader` | Layout | Section title with icon, metric count badge, optional alert badge, action slot |
+| `OutputCard` | Data Display | General-purpose result card (title, status, tags, metadata, timestamp) |
+| `ResultsGrid` | Layout | Paginated, searchable, filterable grid of OutputCards |
+| `ResultsFilters` | Layout | Standalone filter bar (search, tag chips, result count) |
+| `IndexGauge` | Data Display | Circular SVG gauge for 0-100 index scores with animated ring |
+| `AlertRow` | Feedback | Compact metric alert display for Alert/Critical classifications |
+| `StatusDot` | Feedback | Color-coded status indicator (healthy/degraded/critical/offline/unknown) |
+| `MiniSparkline` | Data Display | Tiny inline SVG sparkline for embedding in tickers and cards |
+| `WorkflowSteps` | Navigation | Step indicator for multi-step workflows (complete/active/pending/skipped/error) |
+| `formatMetricValue` | Utility | Pure function formatting numbers by unit type (currency, percent, count, ratio, score, days) |
+
+**Data Contracts:**
+
+All components consume standardized data interfaces:
+
+| Interface | Used By | Key Fields |
+|---|---|---|
+| `TrendDelta` | TrendIndicator, MetricTicker, MetricCard | `value`, `percent`, `direction` (up/down/flat) |
+| `MetricTickerData` | MetricTicker, MetricGrid | `key`, `label`, `value`, `unitType`, `delta`, `sparkline`, `classification` |
+| `MetricCardData` | MetricCard, MetricGrid | Extends MetricTickerData + `description`, `domain`, `category`, `tags`, `dataQualityScore` |
+| `IndexGaugeData` | IndexGauge | `key`, `value` (0-100), `label`, `delta`, `sparkline` |
+| `AlertRowData` | AlertRow | `key`, `label`, `value`, `unitType`, `classification` (Alert/Critical) |
+| `SectionHeaderMeta` | SectionHeader | `id`, `label`, `icon`, `color`, `metricCount`, `alertCount` |
+| `OutputCardData` | OutputCard, ResultsGrid | `id`, `title`, `description`, `status`, `tags`, `metadata`, `timestamp` |
+| `WorkflowStep` | WorkflowSteps | `label`, `status` (complete/active/pending/skipped/error) |
+| `StatusLevel` | StatusDot | Enum: healthy, degraded, critical, offline, unknown |
+
+**Style Tokens:**
+
+| Token Category | Values | Usage |
+|---|---|---|
+| Brand Colors | `#0f69ff` (primary), `#e0f0ff` (primaryLight), `#232a31` (foreground), `#5b636a` (muted), `#e0e4e9` (border) | All apps use these for visual consistency |
+| Classification | Normal (emerald), Watch (amber), Alert (orange), Critical (red) | Badge backgrounds with light/dark variants |
+| Trends | Up = emerald, Down = red, Flat = muted | TrendIndicator and TrendIcon coloring |
+| Status | healthy (emerald-500), degraded (amber-500), critical (red-500), offline (gray) | StatusDot and system health indicators |
+| Spacing | Compact: gap-1.5, p-2 / Standard: gap-2-3, p-3-4 / Relaxed: gap-4-6 | Dense, minimal spacing aesthetic |
+| Typography | Labels: text-xs / Values: text-sm font-semibold tabular-nums / Headers: text-sm font-medium | Small, dense type hierarchy |
+| Borders | Cards: border-border/50 rounded-md / Sections: border-b border-border | Subtle, low-opacity borders |
+
+**Unit Type Formatting:**
+
+| Unit Type | Format Rule | Example |
+|---|---|---|
+| `percent` | `value.toFixed(1) + '%'` | `14.2%` |
+| `currency` | `'$' + value.toLocaleString()` | `$97,240` |
+| `count` | `>= 10k: (value/1000).toFixed(1) + 'k'` | `12.8k` |
+| `ratio` | `value.toFixed(2)` | `0.72` |
+| `score` | `value.toFixed(1)` | `3.8` |
+| `days` | `value.toFixed(0) + 'd'` | `38d` |
+| `custom` | `value.toFixed(1) + ' ' + unitLabel` | `2.3 FTE` |
+
+**Discovery & Consumption for Spoke Apps:**
+
+1. **Fetch Specification**: `GET /api/design-system` returns full machine-readable spec (components, data contracts, style tokens, usage guide)
+2. **Fetch Individual Component**: `GET /api/design-system/:component` returns focused spec for one component
+3. **Copy Source Files**: Clone `client/src/components/pa-design-kit/` into spoke app's component directory
+4. **Match Dependencies**: Ensure React 18, Tailwind CSS 3, shadcn/ui, lucide-react
+5. **Follow Data Contracts**: Shape your data to match the TypeScript interfaces before rendering
+6. **Apply Style Tokens**: Use the brand colors, classification scheme, and spacing patterns consistently
+7. **Validate Compliance**: Check against the style compliance checklist in the spoke consumption guide
+
+**Hub Broadcast:**
+
+When the PA Design Kit is updated, a directive is broadcast to all spokes via the Hub:
+
+```json
+{
+  "type": "design_system_update",
+  "source": "metric-market",
+  "version": "1.1.0",
+  "specEndpoint": "/api/design-system",
+  "componentCount": 15,
+  "dataContractCount": 9,
+  "action": "fetch_updated_spec"
+}
+```
+
+Spoke apps that implement the Hub SDK webhook handler (`POST /api/hub-webhook`) receive this directive and can trigger a spec re-fetch to stay current.
 
 ---
 
