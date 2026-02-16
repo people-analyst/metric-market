@@ -8,7 +8,7 @@ Metric Market is the **card workbench and visualization engine** of the People A
 - **Dashboard (End Users):** A consumer-facing interface where published analytics cards are browsed, filtered, and consumed in a polished, Yahoo Finance-inspired layout.
 
 Core capabilities include:
-- 23 distinct D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, and more.
+- 24 distinct D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, range dot plots, and more.
 - **Range Builder form control** — an interactive compensation range simulator with real-time KPI Index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) producing 0-100 goodness scores. Supports job structure filtering by Super Job Function (GTM, R&D, OPS, G&A) and Level Type (Professional P1-P6, Manager M1-M6, Executive E1-E5, Support S1-S4). Custom Level Structure allows partitioning ranges into 2-10 evenly-spaced levels with interpolated market data.
 - Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals like `range_builder`).
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs via database references.
@@ -38,13 +38,13 @@ Core capabilities include:
 | **Schema Validation** | Zod + drizzle-zod | Latest | Runtime type validation and schema generation from Drizzle tables |
 | **Bundler** | esbuild | Latest | Fast JavaScript/TypeScript bundling for production |
 | **Dev Runner** | tsx | Latest | TypeScript execution for development mode |
-| **Hub Integration** | Hub SDK | 2.1.0 | Spoke-to-Hub communication, directive processing, documentation sync |
+| **Hub Integration** | Hub SDK | 2.3.0 | Spoke-to-Hub communication, directive processing, documentation sync, metric intent catalog, capability assessment |
 
 **Infrastructure:**
 - Hosted on **Replit** with Nix-based environment management
 - PostgreSQL 16 via **Neon** serverless Postgres (Replit-managed)
 - Deployed at `metric-market.replit.app` with automatic TLS
-- Hub SDK v2.1.0 handles `/health`, `/api/hub-webhook`, and `/api/specifications` endpoints
+- Hub SDK v2.3.0 handles `/health`, `/api/hub-webhook`, and `/api/specifications` endpoints, plus metric intent catalog and capability assessment
 
 ## Platform Ecosystem Context
 
@@ -65,7 +65,7 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | **Segmentation Studio** | Data consumer | Supplies workforce segmentation data used in Range Builder employee overlays |
 | **Hub** | Coordinator | Manages documentation scoring, directives, health checks, and inter-application webhooks |
 
-**Hub SDK v2.1.0 Integration:**
+**Hub SDK v2.3.0 Integration:**
 - Automatic health endpoint at `/health` returning application status, version, and uptime
 - Webhook receiver at `/api/hub-webhook` for processing Hub directives
 - Specifications endpoint at `/api/specifications` for component schema discovery
@@ -859,7 +859,7 @@ Spoke apps that implement the Hub SDK webhook handler (`POST /api/hub-webhook`) 
 |---|---|---|
 | **Application Server** | Operational | Express.js 4 serving on port 5000, 35+ API endpoints active |
 | **Database** | Operational | PostgreSQL 16 (Neon) with 7 tables, all migrations applied |
-| **Hub Connection** | Active | SDK v2.1.0 connected to People Analytics Hub as App #13 |
+| **Hub Connection** | Active | SDK v2.3.0 connected to People Analytics Hub as App #13, metric intent + capability assessment active |
 | **Frontend** | Operational | React 18 + Vite 5 SPA with 13 routes, all rendering correctly |
 | **Documentation Score** | Met | Current score: 98/100, all 9 sections at 80+ |
 

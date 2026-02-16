@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
+import { recordRequest, startMetricsPush } from "./hubMetrics";
 
 const app = express();
 app.use(express.json());
@@ -27,6 +28,7 @@ app.use((req, res, next) => {
   res.on("finish", () => {
     const duration = Date.now() - start;
     if (path.startsWith("/api")) {
+      recordRequest(duration, res.statusCode >= 400);
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
         logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
@@ -75,5 +77,6 @@ app.use((req, res, next) => {
     reusePort: true,
   }, () => {
     log(`serving on port ${port}`);
+    startMetricsPush(300000);
   });
 })();

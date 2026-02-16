@@ -13,7 +13,7 @@
  * Do NOT edit the core logic — pull updates from the Hub when a new version is available.
  */
 
-const HUB_URL = "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
+const HUB_URL = "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
 const APP_SLUG = "metric-market";
 const APP_NAME = "Metric Market";
 const SDK_VERSION = "2.3.0";
@@ -39,6 +39,12 @@ function _headers() {
     "Content-Type": "application/json",
     "X-API-Key": _getApiKey() || "",
   };
+}
+
+async function _hubFetch(path, options) {
+  const opts = options || {};
+  opts.headers = Object.assign({}, _headers(), opts.headers || {});
+  return fetch(HUB_URL + path, opts);
 }
 
 function _simpleHash(str) {
