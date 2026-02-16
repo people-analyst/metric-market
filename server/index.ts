@@ -6,6 +6,7 @@ import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
 import { recordRequest, startMetricsPush } from "./hubMetrics";
 import { startAutoSync } from "./githubSync";
+import { handleDirective } from "./directiveHandler";
 
 const app = express();
 app.use(express.json());
@@ -13,7 +14,11 @@ app.use(express.urlencoded({ extended: false }));
 
 const _require = createRequire(import.meta.url);
 const hubSdk = _require("../hub-sdk.cjs");
-hubSdk.init(app, { pollDirectives: false });
+hubSdk.init(app, {
+  pollDirectives: true,
+  pollIntervalMs: 300000,
+  onDirective: handleDirective,
+});
 
 app.use((req, res, next) => {
   const start = Date.now();

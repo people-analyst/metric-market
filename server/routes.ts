@@ -16,6 +16,8 @@ import { getComponentRegistry, getComponentDetail } from "./componentExport";
 import { getDesignSystemSpec, getDesignSystemComponent } from "./designSystemRegistry";
 import { registerIngestRoutes } from "./ingest";
 import { pushToGitHub, getSyncStatus, startAutoSync, stopAutoSync } from "./githubSync";
+import { processAgentInstruction } from "./aiAgent";
+import { listKanbaiCards, createKanbaiCard, updateKanbaiCard } from "./kanbaiClient";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -311,6 +313,55 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const comp = getDesignSystemComponent(req.params.component);
     if (!comp) return res.status(404).json({ error: "Design system component not found", available: getDesignSystemSpec().components.map((c) => c.name) });
     res.json(comp);
+  });
+
+  // --- AI Agent Endpoint ---
+  app.post("/api/ai/agent", async (req, res) => {
+    try {
+      const { instruction, context } = req.body;
+      if (!instruction) {
+        return res.status(400).json({ error: "instruction is required" });
+      }
+      const result = await processAgentInstruction({ instruction, context });
+      res.json(result);
+    } catch (e: any) {
+      res.status(500).json({ status: "error", result: e.message });
+    }
+  });
+
+  // --- Kanbai Integration ---
+  app.get("/api/kanbai/cards", async (req, res) => {
+    try {
+      const cards = await listKanbaiCards({
+        source: req.query.source as string | undefined,
+        status: req.query.status as string | undefined,
+      });
+      res.json(cards);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/kanbai/cards", async (req, res) => {
+    try {
+      const { title, description, priority } = req.body;
+      if (!title) return res.status(400).json({ error: "title is required" });
+      const card = await createKanbaiCard({ title, description, priority });
+      if (!card) return res.status(502).json({ error: "Failed to create Kanbai card" });
+      res.status(201).json(card);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.patch("/api/kanbai/cards/:id", async (req, res) => {
+    try {
+      const result = await updateKanbaiCard(req.params.id, req.body);
+      if (!result) return res.status(502).json({ error: "Failed to update Kanbai card" });
+      res.json(result);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
   });
 
   // --- GitHub Sync API (internal only — requires X-Internal-Token header) ---

@@ -149,10 +149,10 @@ export async function reportCapabilities() {
       { capabilityId: 2, maturityLevel: 2 },
       { capabilityId: 3, maturityLevel: 2 },
       { capabilityId: 4, maturityLevel: 2 },
-      { capabilityId: 5, maturityLevel: 1 },
-      { capabilityId: 6, maturityLevel: 1 },
-      { capabilityId: 7, maturityLevel: 0 },
-      { capabilityId: 8, maturityLevel: 1 },
+      { capabilityId: 5, maturityLevel: 4 },
+      { capabilityId: 6, maturityLevel: 3 },
+      { capabilityId: 7, maturityLevel: 3 },
+      { capabilityId: 8, maturityLevel: 2 },
     ]);
     console.log("[hub-metrics] Capability assessment reported");
     return result;
