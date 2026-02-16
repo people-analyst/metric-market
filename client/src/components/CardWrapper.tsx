@@ -29,6 +29,7 @@ import {
 } from "@/components/charts";
 import { RangeBuilderControl } from "@/components/controls/RangeBuilderControl";
 import { RangeTargetBulletChart } from "@/components/charts/RangeTargetBulletChart";
+import { RangeDotPlotChart } from "@/components/charts/RangeDotPlotChart";
 
 const CHART_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   confidence_band: ConfidenceBandChart,
@@ -55,6 +56,7 @@ const CHART_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   range_strip_aligned: RangeStripAlignedChart,
   interactive_range_strip: InteractiveRangeStripChart,
   range_target_bullet: RangeTargetBulletChart,
+  range_dot_plot: RangeDotPlotChart,
   range_builder: RangeBuilderControl,
 };
 

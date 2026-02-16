@@ -70,5 +70,8 @@ export type { InteractiveRangeRow, InteractiveSegment, InteractiveRangeStripChar
 export { RangeTargetBulletChart } from "./RangeTargetBulletChart";
 export type { BulletRangeRow, RangeTargetBulletChartProps } from "./RangeTargetBulletChart";
 
+export { RangeDotPlotChart } from "./RangeDotPlotChart";
+export type { RangeDotPlotLevel, RangeDotPlotEmployee, RangeDotPlotChartProps } from "./RangeDotPlotChart";
+
 export { TILE_PRESETS } from "./tilePresets";
 export type { TilePreset } from "./tilePresets";
