@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench, Ruler, PackageOpen } from "lucide-react";
+import { Filter, ListChecks, SlidersHorizontal, Menu, BarChart3, FileText, TrendingUp, Layers, Target, BarChart, Wrench, Ruler, PackageOpen, Kanban } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -21,6 +21,11 @@ const adminItems = [
     title: "Export",
     url: "/export",
     icon: PackageOpen,
+  },
+  {
+    title: "Kanbai",
+    url: "/kanban",
+    icon: Kanban,
   },
 ];
 
