@@ -1,0 +1,180 @@
+# Spoke Application Element Inventory Prompt
+
+**Purpose:** Send this prompt to the AI agent in each spoke application (Conductor, Metric Market, MetaFactory, PeopleAnalyst, Anonymizer, Segmentation Studio, Calculus, Reincarnation, AnyComp, etc.) to inventory everything in their codebase that could become a canonical element in the unified People Analytics taxonomy.
+
+**Instructions:** Copy the prompt below and paste it into the AI agent chat for each spoke application. Replace `[APP_NAME]` with the actual app name.
+
+---
+
+## THE PROMPT
+
+I need you to do a thorough codebase inventory for [APP_NAME]. We are building a unified canonical registry across the entire People Analytics ecosystem — one central taxonomy of all element types shared by every application. Your job is to search this entire codebase and report everything that could be a canonical element.
+
+This is extremely important work. Be thorough. Search every schema file, every constant definition, every enum, every type, every seed data file, every configuration. Look at database tables, TypeScript interfaces, JSON configs, and hardcoded arrays. I need you to find EVERYTHING.
+
+### What We Mean by "Element"
+
+An element is any reusable concept, data structure, metric, model, field, segment, template, or capability that this application knows about. These fall into these categories:
+
+**1. FIELDS (canonical data fields)**
+- Any HR/people data field this app references, stores, maps, or processes
+- Field names, aliases, data types, categories
+- Look in: database schemas, data models, field mapping tables, import/export configs, column definitions, dataset schemas
+- Examples: employee_id, hire_date, department, job_level, salary, performance_rating, engagement_score
+
+**2. MEASURES / METRICS**
+- Any KPI, metric, measure, score, rate, ratio, or index this app calculates, displays, or references
+- Include: the metric key/name, how it's calculated (formula if available), what unit it's in, what domain it belongs to, what data sources feed it
+- Look in: metric definitions, dashboard configs, calculation functions, report templates, chart configurations
+- Examples: voluntary_attrition_rate, engagement_index, compa_ratio, time_to_fill, headcount
+
+**3. MODELS (analytical/statistical/scientific)**
+- Any predictive model, statistical technique, scientific framework, or analytical method this app implements or references
+- Include: model name, what type it is (regression, classification, survival analysis, factor analysis, simulation, etc.), what it predicts/explains, what inputs it needs
+- Look in: model definitions, algorithm implementations, prediction functions, scoring engines
+- Examples: attrition_prediction_model, engagement_factor_model, key_driver_analysis, survival_model
+
+**4. SURVEY ITEMS / INSTRUMENTS**
+- Any survey questions, scales, constructs, or psychometric instruments this app manages
+- Include: item text or construct name, what it measures, response scale, which survey it belongs to
+- Look in: survey builders, question banks, item pools, construct definitions, scale configurations
+- Examples: "I am proud to work for this organization" (Commitment), "My manager provides clear direction" (Manager Quality)
+
+**5. SEGMENTS / DIMENSIONS**
+- Any way this app cuts or groups population data
+- Include: segment name, dimension type (demographic, organizational, behavioral, derived), possible values
+- Look in: segmentation logic, filter definitions, group-by configurations, dimension tables
+- Examples: tenure_bands, job_family, location_region, performance_quartile, risk_category
+
+**6. DATA SOURCES**
+- Any external data source, feed, or system this app connects to or references
+- Include: source name, type (HRIS, ATS, survey platform, financial system, external benchmark), connection method
+- Look in: integration configs, data connector definitions, import schemas, API clients
+- Examples: workday_hris, greenhouse_ats, qualtrics_surveys, radford_market_data
+
+**7. EQUIPMENT / TOOLS / MICROSERVICES**
+- Any distinct functional component, service, or tool within this app
+- Include: what it does, what pipeline stage it serves (intake, protect, structure, collect, compute, analyze, decide, deliver)
+- Examples: field_mapper, metric_calculator, report_generator, data_profiler
+
+**8. RECIPES / WORKFLOWS / TEMPLATES**
+- Any predefined workflow, analysis pattern, or template that chains multiple steps together
+- Include: what steps are involved, what inputs are needed, what outputs are produced
+- Examples: monthly_attrition_report_workflow, engagement_survey_analysis_template
+
+**9. PERSONAS / USER TYPES**
+- Any user role, persona, or audience type this app is designed for
+- Include: role name, what they need, what features they use
+- Examples: CHRO, HRBP, PA_Analyst, Comp_Leader
+
+**10. CAPABILITIES / SKILLS**
+- Any team capability, skill, or competency this app requires or develops
+- Examples: data_engineering, statistical_computing, psychometric_science
+
+**11. TAXONOMIES / ENUMERATIONS**
+- Any categorical system, classification scheme, or enumeration used to organize data
+- Include: the taxonomy name and all its values
+- Look in: enum definitions, const arrays, dropdown options, status values, type definitions
+- Examples: employment_status (active/terminated/leave), job_level (IC1-IC5, M1-M4, E1-E3)
+
+### Output Format
+
+For each element you find, provide it in this structured format:
+
+```
+ELEMENT:
+  name: [human readable name]
+  key: [snake_case unique identifier]  
+  category: [field | measure | model | survey_item | segment | data_source | equipment | recipe | persona | capability | taxonomy]
+  source_location: [file path where you found this]
+  
+  # Include ALL of these that apply:
+  description: [what it is / what it does]
+  data_type: [string | number | date | boolean | currency | percent | etc.]
+  formula: [how it's calculated, if applicable]
+  unit: [count | percent | currency | days | score | ratio | etc.]
+  domain: [talent_acquisition | retention | engagement | compensation | workforce_planning | dei | learning_development | manager_effectiveness | culture | general | operational]
+  dependencies: [what other elements it needs]
+  aliases: [other names this element goes by in this app or in source systems]
+  values: [if it's an enumeration, list all possible values]
+  tags: [relevant tags]
+  
+  # For metrics:
+  metric_type: [leading | lagging | ratio | index | rate]
+  metric_source: [op_system | survey | complex]
+  
+  # For models:
+  model_type: [scientific | statistical | system | strategy]
+  model_family: [classification | regression | clustering | factor_analysis | survival_analysis | nlp | simulation]
+  
+  # For segments:
+  segment_dimension: [demographic | organizational | behavioral | derived]
+  
+  # For survey items:
+  construct: [what psychological construct this measures]
+  scale: [response scale details]
+  
+  # For data sources:
+  source_type: [hris | ats | survey | financial | external_benchmark | manual | api]
+  connection_method: [api | file_upload | direct_db | sdk]
+  
+  metadata: [any other relevant information not captured above]
+```
+
+### Search Instructions
+
+1. **Start with schema files** — Look at every database table definition, every TypeScript interface, every Zod schema
+2. **Check constants and enums** — Search for `const`, `enum`, arrays of objects with labels/values, dropdown option lists
+3. **Look at seed data** — Any data that initializes the app (seed scripts, default configs, fixture files)
+4. **Examine API routes** — What entities does this app CRUD? Each entity type is potentially a canonical element
+5. **Read configuration files** — Dashboard configs, chart configs, report templates, workflow definitions
+6. **Check the lib/utils folders** — Helper functions often reveal domain concepts (calculateAttritionRate → "attrition_rate" is a measure)
+7. **Look at component props** — React components that accept metric names, field names, or category types reveal taxonomies
+8. **Search for hardcoded strings** — Grep for domain terms like "attrition", "engagement", "tenure", "compensation" to find elements embedded in logic
+
+### Important Notes
+
+- **Be exhaustive.** I would rather have duplicates than miss something. If in doubt, include it.
+- **Report what you actually find in the code**, not what you think should exist. We want the ground truth.
+- **Include the file path** where you found each element so we can trace it back.
+- **If an element has rich metadata in one place and sparse metadata elsewhere**, report both locations and all metadata you can find.
+- **Pay special attention to naming.** Different apps may call the same concept different things — that's exactly what we're trying to reconcile.
+- **Include internal/operational elements too**, not just HR/business ones. If this app tracks its own health metrics, pipeline statuses, or processing statistics — those matter.
+
+### Summary Section
+
+After listing all elements, provide a summary:
+
+```
+SUMMARY:
+  app_name: [APP_NAME]
+  total_elements_found: [count]
+  breakdown:
+    fields: [count]
+    measures: [count]  
+    models: [count]
+    survey_items: [count]
+    segments: [count]
+    data_sources: [count]
+    equipment: [count]
+    recipes: [count]
+    personas: [count]
+    capabilities: [count]
+    taxonomies: [count]
+  
+  unique_taxonomies: [list the classification systems this app uses]
+  naming_conventions: [describe how this app names things - camelCase, snake_case, etc.]
+  primary_domain_focus: [what HR domains does this app primarily serve]
+  data_model_approach: [how does this app organize its data - relational, document, etc.]
+  
+  hub_integration_status:
+    has_hub_sdk: [yes/no]
+    pushes_metrics: [yes/no]  
+    pushes_fields: [yes/no]
+    receives_directives: [yes/no]
+    other_sync: [describe any other sync mechanisms]
+```
+
+Please begin the inventory now. Search thoroughly and report everything you find.
+
+---
