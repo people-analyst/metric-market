@@ -18,6 +18,8 @@ import { registerIngestRoutes } from "./ingest";
 import { pushToGitHub, getSyncStatus, startAutoSync, stopAutoSync } from "./githubSync";
 import { processAgentInstruction } from "./aiAgent";
 import { registerKanbanRoutes } from "./kanban-routes";
+// @ts-ignore - JS module
+import { registerAgentRoutes } from "./kanbai-agent-runner.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -331,6 +333,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // --- Kanban / Kanbai Integration (local spoke) ---
   registerKanbanRoutes(app);
+
+  // --- Kanbai Agent Runner (Claude-powered task processing) ---
+  registerAgentRoutes(app);
 
   // --- GitHub Sync API (internal only — requires X-Internal-Token header) ---
 
