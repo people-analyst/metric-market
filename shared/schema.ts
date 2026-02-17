@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, real } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, integer, jsonb, timestamp, boolean, real, serial } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -211,3 +211,47 @@ export const insertCardDataSchema = createInsertSchema(cardData).omit({
 
 export type InsertCardData = z.infer<typeof insertCardDataSchema>;
 export type CardData = typeof cardData.$inferSelect;
+
+export const KANBAN_STATUSES = ["backlog", "planning", "planned", "prioritization", "ready", "assignment", "in_progress", "review", "done"] as const;
+export type KanbanStatus = (typeof KANBAN_STATUSES)[number];
+
+export const KANBAN_PRIORITIES = ["critical", "high", "medium", "low"] as const;
+export type KanbanPriority = (typeof KANBAN_PRIORITIES)[number];
+
+export const kanbanCards = pgTable("kanban_cards", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  type: varchar("type", { length: 50 }).notNull(),
+  appTarget: varchar("app_target", { length: 100 }),
+  status: varchar("status", { length: 50 }).notNull().default("backlog"),
+  priority: varchar("priority", { length: 50 }).notNull().default("medium"),
+  description: text("description"),
+  acceptanceCriteria: jsonb("acceptance_criteria").$type<string[]>(),
+  technicalNotes: text("technical_notes"),
+  estimatedEffort: varchar("estimated_effort", { length: 50 }),
+  assignedTo: varchar("assigned_to", { length: 100 }),
+  dependencies: jsonb("dependencies").$type<string[]>(),
+  tags: jsonb("tags").$type<string[]>(),
+  agentNotes: text("agent_notes"),
+  position: integer("position").default(0),
+  sourceApp: varchar("source_app", { length: 100 }),
+  sourceCardId: integer("source_card_id"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const kanbanSubtasks = pgTable("kanban_subtasks", {
+  id: serial("id").primaryKey(),
+  cardId: integer("card_id").notNull().references(() => kanbanCards.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  completed: boolean("completed").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertKanbanCardSchema = createInsertSchema(kanbanCards).omit({ id: true, createdAt: true, updatedAt: true });
+export const updateKanbanCardSchema = insertKanbanCardSchema.partial();
+export const insertKanbanSubtaskSchema = createInsertSchema(kanbanSubtasks).omit({ id: true, createdAt: true });
+
+export type KanbanCard = typeof kanbanCards.$inferSelect;
+export type InsertKanbanCard = z.infer<typeof insertKanbanCardSchema>;
+export type KanbanSubtask = typeof kanbanSubtasks.$inferSelect;
