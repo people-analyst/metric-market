@@ -1,36 +1,29 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
-import { KanbanCard } from "./KanbanCard";
-import { queryClient, apiRequest } from "@/lib/queryClient";
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { AgentControlPanel } from "./AgentControlPanel";
 
-const STATUSES = ["backlog", "planning", "planned", "prioritization", "ready", "assignment", "in_progress", "review", "done"] as const;
-const STATUS_LABELS: Record<string, string> = {
-  backlog: "Backlog",
-  planning: "Planning",
-  planned: "Planned",
-  prioritization: "Prioritization",
-  ready: "Ready",
-  assignment: "Assignment",
-  in_progress: "In Progress",
-  review: "Review",
-  done: "Done",
+const DEFAULT_STATUSES = ["backlog", "planning", "planned", "prioritization", "ready", "assignment", "in_progress", "review", "done"];
+const DEFAULT_STATUS_LABELS: Record<string, string> = {
+  backlog: "Backlog", planning: "Planning", planned: "Planned", prioritization: "Prioritization",
+  ready: "Ready", assignment: "Assignment", in_progress: "In Progress", review: "Review", done: "Done"
 };
-
-const STATUS_COLORS: Record<string, string> = {
-  backlog: "bg-muted/50",
-  planning: "bg-blue-50 dark:bg-blue-950/20",
-  planned: "bg-indigo-50 dark:bg-indigo-950/20",
-  prioritization: "bg-amber-50 dark:bg-amber-950/20",
-  ready: "bg-emerald-50 dark:bg-emerald-950/20",
-  assignment: "bg-cyan-50 dark:bg-cyan-950/20",
-  in_progress: "bg-sky-50 dark:bg-sky-950/20",
-  review: "bg-violet-50 dark:bg-violet-950/20",
-  done: "bg-emerald-50 dark:bg-emerald-950/20",
+const PRIORITY_COLORS: Record<string, string> = {
+  critical: "bg-red-600 text-red-50",
+  high: "bg-orange-500 text-orange-50",
+  medium: "bg-blue-500 text-blue-50",
+  low: "bg-muted text-muted-foreground",
 };
+interface ColumnConfig {
+  status: string;
+  label: string;
+  isAgent?: boolean;
+}
 
 interface KanbanCardData {
   id: number;
@@ -47,14 +40,16 @@ interface KanbanCardData {
   assignedTo?: string | null;
   dependencies?: string[] | null;
   agentNotes?: string | null;
+  lockedBy?: string | null;
 }
 
 export function KanbanBoard() {
-  const { data: cards = [], isLoading } = useQuery<KanbanCardData[]>({
-    queryKey: ["/api/kanban/cards"],
-  });
-
+  const { data, isLoading, error, refetch } = useQuery<any>({ queryKey: ["/api/kanban/cards"] });
+  const [showAgent, setShowAgent] = useState(true);
   const [selectedCard, setSelectedCard] = useState<KanbanCardData | null>(null);
+  const [viewMode, setViewMode] = useState<"board" | "list">("board");
+
+  const cards: KanbanCardData[] = Array.isArray(data) ? data : (data?.cards ?? []);
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: number; data: Record<string, unknown> }) => {
@@ -66,39 +61,203 @@ export function KanbanBoard() {
     },
   });
 
-  if (isLoading) {
+  const columns: ColumnConfig[] = DEFAULT_STATUSES.map(s => ({ status: s, label: DEFAULT_STATUS_LABELS[s] || s }));
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64" data-testid="loading-kanban">
-        <span className="text-sm text-muted-foreground">Loading board...</span>
+      <div className="flex flex-col items-center justify-center h-64 gap-3" data-testid="board-error">
+        <div className="text-destructive font-medium">Failed to load board</div>
+        <p className="text-sm text-muted-foreground">{(error as Error).message}</p>
+        <Button size="sm" variant="outline" onClick={() => refetch()} data-testid="button-retry-board">
+          Retry
+        </Button>
       </div>
     );
   }
 
-  return (
-    <>
-      <div className="flex gap-3 p-4 overflow-x-auto h-full" data-testid="kanban-board">
-        {STATUSES.map((status) => {
-          const statusCards = cards.filter((c) => c.status === status);
-          return (
-            <div key={status} className="flex-shrink-0 w-64" data-testid={`column-${status}`}>
-              <div className={`rounded-md p-2 ${STATUS_COLORS[status] || "bg-muted/50"}`}>
-                <div className="flex items-center gap-2 mb-2 px-1">
-                  <h3 className="font-semibold text-xs text-foreground">{STATUS_LABELS[status]}</h3>
-                  <Badge variant="secondary" className="text-[10px]">{statusCards.length}</Badge>
-                </div>
-                <div className="space-y-2 min-h-[4rem]">
-                  {statusCards.map((card) => (
-                    <KanbanCard
-                      key={card.id}
-                      card={card}
-                      onClick={() => setSelectedCard(card)}
-                    />
-                  ))}
-                </div>
-              </div>
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full" data-testid="board-loading">
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b flex-wrap">
+          <div className="flex items-center gap-2">
+            <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+            <div className="h-5 w-16 bg-muted rounded animate-pulse" />
+          </div>
+          <div className="h-8 w-28 bg-muted rounded animate-pulse" />
+        </div>
+        <div className="flex gap-3 p-4 overflow-x-auto flex-1">
+          {[1,2,3,4,5].map(i => (
+            <div key={i} className="flex-shrink-0 w-64 space-y-2">
+              <div className="h-5 w-24 bg-muted rounded animate-pulse mb-3" />
+              {[1,2,3].map(j => (
+                <div key={j} className="h-20 bg-muted rounded-md animate-pulse" />
+              ))}
             </div>
-          );
-        })}
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const totalByPriority = cards.reduce((acc: Record<string, number>, c) => {
+    acc[c.priority] = (acc[c.priority] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <div className="flex flex-col h-full" data-testid="kanban-board">
+      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b flex-wrap">
+        <div className="flex items-center gap-2 flex-wrap">
+          <h2 className="text-lg font-semibold">Kanban Board</h2>
+          <Badge variant="secondary" data-testid="badge-card-count">{cards.length} cards</Badge>
+          {Object.entries(totalByPriority).map(([p, count]) => (
+            <Badge key={p} variant="outline" className="text-[10px]" data-testid={`badge-priority-${p}`}>
+              {p}: {count as number}
+            </Badge>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="flex border rounded-md overflow-visible">
+            <Button
+              variant={viewMode === "board" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-r-none"
+              onClick={() => setViewMode("board")}
+              data-testid="button-view-board"
+            >
+              Board
+            </Button>
+            <Button
+              variant={viewMode === "list" ? "default" : "ghost"}
+              size="sm"
+              className="rounded-l-none"
+              onClick={() => setViewMode("list")}
+              data-testid="button-view-list"
+            >
+              List
+            </Button>
+          </div>
+          <Button
+            variant={showAgent ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowAgent(!showAgent)}
+            data-testid="button-toggle-agent-panel"
+          >
+            {showAgent ? "Hide Agent" : "Show AI Agent"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden">
+        {viewMode === "board" ? (
+          <div className="flex gap-3 p-4 overflow-x-auto flex-1">
+            {columns.map(col => {
+              const columnCards = cards.filter(c => c.status === col.status);
+              return (
+                <div key={col.status} className="flex-shrink-0 w-64 flex flex-col" data-testid={`column-${col.status}`}>
+                  <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold text-sm">{col.label}</h3>
+                      {col.isAgent && (
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 border-cyan-500 text-cyan-600 dark:text-cyan-400">AI</Badge>
+                      )}
+                    </div>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0">{columnCards.length}</Badge>
+                  </div>
+                  <div className="space-y-2 overflow-y-auto flex-1 min-h-[120px]">
+                    {columnCards.map((card: KanbanCardData) => (
+                      <Card
+                        key={card.id}
+                        className={`p-3 hover-elevate cursor-pointer ${card.lockedBy ? "ring-1 ring-cyan-500/50" : ""}`}
+                        onClick={() => setSelectedCard(selectedCard?.id === card.id ? null : card)}
+                        data-testid={`card-${card.id}`}
+                      >
+                        <div className="flex items-start justify-between gap-1 mb-1">
+                          <h4 className="font-medium text-sm leading-tight flex-1">{card.title}</h4>
+                          <span className="text-[10px] text-muted-foreground font-mono flex-shrink-0">#{card.id}</span>
+                        </div>
+                        {card.lockedBy && (
+                          <div className="flex items-center gap-1 mb-1.5 text-xs text-cyan-600 dark:text-cyan-400" data-testid={`card-agent-lock-${card.id}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                            <span>Agent: {card.lockedBy}</span>
+                          </div>
+                        )}
+                        {card.description && (
+                          <p className="text-xs text-muted-foreground mb-1.5 line-clamp-2">{card.description}</p>
+                        )}
+                        <div className="flex gap-1 flex-wrap">
+                          <Badge className={`text-[10px] px-1.5 py-0 ${PRIORITY_COLORS[card.priority] || ""}`}>
+                            {card.priority}
+                          </Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">{card.type}</Badge>
+                          {card.tags?.slice(0, 2).map((tag: string) => (
+                            <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                          ))}
+                        </div>
+                      </Card>
+                    ))}
+                    {columnCards.length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                        <p className="text-xs">No cards</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto p-4">
+            <div className="rounded-md border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/50">
+                    <th className="text-left p-2 font-medium">ID</th>
+                    <th className="text-left p-2 font-medium">Title</th>
+                    <th className="text-left p-2 font-medium">Status</th>
+                    <th className="text-left p-2 font-medium">Priority</th>
+                    <th className="text-left p-2 font-medium">Type</th>
+                    <th className="text-left p-2 font-medium">Agent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cards.map((card: KanbanCardData) => (
+                    <tr
+                      key={card.id}
+                      className="border-b hover-elevate cursor-pointer"
+                      onClick={() => setSelectedCard(selectedCard?.id === card.id ? null : card)}
+                      data-testid={`list-row-${card.id}`}
+                    >
+                      <td className="p-2 font-mono text-muted-foreground">#{card.id}</td>
+                      <td className="p-2 font-medium">{card.title}</td>
+                      <td className="p-2">
+                        <Badge variant="outline" className="text-[10px]">{DEFAULT_STATUS_LABELS[card.status] || card.status}</Badge>
+                      </td>
+                      <td className="p-2">
+                        <Badge className={`text-[10px] px-1.5 py-0 ${PRIORITY_COLORS[card.priority] || ""}`}>{card.priority}</Badge>
+                      </td>
+                      <td className="p-2"><Badge variant="outline" className="text-[10px]">{card.type}</Badge></td>
+                      <td className="p-2">
+                        {card.lockedBy && (
+                          <span className="flex items-center gap-1 text-xs text-cyan-600 dark:text-cyan-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
+                            {card.lockedBy}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {showAgent && (
+          <div className="w-80 flex-shrink-0 border-l overflow-y-auto" data-testid="agent-panel-sidebar">
+            <AgentControlPanel />
+          </div>
+        )}
       </div>
 
       <Dialog open={!!selectedCard} onOpenChange={(open) => !open && setSelectedCard(null)}>
@@ -109,7 +268,7 @@ export function KanbanBoard() {
             </DialogHeader>
             <div className="space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="secondary">{selectedCard.priority}</Badge>
+                <Badge className={`${PRIORITY_COLORS[selectedCard.priority] || ""}`}>{selectedCard.priority}</Badge>
                 <Badge variant="outline">{selectedCard.type}</Badge>
                 {selectedCard.appTarget && <Badge variant="outline">{selectedCard.appTarget}</Badge>}
               </div>
@@ -127,8 +286,8 @@ export function KanbanBoard() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {STATUSES.map((s) => (
-                      <SelectItem key={s} value={s}>{STATUS_LABELS[s]}</SelectItem>
+                    {DEFAULT_STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>{DEFAULT_STATUS_LABELS[s]}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -183,6 +342,6 @@ export function KanbanBoard() {
           </DialogContent>
         )}
       </Dialog>
-    </>
+    </div>
   );
 }
