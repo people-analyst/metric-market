@@ -173,6 +173,31 @@ export function registerAgentRoutes(app) {
     stopAgent();
     res.json({ status: "stopped" });
   });
+
+  app.post("/api/agent/mode", (req, res) => {
+    const { mode } = req.body || {};
+    if (mode === "auto" || mode === "semi") {
+      AGENT_CONFIG.mode = mode;
+      AGENT_CONFIG.autoApprove = mode === "auto";
+      console.log(`[KanbaiAgent] Mode switched to ${mode}`);
+      res.json({ mode, autoApprove: AGENT_CONFIG.autoApprove });
+    } else {
+      res.status(400).json({ error: "Invalid mode. Use 'auto' or 'semi'." });
+    }
+  });
+
+  app.post("/api/agent/reject/:cardId", async (req, res) => {
+    const cardId = parseInt(req.params.cardId);
+    const card = pendingApproval.get(cardId);
+    if (!card) return res.status(404).json({ error: "No pending task with that id" });
+    pendingApproval.delete(cardId);
+    try {
+      await releaseTask(cardId, AGENT_CONFIG.agentId);
+      res.json({ success: true, message: `Task #${cardId} rejected and released` });
+    } catch (err) {
+      res.json({ success: true, message: `Task #${cardId} removed from queue` });
+    }
+  });
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
