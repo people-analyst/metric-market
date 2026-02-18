@@ -19,6 +19,7 @@ const PRIORITY_COLORS: Record<string, string> = {
   medium: "bg-blue-500 text-blue-50",
   low: "bg-muted text-muted-foreground",
 };
+
 interface ColumnConfig {
   status: string;
   label: string;
@@ -45,6 +46,7 @@ interface KanbanCardData {
 
 export function KanbanBoard() {
   const { data, isLoading, error, refetch } = useQuery<any>({ queryKey: ["/api/kanban/cards"] });
+  const { data: spokeConfig } = useQuery<any>({ queryKey: ["/api/kanban/spoke-config"] });
   const [showAgent, setShowAgent] = useState(true);
   const [selectedCard, setSelectedCard] = useState<KanbanCardData | null>(null);
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
@@ -61,7 +63,9 @@ export function KanbanBoard() {
     },
   });
 
-  const columns: ColumnConfig[] = DEFAULT_STATUSES.map(s => ({ status: s, label: DEFAULT_STATUS_LABELS[s] || s }));
+  const columns: ColumnConfig[] = spokeConfig?.columns?.length
+    ? spokeConfig.columns.map((c: any) => ({ status: c.status, label: c.label || DEFAULT_STATUS_LABELS[c.status] || c.status, isAgent: c.isAgent }))
+    : DEFAULT_STATUSES.map(s => ({ status: s, label: DEFAULT_STATUS_LABELS[s] || s }));
 
   if (error) {
     return (
@@ -256,6 +260,35 @@ export function KanbanBoard() {
         {showAgent && (
           <div className="w-80 flex-shrink-0 border-l overflow-y-auto" data-testid="agent-panel-sidebar">
             <AgentControlPanel />
+            {selectedCard && (
+              <div className="p-4 border-t" data-testid="card-detail-panel">
+                <h3 className="font-semibold text-sm mb-2">{selectedCard.title}</h3>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div><span className="font-medium text-foreground">Status:</span> {DEFAULT_STATUS_LABELS[selectedCard.status] || selectedCard.status}</div>
+                  <div><span className="font-medium text-foreground">Priority:</span> {selectedCard.priority}</div>
+                  <div><span className="font-medium text-foreground">Type:</span> {selectedCard.type}</div>
+                  {selectedCard.description && <div><span className="font-medium text-foreground">Description:</span> {selectedCard.description}</div>}
+                  {selectedCard.technicalNotes && <div><span className="font-medium text-foreground">Notes:</span> {selectedCard.technicalNotes}</div>}
+                  {selectedCard.acceptanceCriteria && selectedCard.acceptanceCriteria.length > 0 && (
+                    <div>
+                      <span className="font-medium text-foreground">Acceptance Criteria:</span>
+                      <ul className="list-disc list-inside mt-1 space-y-0.5">
+                        {selectedCard.acceptanceCriteria.map((ac: string, i: number) => (
+                          <li key={i}>{ac}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {selectedCard.tags && selectedCard.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap">
+                      {selectedCard.tags.map((tag: string) => (
+                        <Badge key={tag} variant="outline" className="text-[10px]">{tag}</Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

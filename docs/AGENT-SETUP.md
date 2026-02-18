@@ -43,14 +43,71 @@ That's it. Your app now has:
 The agent runs a continuous loop:
 1. **Polls** Kanbai for available tasks assigned to `metric-market`
 2. **Claims** a task (locks it so no other agent takes it)
-3. **Analyzes** the task with Claude (reads title, description, acceptance criteria, technical notes)
-4. **Reports progress** back to Kanbai as it works
-5. **Completes or escalates** the task based on Claude's analysis
+3. **Explores** the project (lists directories, reads files, searches code)
+4. **Implements** changes using Claude's tool-use (edits files, creates new files)
+5. **Verifies** its work by reading modified files and running tests
+6. **Reports progress** back to Kanbai at each step
+7. **Completes or escalates** the task based on results
+
+## Tool-Use Capabilities (v2.0)
+
+The agent uses Claude's tool-use feature to interact with the project filesystem. Claude can call these tools during task execution:
+
+| Tool | Description |
+|------|-------------|
+| `read_file` | Read file contents (with optional line range) |
+| `write_file` | Create or overwrite a file |
+| `edit_file` | Replace a specific string in a file (surgical edit) |
+| `list_directory` | List files and subdirectories |
+| `search_files` | Grep for a pattern across project files |
+| `run_command` | Run an allowed shell command (e.g., `npm test`) |
+
+### Safety Guardrails
+
+The agent operates within strict safety boundaries:
+
+- **Path restrictions**: Cannot access files outside the project root, or in `node_modules/`, `.git/`, `.env`, `.replit`, `replit.nix`, `package-lock.json`
+- **File size limit**: Cannot read or write files larger than 200KB
+- **Command allowlist**: Only these commands are permitted: `npm test`, `npm run lint`, `npm run build`, `ls`, `cat`, `grep`, `find`, `wc`, `head`, `tail`, `diff`
+- **Command timeout**: Shell commands time out after 30 seconds
+- **Iteration cap**: Maximum 15 tool-use steps per task (prevents runaway loops)
+- **Progress reporting**: Every 3 steps, the agent reports what it's done back to Kanbai
+
+### Customizing Guardrails
+
+You can adjust safety settings in the `AGENT_CONFIG` object:
+```javascript
+AGENT_CONFIG.maxToolIterations = 20;        // Allow more steps per task
+AGENT_CONFIG.maxFileSize = 500 * 1024;      // Allow larger files (500KB)
+AGENT_CONFIG.commandTimeout = 60000;        // 60-second command timeout
+AGENT_CONFIG.allowedCommands.push("python"); // Add python to allowed commands
+AGENT_CONFIG.blockedPaths.push("secrets/");  // Block additional paths
+```
 
 ## Agent Modes
 
-- **semi** (default): Agent finds tasks and queues them for approval. You approve via `POST /api/agent/approve/:cardId`
-- **auto**: Agent claims and processes tasks fully autonomously
+- **semi** (default): Two-stage review process:
+  1. Agent finds tasks and queues them for **pre-work approval** (`POST /api/agent/approve/:cardId`)
+  2. After the agent finishes work, results are queued for **post-work review** with a structured completion report
+  3. You review the report (`GET /api/agent/review/:cardId`) showing files changed, change summaries, and test results
+  4. You **confirm** (`POST /api/agent/confirm/:cardId`) to mark done, or **reject** (`POST /api/agent/reject-review/:cardId`) to release for rework
+- **auto**: Agent claims, implements, and completes tasks fully autonomously, posting structured completion reports back to Kanbai and the Hub
+
+## Completion Reports
+
+When an agent finishes working on a task, it generates a structured completion report containing:
+- **filesChanged**: Object mapping file paths to change details (action type, content size or before/after snippets)
+- **testResults**: Array of test runs with command, exit code, output, pass/fail status
+- **iterations**: Number of tool-use steps taken
+- **summary**: Claude's own summary of what it accomplished and any remaining work
+- **allTestsPassed**: Boolean indicating overall test status
+
+In **semi mode**, this report is held for human review before the card moves to "done".
+In **auto mode**, the report is sent to Kanbai and (optionally) the Hub immediately.
+
+### Hub Notification
+
+If `HUB_URL` or `PLATFORM_HUB_URL` is set, the agent will POST the completion report to `{HUB_URL}/api/agent-completion` so the Hub can track which cards were completed and what changed.
 
 ## Control Endpoints (mounted automatically)
 
@@ -58,9 +115,12 @@ The agent runs a continuous loop:
 |----------|--------|-------------|
 | `/api/agent/start` | POST | Start the agent loop |
 | `/api/agent/stop` | POST | Stop the agent loop |
-| `/api/agent/status` | GET | View agent status, active tasks, pending approvals |
-| `/api/agent/approve/:cardId` | POST | Approve a pending task (semi mode) |
-| `/api/agent/reject/:cardId` | POST | Reject a pending task and release it |
+| `/api/agent/status` | GET | View agent status, active/pending/review queues |
+| `/api/agent/approve/:cardId` | POST | Approve a pending task for the agent to work on (semi mode, pre-work) |
+| `/api/agent/reject/:cardId` | POST | Reject a pending task and release it (pre-work) |
+| `/api/agent/review/:cardId` | GET | View the structured completion report for a finished task (semi mode, post-work) |
+| `/api/agent/confirm/:cardId` | POST | Confirm agent work and mark card done (semi mode, post-work) |
+| `/api/agent/reject-review/:cardId` | POST | Reject agent work and release card for rework (semi mode, post-work) |
 | `/api/agent/mode` | POST | Switch mode: `{ "mode": "auto" }` or `{ "mode": "semi" }` |
 | `/api/kanban/cards` | GET | Proxied board data from hub (used by board UI) |
 | `/api/kanban/spoke-config` | GET | Proxied column config from hub (used by board UI) |

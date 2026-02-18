@@ -155,4 +155,20 @@ export function registerKanbanRoutes(app: Express) {
       res.status(500).json({ error: e.message });
     }
   });
+
+  app.get("/api/kanban/spoke-config", async (_req, res) => {
+    try {
+      const KANBAI_URL = "http://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+      const resp = await fetch(`${KANBAI_URL}/api/kanban/spoke-config?app=metric-market`, {
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY}`,
+        },
+      });
+      const data = await resp.json();
+      res.json(data);
+    } catch (err: any) {
+      res.status(502).json({ error: "Could not reach Kanbai hub for config", details: err.message });
+    }
+  });
 }
