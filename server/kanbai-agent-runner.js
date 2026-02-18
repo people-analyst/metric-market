@@ -2,13 +2,14 @@ import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import pathMod from "path";
 import { execSync, execFileSync } from "child_process";
-import { pullBoard, claimTask, reportProgress, completeTask, releaseTask, getAvailableTasks, getSchema, getSpokeConfig } from "./kanbai-connector.js";
+import { pullBoard, claimTask, reportProgress, completeTask, releaseTask, getAvailableTasks, getSchema, getSpokeConfig, KANBAI_URL } from "./kanbai-connector.js";
 
 const PROJECT_ROOT = process.cwd();
 const AGENT_CONFIG = {
   agentId: "agent-metric-market",
   appSlug: "metric-market",
   mode: "semi",
+  model: process.env.KANBAI_AGENT_MODEL || "claude-sonnet-4-5",
   pollInterval: 60000,
   maxConcurrent: 1,
   priorities: ["critical", "high", "medium"],
@@ -129,7 +130,7 @@ function executeTool(name, input) {
   }
 }
 
-const anthropic = new Anthropic();
+let anthropic;
 let activeTasks = new Map();
 let running = false;
 const pendingApproval = new Map();
@@ -185,7 +186,7 @@ async function approveTask(cardId) {
 
 async function claimAndStart(card) {
   const result = await claimTask(card.id, AGENT_CONFIG.agentId);
-  if (result.error) {
+  if (result.error && !result.local) {
     console.warn(`[KanbaiAgent] Could not claim #${card.id}: ${result.error}`);
     return;
   }
@@ -222,13 +223,22 @@ async function processActiveTasks() {
 }
 
 async function processTaskWithClaude(card) {
-  const systemPrompt = `You are an AI agent working on the "${AGENT_CONFIG.appSlug}" application (People Analytics Toolbox - Metric Market).
-You have tools to read, write, edit files, search code, and run commands.
-Complete the task described below. Work methodically:
-1. First explore relevant files to understand the codebase
-2. Plan your changes
-3. Implement the changes using the tools
-4. Verify your work
+  if (!anthropic) anthropic = new Anthropic();
+
+  const maxIter = AGENT_CONFIG.maxToolIterations;
+  const systemPrompt = `You are an autonomous AI development agent for "${AGENT_CONFIG.appSlug}".
+You have a STRICT budget of ${maxIter} tool-use rounds. Be efficient and produce tangible output.
+
+WORKFLOW:
+1. EXPLORE (2-3 rounds max): list_directory and read_file to understand the project
+2. IMPLEMENT (remaining rounds): Create or edit files to fulfill the task
+3. VERIFY (1-2 rounds): Read modified files or run tests
+4. SUMMARIZE: Start your final message with "SUMMARY:" listing what you created/changed
+
+RULES:
+- Spend at most 3-4 rounds exploring. Then START implementing.
+- Every task must produce at least one tangible artifact (file, code change, documentation)
+- If the task is analytical, create an output file with the analysis
 
 Project structure: TypeScript monorepo with React frontend (client/src/), Express backend (server/), shared types (shared/).
 Key files: shared/schema.ts (DB schema), server/routes.ts (API), client/src/App.tsx (routing).`;
@@ -259,7 +269,7 @@ Complete this task using the available tools. Read files first to understand con
     report.iterations = i + 1;
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: AGENT_CONFIG.model,
       max_tokens: 4096,
       system: systemPrompt,
       tools: TOOLS,
@@ -315,7 +325,6 @@ Complete this task using the available tools. Read files first to understand con
 
 async function notifyHubCompletion(report) {
   try {
-    const KANBAI_URL = "http://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
     await fetch(`${KANBAI_URL}/api/agent/completion-report`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY}` },

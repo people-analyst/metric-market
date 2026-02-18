@@ -8,14 +8,14 @@
 //
 // Required Replit Secrets:
 //   DEPLOY_SECRET_KEY  - Shared secret (must match the Kanbai instance)
-//                        If you already have this from a previous Kanbai setup, keep using it.
-//   ANTHROPIC_API_KEY  - Your Claude API key (optional, only for agent runner)
-//                        If you already have this set, no changes needed — your existing key works.
+//   Anthropic API access - ONE of these (checked in order):
+//     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
+//     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.0.0 | Generated 2026-02-18T00:32:53.095Z
+// Connector v2.0.0 | Generated 2026-02-18T12:53:37.304Z
 // ════════════════════════════════════════════════════════════════════
 
-const KANBAI_URL = "http://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+const KANBAI_URL = "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY;
 const CONNECTOR_VERSION = "2.0.0";
 const APP_SLUG = "metric-market";
@@ -28,29 +28,42 @@ const headers = () => ({
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
+async function safeHubCall(url, options, label) {
+  try {
+    const resp = await fetch(url, options);
+    const text = await resp.text();
+    try { return JSON.parse(text); } catch {
+      if (text.includes("<!DOCTYPE") || text.includes("<html")) {
+        console.warn(`[Kanbai] ${label}: Hub returned HTML (likely redirect or auth page). Status: ${resp.status}`);
+        return { error: "hub_html_response", status: resp.status, local: true };
+      }
+      console.warn(`[Kanbai] ${label}: Non-JSON response from hub. Status: ${resp.status}`);
+      return { error: "invalid_json", status: resp.status, local: true };
+    }
+  } catch (err) {
+    console.warn(`[Kanbai] ${label}: Hub unreachable — ${err.message}`);
+    return { error: err.message, local: true };
+  }
+}
+
 // ════════════════════════════════════════════════════════════════════
 // SECTION 1: CONNECTOR  (pull cards, push cards, sync)
 // ════════════════════════════════════════════════════════════════════
 
 async function pullBoard() {
-  const resp = await fetch(`${KANBAI_URL}/api/pull/board/${APP_SLUG}`, { headers: headers() });
-  if (!resp.ok) throw new Error("Failed to pull board: " + resp.status);
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/pull/board/${APP_SLUG}`, { headers: headers() }, "pullBoard");
 }
 
 async function pullUpdates(since) {
-  const resp = await fetch(`${KANBAI_URL}/api/pull/updates?since=${encodeURIComponent(since)}&app=${APP_SLUG}`, { headers: headers() });
-  if (!resp.ok) throw new Error("Failed to pull updates: " + resp.status);
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/pull/updates?since=${encodeURIComponent(since)}&app=${APP_SLUG}`, { headers: headers() }, "pullUpdates");
 }
 
 async function getCards(page = 1, limit = 100) {
-  const resp = await fetch(`${KANBAI_URL}/api/kanban/cards?app=${APP_SLUG}&page=${page}&limit=${limit}`, { headers: headers() });
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/kanban/cards?app=${APP_SLUG}&page=${page}&limit=${limit}`, { headers: headers() }, "getCards");
 }
 
 async function pushCards(cards) {
-  const resp = await fetch(`${KANBAI_URL}/api/receive-cards`, {
+  return safeHubCall(`${KANBAI_URL}/api/receive-cards`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({
       cards: cards.map(c => ({
@@ -70,25 +83,22 @@ async function pushCards(cards) {
       })),
       metadata: { source: APP_SLUG, sourceApp: APP_SLUG, connectorVersion: CONNECTOR_VERSION, pushedAt: new Date().toISOString() },
     }),
-  });
-  return resp.json();
+  }, "pushCards");
 }
 
 async function checkForUpdates() {
-  const resp = await fetch(`${KANBAI_URL}/api/connector/update-check?version=${CONNECTOR_VERSION}&app=${APP_SLUG}`);
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/connector/update-check?version=${CONNECTOR_VERSION}&app=${APP_SLUG}`, {}, "checkForUpdates");
 }
 
 async function registerWebhook(callbackUrl) {
-  const resp = await fetch(`${KANBAI_URL}/api/webhooks/register`, {
+  return safeHubCall(`${KANBAI_URL}/api/webhooks/register`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({ appSlug: APP_SLUG, callbackUrl }),
-  });
-  return resp.json();
+  }, "registerWebhook");
 }
 
 async function reportHealth() {
-  const resp = await fetch(`${KANBAI_URL}/api/ecosystem/health`, {
+  return safeHubCall(`${KANBAI_URL}/api/ecosystem/health`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -97,8 +107,7 @@ async function reportHealth() {
       connectorVersion: CONNECTOR_VERSION,
       timestamp: new Date().toISOString(),
     }),
-  });
-  return resp.json();
+  }, "reportHealth");
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -106,46 +115,40 @@ async function reportHealth() {
 // ════════════════════════════════════════════════════════════════════
 
 async function claimTask(cardId, agentId) {
-  const resp = await fetch(`${KANBAI_URL}/api/agent/claim`, {
+  return safeHubCall(`${KANBAI_URL}/api/agent/claim`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({ cardId, agentId }),
-  });
-  return resp.json();
+  }, "claimTask");
 }
 
 async function reportProgress(cardId, agentId, status, notes) {
-  const resp = await fetch(`${KANBAI_URL}/api/agent/progress`, {
+  return safeHubCall(`${KANBAI_URL}/api/agent/progress`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({ cardId, agentId, status, notes }),
-  });
-  return resp.json();
+  }, "reportProgress");
 }
 
 async function completeTask(cardId, agentId, completionNotes) {
-  const resp = await fetch(`${KANBAI_URL}/api/agent/complete`, {
+  return safeHubCall(`${KANBAI_URL}/api/agent/complete`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({ cardId, agentId, completionNotes }),
-  });
-  return resp.json();
+  }, "completeTask");
 }
 
 async function releaseTask(cardId, agentId) {
-  const resp = await fetch(`${KANBAI_URL}/api/agent/release`, {
+  return safeHubCall(`${KANBAI_URL}/api/agent/release`, {
     method: "POST", headers: headers(),
     body: JSON.stringify({ cardId, agentId }),
-  });
-  return resp.json();
+  }, "releaseTask");
 }
 
 async function getAvailableTasks(priority) {
   const qs = priority ? `&priority=${priority}` : "";
-  const resp = await fetch(`${KANBAI_URL}/api/agent/available?app=${APP_SLUG}${qs}`, { headers: headers() });
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/agent/available?app=${APP_SLUG}${qs}`, { headers: headers() }, "getAvailableTasks");
 }
 
 async function getSchema() {
-  const resp = await fetch(`${KANBAI_URL}/api/kanban/schema`, { headers: headers() });
-  return resp.json();
+  return safeHubCall(`${KANBAI_URL}/api/kanban/schema`, { headers: headers() }, "getSchema");
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -160,6 +163,7 @@ const AGENT_CONFIG = {
   agentId: "agent-metric-market",
   appSlug: APP_SLUG,
   mode: "semi",
+  model: process.env.KANBAI_AGENT_MODEL || "claude-sonnet-4-5",
   pollInterval: 60000,
   maxConcurrent: 1,
   priorities: ["critical", "high", "medium"],
@@ -360,21 +364,29 @@ async function executeTaskWithTools(anthropic, cardId, card) {
   let iterationCount = 0;
   let agentSummary = "";
 
-  const systemPrompt = `You are an autonomous AI development agent working on the "${APP_SLUG}" application.
-You have been assigned a task from the Kanban board. Your job is to implement the required changes by reading, understanding, and editing the project's source code.
+  const maxIter = AGENT_CONFIG.maxToolIterations;
+  const systemPrompt = `You are an autonomous AI development agent for "${APP_SLUG}".
+You have a STRICT budget of ${maxIter} tool-use rounds. Be efficient and produce tangible output.
 
-IMPORTANT GUIDELINES:
-- Start by exploring the project structure with list_directory and reading relevant files
-- Understand the existing code patterns before making changes
+WORKFLOW (follow this order):
+1. EXPLORE (2-3 rounds max): Use list_directory and read_file to understand project structure and relevant code
+2. IMPLEMENT (remaining rounds): Create or edit files to fulfill the task. Write actual code, not just analysis.
+3. VERIFY (1-2 rounds): Read modified files or run tests to confirm changes work
+4. SUMMARIZE: When done, start your final message with "SUMMARY:" listing what you created/changed
+
+RULES:
+- Spend at most 3-4 rounds exploring. Then START implementing.
+- Every task must produce at least one tangible artifact (file, code change, configuration, documentation)
+- If the task is analytical (design, spec, planning), create an output file with the analysis
 - Make focused, minimal changes that accomplish the task
-- After making changes, verify them by reading the modified files or running tests
-- If you cannot fully complete the task, do as much as you can and clearly document what remains
-- When you finish, provide a clear summary of what you changed and any remaining work
+- Do NOT edit package.json directly — flag dependency needs in your summary instead
+- If you cannot fully complete the task, implement what you can and document remaining work
+- When you finish, provide a clear summary starting with "SUMMARY:" listing every file created/modified
 
 PROJECT: ${APP_SLUG}
 WORKING DIRECTORY: ${PROJECT_ROOT}`;
 
-  const taskPrompt = `Here is the task you need to implement:
+  const taskPrompt = `Task to implement (you have ${maxIter} tool rounds — explore briefly, then implement):
 
 Title: ${card.title}
 Type: ${card.type || "task"}
@@ -384,7 +396,7 @@ Acceptance Criteria: ${JSON.stringify(card.acceptanceCriteria || [], null, 2)}
 Technical Notes: ${card.technicalNotes || "None"}
 Tags: ${(card.tags || []).join(", ") || "None"}
 
-Begin by exploring the project structure to understand what exists, then implement the required changes. Use the tools available to you.`;
+Begin by briefly exploring the project structure (2-3 rounds), then implement the required changes. Produce tangible output.`;
 
   let messages = [{ role: "user", content: taskPrompt }];
 
@@ -394,7 +406,7 @@ Begin by exploring the project structure to understand what exists, then impleme
       `Agent working... (step ${iterationCount}/${AGENT_CONFIG.maxToolIterations})`);
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: AGENT_CONFIG.model || "claude-sonnet-4-5",
       max_tokens: 4096,
       system: systemPrompt,
       tools: TOOLS,
@@ -418,8 +430,11 @@ Begin by exploring the project structure to understand what exists, then impleme
       console.log(`[KanbaiAgent] Tool: ${block.name}(${JSON.stringify(block.input).slice(0, 100)}...)`);
       const result = executeTool(block.name, block.input);
 
+      if (block.name === "read_file") changeLog.push(`Read: ${block.input.file_path}`);
+      if (block.name === "list_directory") changeLog.push(`Listed: ${block.input.dir_path || "."}`);
+      if (block.name === "search_files") changeLog.push(`Searched: "${block.input.pattern}" in ${block.input.dir_path || "."}`);
       if (block.name === "write_file" && result.success) {
-        changeLog.push(`Created/wrote: ${block.input.file_path}`);
+        changeLog.push(`Wrote: ${block.input.file_path}`);
         filesChanged[block.input.file_path] = { action: "written", size: (block.input.content || "").length };
       }
       if (block.name === "edit_file" && result.success) {
@@ -450,6 +465,13 @@ Begin by exploring the project structure to understand what exists, then impleme
 
   if (iterationCount >= AGENT_CONFIG.maxToolIterations) {
     changeLog.push("Reached max iterations (" + AGENT_CONFIG.maxToolIterations + ")");
+    if (!agentSummary && changeLog.length > 0) {
+      agentSummary = `Agent completed ${iterationCount} iterations (budget exhausted). ` +
+        (Object.keys(filesChanged).length > 0
+          ? `Files modified: ${Object.keys(filesChanged).join(", ")}. `
+          : "Explored codebase but made no file changes. ") +
+        `Activities: ${changeLog.length} operations performed.`;
+    }
   }
 
   const completionReport = {
@@ -494,7 +516,18 @@ async function startAgent() {
     console.warn("[KanbaiAgent] Agent runner disabled. Connector and routes still work.");
     return;
   }
-  const anthropic = new Anthropic();
+  const anthropicConfig = {};
+  if (process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY) {
+    anthropicConfig.apiKey = process.env.AI_INTEGRATIONS_ANTHROPIC_API_KEY;
+    if (process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL) anthropicConfig.baseURL = process.env.AI_INTEGRATIONS_ANTHROPIC_BASE_URL;
+    console.log("[KanbaiAgent] Using Replit AI Integration credentials");
+  } else if (process.env.ANTHROPIC_API_KEY) {
+    console.log("[KanbaiAgent] Using ANTHROPIC_API_KEY");
+  } else {
+    console.warn("[KanbaiAgent] No Anthropic API key found. Set AI_INTEGRATIONS_ANTHROPIC_API_KEY (via Replit AI Integration) or ANTHROPIC_API_KEY.");
+    return;
+  }
+  const anthropic = new Anthropic(anthropicConfig);
   console.log(`[KanbaiAgent] Starting ${AGENT_CONFIG.agentId} in ${AGENT_CONFIG.mode} mode (with tool-use)`);
   running = true;
 
@@ -511,7 +544,7 @@ async function startAgent() {
             break;
           }
           const claimResult = await claimTask(card.id, AGENT_CONFIG.agentId);
-          if (!claimResult.error) {
+          if (!claimResult.error || claimResult.local) {
             activeTasks.set(card.id, { ...card, claimedAt: new Date() });
           }
           break;
@@ -555,14 +588,28 @@ function stopAgent() { running = false; console.log("[KanbaiAgent] Stopping...")
 // SECTION 4: EXPRESS ROUTES  (mount all endpoints in one call)
 // ════════════════════════════════════════════════════════════════════
 
+function requireAgentAuth(req, res) {
+  const secret = DEPLOY_SECRET;
+  if (!secret) return true;
+  const authHeader = req.headers.authorization;
+  if (authHeader === `Bearer ${secret}`) return true;
+  const referer = req.headers.referer || req.headers.origin || "";
+  const host = req.headers.host || "";
+  if (referer && host && referer.includes(host)) return true;
+  if (req.headers["x-requested-with"] === "XMLHttpRequest") return true;
+  res.status(401).json({ error: "Unauthorized" });
+  return false;
+}
+
 function mount(app) {
   // Health endpoint (required for ecosystem monitoring)
   app.get("/health", (req, res) => {
     res.json({ status: "ok", app: APP_SLUG, connectorVersion: CONNECTOR_VERSION, agent: running });
   });
 
-  // Webhook receiver (Kanbai sends card events here)
+  // Webhook receiver (hub-to-spoke, requires auth)
   app.post("/api/hub-webhook", (req, res) => {
+    if (!requireAgentAuth(req, res)) return;
     const { event, data } = req.body || {};
     console.log(`[Kanbai Webhook] ${event}:`, data?.title || data?.id || "");
     res.json({ received: true });
@@ -597,8 +644,8 @@ function mount(app) {
       if (!card) return res.status(400).json({ error: "No pending task with that id" });
       pendingApproval.delete(card.id);
       const result = await claimTask(card.id, AGENT_CONFIG.agentId);
-      if (!result.error) activeTasks.set(card.id, { ...card, claimedAt: new Date() });
-      res.json({ success: true });
+      if (!result.error || result.local) activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+      res.json({ success: true, local: result.local || false });
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
