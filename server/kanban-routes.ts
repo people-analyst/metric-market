@@ -158,11 +158,12 @@ export function registerKanbanRoutes(app: Express) {
 
   app.get("/api/kanban/spoke-config", async (_req, res) => {
     try {
-      const kanbaiUrl = "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+      const kanbaiUrl = process.env.KANBAI_HUB_URL || "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+      const authToken = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY || "";
       const resp = await fetch(`${kanbaiUrl}/api/kanban/spoke-config?app=metric-market`, {
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY}`,
+          "Authorization": `Bearer ${authToken}`,
         },
       });
       const data = await resp.json();
