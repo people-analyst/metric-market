@@ -1,9 +1,16 @@
-const KANBAI_URL = "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
-const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY;
+// ── Kanbai Connector v2.1.0 for metric-market ──────────────────
+// Set one of DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY in your Replit Secrets.
+
+const KANBAI_URL = process.env.KANBAI_URL || "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY;
+
+if (!DEPLOY_SECRET) {
+  console.error("[Kanbai] WARNING: No auth secret found. Set DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY.");
+}
 
 const kanbaiHeaders = () => ({
   "Content-Type": "application/json",
-  "Authorization": `Bearer ${DEPLOY_SECRET}`,
+  "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY}`,
 });
 
 async function safeHubCall(url, options, label) {
@@ -20,6 +27,34 @@ async function safeHubCall(url, options, label) {
   } catch (err) {
     console.warn(`[Kanbai] ${label}: Hub unreachable — ${err.message}`);
     return { error: err.message, local: true };
+  }
+}
+
+async function getLocalAvailableTasks(priority) {
+  if (!process.env.DATABASE_URL) return { cards: [] };
+  try {
+    const pg = await import("pg");
+    const Pool = pg.default?.Pool || pg.Pool;
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const agentStatuses = ["backlog", "planned", "planning", "prioritization", "assignment"];
+    let query = "SELECT * FROM kanban_cards WHERE status = ANY($1) AND (app_target = $2 OR app_target IS NULL)";
+    const params = [agentStatuses, "metric-market"];
+    if (priority) { query += " AND priority = $" + (params.length + 1); params.push(priority); }
+    query += " ORDER BY CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END LIMIT 5";
+    const result = await pool.query(query, params);
+    await pool.end();
+    const cards = result.rows.map(r => ({
+      id: r.id, title: r.title, type: r.type, priority: r.priority,
+      status: r.status, description: r.description,
+      acceptanceCriteria: r.acceptance_criteria,
+      technicalNotes: r.technical_notes, tags: r.tags,
+      appTarget: r.app_target, assignedTo: r.assigned_to,
+    }));
+    console.log(`[Kanbai] Local fallback: found ${cards.length} available tasks`);
+    return { cards, source: "local" };
+  } catch (err) {
+    console.warn("[Kanbai] Local task discovery failed:", err.message);
+    return { cards: [] };
   }
 }
 
@@ -54,7 +89,12 @@ export async function completeTask(cardId, agentId, completionNotes) {
 
 export async function getAvailableTasks(priority) {
   const qs = priority ? `&priority=${priority}` : "";
-  return safeHubCall(`${KANBAI_URL}/api/agent/available?app=metric-market${qs}`, { headers: kanbaiHeaders() }, "getAvailableTasks");
+  const data = await safeHubCall(`${KANBAI_URL}/api/agent/available?app=metric-market${qs}`, { headers: kanbaiHeaders() }, "getAvailableTasks");
+  if (data.local || data.error || !data.cards || data.cards.length === 0) {
+    const localData = await getLocalAvailableTasks(priority);
+    if (localData.cards.length > 0) return localData;
+  }
+  return data;
 }
 
 export async function releaseTask(cardId, agentId) {
@@ -83,4 +123,4 @@ export async function registerWebhook(callbackUrl) {
   }, "registerWebhook");
 }
 
-export { safeHubCall, KANBAI_URL };
+export { safeHubCall, KANBAI_URL, getLocalAvailableTasks };

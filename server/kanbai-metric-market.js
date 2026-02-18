@@ -6,19 +6,27 @@
 //
 //   require("./kanbai-metric-market").mount(app);
 //
-// Required Replit Secrets:
+// Required Replit Secrets (any ONE of these for hub auth — checked in order):
 //   DEPLOY_SECRET_KEY  - Shared secret (must match the Kanbai instance)
+//   DEPLOY_SECRET      - Alternative name for the same secret
+//   HUB_API_KEY        - Platform Hub API key (also accepted)
+//
 //   Anthropic API access - ONE of these (checked in order):
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.0.0 | Generated 2026-02-18T12:53:37.304Z
+// Connector v2.1.0 | Generated 2026-02-18T14:16:44.843Z
 // ════════════════════════════════════════════════════════════════════
 
-const KANBAI_URL = "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
-const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY;
-const CONNECTOR_VERSION = "2.0.0";
+const KANBAI_URL = process.env.KANBAI_URL || "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY;
+const CONNECTOR_VERSION = "2.1.0";
 const APP_SLUG = "metric-market";
+
+if (!DEPLOY_SECRET) {
+  console.error("[Kanbai] WARNING: No authentication secret found. Set one of: DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY");
+  console.error("[Kanbai] Hub API calls will fail until a secret is configured.");
+}
 
 // ── Helper ──────────────────────────────────────────────────────────
 const headers = () => ({
@@ -142,9 +150,57 @@ async function releaseTask(cardId, agentId) {
   }, "releaseTask");
 }
 
+async function getLocalAvailableTasks(priority) {
+  if (!process.env.DATABASE_URL) return { cards: [] };
+  try {
+    const { Pool } = require("pg");
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    const agentStatuses = ["backlog", "planned", "planning", "prioritization", "assignment"];
+    let query = "SELECT * FROM kanban_cards WHERE status = ANY($1) AND (app_target = $2 OR app_target IS NULL)";
+    const params = [agentStatuses, APP_SLUG];
+    if (priority) { query += " AND priority = $" + (params.length + 1); params.push(priority); }
+    query += " ORDER BY CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END LIMIT 5";
+    const result = await pool.query(query, params);
+    await pool.end();
+    const cards = result.rows.map(r => ({
+      id: r.id, title: r.title, type: r.type, priority: r.priority,
+      status: r.status, description: r.description,
+      acceptanceCriteria: r.acceptance_criteria,
+      technicalNotes: r.technical_notes, tags: r.tags,
+      appTarget: r.app_target, assignedTo: r.assigned_to,
+    }));
+    console.log(`[Kanbai] Local fallback: found ${cards.length} available tasks`);
+    return { cards, source: "local" };
+  } catch (err) {
+    console.warn("[Kanbai] Local task discovery failed:", err.message);
+    return { cards: [] };
+  }
+}
+
 async function getAvailableTasks(priority) {
   const qs = priority ? `&priority=${priority}` : "";
-  return safeHubCall(`${KANBAI_URL}/api/agent/available?app=${APP_SLUG}${qs}`, { headers: headers() }, "getAvailableTasks");
+  const data = await safeHubCall(`${KANBAI_URL}/api/agent/available?app=${APP_SLUG}${qs}`, { headers: headers() }, "getAvailableTasks");
+  if (data.error) {
+    consecutiveHubErrors++;
+    if (consecutiveHubErrors === 1) {
+      console.warn(`[KanbaiAgent] Hub error on getAvailableTasks: ${data.error}`);
+    }
+    if (consecutiveHubErrors >= 5) {
+      console.warn(`[KanbaiAgent] ${consecutiveHubErrors} consecutive hub errors. Increasing poll interval.`);
+    }
+    const localData = await getLocalAvailableTasks(priority);
+    if (localData.cards.length > 0) return localData;
+    return data;
+  }
+  if (consecutiveHubErrors > 0) {
+    console.log("[KanbaiAgent] Hub connection restored after " + consecutiveHubErrors + " errors.");
+    consecutiveHubErrors = 0;
+  }
+  if (!data.cards || data.cards.length === 0) {
+    const localData = await getLocalAvailableTasks(priority);
+    if (localData.cards.length > 0) return localData;
+  }
+  return data;
 }
 
 async function getSchema() {
@@ -162,18 +218,29 @@ const { execSync } = require("child_process");
 const AGENT_CONFIG = {
   agentId: "agent-metric-market",
   appSlug: APP_SLUG,
-  mode: "semi",
+  mode: process.env.KANBAI_AGENT_MODE || "semi",
   model: process.env.KANBAI_AGENT_MODEL || "claude-sonnet-4-5",
   pollInterval: 60000,
   maxConcurrent: 1,
   priorities: ["critical", "high", "medium"],
-  autoApprove: false,
-  maxToolIterations: 15,
+  autoApprove: (process.env.KANBAI_AGENT_MODE || "semi") === "auto",
+  maxToolIterations: parseInt(process.env.KANBAI_AGENT_MAX_ITERATIONS || "25", 10),
+  windDownBuffer: parseInt(process.env.KANBAI_AGENT_WINDDOWN_BUFFER || "3", 10),
   maxFileSize: 200 * 1024,
   commandTimeout: 30000,
   allowedCommands: ["npm test", "npm run lint", "npm run build", "ls", "cat", "grep", "find", "wc", "head", "tail", "diff"],
   blockedPaths: ["node_modules", ".git", ".env", ".replit", "replit.nix", "package-lock.json", ".env.local", ".env.production"],
+  projectContext: null,
 };
+
+// Load spoke-specific context file if it exists
+try {
+  const contextPath = path.resolve(process.cwd(), "kanbai-context.md");
+  if (fs.existsSync(contextPath)) {
+    AGENT_CONFIG.projectContext = fs.readFileSync(contextPath, "utf-8").slice(0, 5000);
+    console.log("[KanbaiAgent] Loaded project context from kanbai-context.md");
+  }
+} catch {}
 
 const PROJECT_ROOT = process.cwd();
 
@@ -301,9 +368,27 @@ function executeTool(name, input) {
         const absPath = sanitizePath(input.file_path);
         if (!fs.existsSync(absPath)) return { error: "File not found: " + input.file_path };
         const content = fs.readFileSync(absPath, "utf-8");
-        if (!content.includes(input.old_string)) return { error: "old_string not found in file. Make sure it matches exactly including whitespace." };
+        if (!content.includes(input.old_string)) {
+          // Provide nearby text hints to help the agent self-correct
+          const firstLine = (input.old_string || "").split("\n")[0].trim();
+          let hint = "";
+          if (firstLine.length > 5) {
+            const lines = content.split("\n");
+            const nearMatches = [];
+            for (let i = 0; i < lines.length; i++) {
+              if (lines[i].includes(firstLine.slice(0, 30))) {
+                nearMatches.push({ line: i + 1, text: lines[i].trim().slice(0, 120) });
+                if (nearMatches.length >= 3) break;
+              }
+            }
+            if (nearMatches.length > 0) {
+              hint = " Nearby matches for first line: " + nearMatches.map(m => `L${m.line}: "${m.text}"`).join("; ") + ". TIP: Use read_file with line_start/line_end to see exact text, or use write_file to replace the entire file.";
+            }
+          }
+          return { error: "old_string not found in file. Make sure it matches exactly including whitespace and indentation." + hint };
+        }
         const occurrences = content.split(input.old_string).length - 1;
-        if (occurrences > 1) return { error: `old_string found ${occurrences} times. Provide more context to make it unique.` };
+        if (occurrences > 1) return { error: `old_string found ${occurrences} times. Provide more surrounding context to make it unique.` };
         const updated = content.replace(input.old_string, input.new_string);
         fs.writeFileSync(absPath, updated, "utf-8");
         return { success: true, path: input.file_path };
@@ -319,7 +404,9 @@ function executeTool(name, input) {
       }
       case "search_files": {
         const dir = sanitizePath(input.dir_path || ".");
-        const grepArgs = ["-rn"];
+        const grepArgs = ["-rn", "--binary-files=without-match"];
+        const defaultExcludes = ["node_modules", ".git", "dist", "attached_assets", ".cache", "coverage"];
+        defaultExcludes.forEach(d => grepArgs.push("--exclude-dir=" + d));
         if (input.file_glob) grepArgs.push("--include=" + input.file_glob);
         grepArgs.push("--", input.pattern, dir);
         try {
@@ -365,26 +452,53 @@ async function executeTaskWithTools(anthropic, cardId, card) {
   let agentSummary = "";
 
   const maxIter = AGENT_CONFIG.maxToolIterations;
+  const exploreMax = Math.min(4, Math.floor(maxIter * 0.2));
+  const implMax = Math.floor(maxIter * 0.6);
+  const verifyMax = Math.max(2, maxIter - exploreMax - implMax - 1);
   const systemPrompt = `You are an autonomous AI development agent for "${APP_SLUG}".
 You have a STRICT budget of ${maxIter} tool-use rounds. Be efficient and produce tangible output.
 
-WORKFLOW (follow this order):
-1. EXPLORE (2-3 rounds max): Use list_directory and read_file to understand project structure and relevant code
-2. IMPLEMENT (remaining rounds): Create or edit files to fulfill the task. Write actual code, not just analysis.
-3. VERIFY (1-2 rounds): Read modified files or run tests to confirm changes work
-4. SUMMARIZE: When done, start your final message with "SUMMARY:" listing what you created/changed
+BUDGET ALLOCATION (plan your rounds carefully):
+- Rounds 1-${exploreMax}: EXPLORE — list_directory and read_file on key files only
+- Rounds ${exploreMax + 1}-${exploreMax + implMax}: IMPLEMENT — write_file or edit_file to create/modify code
+- Rounds ${exploreMax + implMax + 1}-${maxIter - 1}: VERIFY — run tests or read modified files to confirm
+- Round ${maxIter}: SUMMARIZE — write your final summary (no tools)
+
+WORKFLOW:
+1. EXPLORE (max ${exploreMax} rounds): Understand project structure. Read ONLY the files most relevant to the task.
+2. IMPLEMENT (core budget): Create or edit files. Write actual code, not analysis.
+   - If edit_file fails twice on the same file, use write_file to replace the entire file instead.
+   - Always check acceptance criteria against your implementation.
+3. VERIFY (1-2 rounds): Read modified files or run "npm test" / "npm run build" to confirm changes compile.
+4. SUMMARIZE: Start your final message with "SUMMARY:" listing what you created/changed.
 
 RULES:
-- Spend at most 3-4 rounds exploring. Then START implementing.
+- Spend at most ${exploreMax} rounds exploring. Then START implementing.
 - Every task must produce at least one tangible artifact (file, code change, configuration, documentation)
 - If the task is analytical (design, spec, planning), create an output file with the analysis
 - Make focused, minimal changes that accomplish the task
 - Do NOT edit package.json directly — flag dependency needs in your summary instead
-- If you cannot fully complete the task, implement what you can and document remaining work
+- If you cannot fully complete the task, implement what you can and document remaining work in your summary
+- Track which acceptance criteria you have and haven't addressed
 - When you finish, provide a clear summary starting with "SUMMARY:" listing every file created/modified
 
 PROJECT: ${APP_SLUG}
-WORKING DIRECTORY: ${PROJECT_ROOT}`;
+WORKING DIRECTORY: ${PROJECT_ROOT}${AGENT_CONFIG.projectContext ? "\n\nPROJECT CONTEXT (from kanbai-context.md):\n" + AGENT_CONFIG.projectContext : ""}`;
+
+  const isContinuation = (card.tags || []).includes("agent-continuation") || (card.title && card.title.startsWith("[CONTINUE"));
+  let resumeBlock = "";
+  if (isContinuation && card._resumeContext) {
+    const ctx = card._resumeContext;
+    resumeBlock = `\n\n=== CONTINUATION CONTEXT (from previous agent session) ===
+Previous agent: ${ctx.pausedBy || "unknown"}
+Previous iterations: ${ctx.iterations || "?"}
+Files already modified: ${(ctx.filesChanged ? Object.keys(ctx.filesChanged).join(", ") : "none")}
+Resume instructions: ${ctx.resumeInstructions || "Continue from where the previous agent left off."}
+Recent activity: ${(ctx.changeLog || []).slice(-5).join("; ")}
+=== END CONTINUATION CONTEXT ===
+
+IMPORTANT: This is a CONTINUATION task. Start by reading the files listed above to understand what was already done. Do NOT redo completed work. Focus on the remaining items.`;
+  }
 
   const taskPrompt = `Task to implement (you have ${maxIter} tool rounds — explore briefly, then implement):
 
@@ -394,7 +508,7 @@ Priority: ${card.priority || "medium"}
 Description: ${card.description || "No description provided"}
 Acceptance Criteria: ${JSON.stringify(card.acceptanceCriteria || [], null, 2)}
 Technical Notes: ${card.technicalNotes || "None"}
-Tags: ${(card.tags || []).join(", ") || "None"}
+Tags: ${(card.tags || []).join(", ") || "None"}${resumeBlock}
 
 Begin by briefly exploring the project structure (2-3 rounds), then implement the required changes. Produce tangible output.`;
 
@@ -430,9 +544,16 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
       console.log(`[KanbaiAgent] Tool: ${block.name}(${JSON.stringify(block.input).slice(0, 100)}...)`);
       const result = executeTool(block.name, block.input);
 
-      if (block.name === "read_file") changeLog.push(`Read: ${block.input.file_path}`);
-      if (block.name === "list_directory") changeLog.push(`Listed: ${block.input.dir_path || "."}`);
-      if (block.name === "search_files") changeLog.push(`Searched: "${block.input.pattern}" in ${block.input.dir_path || "."}`);
+      // Log ALL tool operations, including failures
+      if (result.error) {
+        changeLog.push(`FAILED: ${block.name}(${(block.input.file_path || block.input.dir_path || block.input.pattern || block.input.command || "").slice(0, 60)}) — ${result.error.slice(0, 150)}`);
+      } else if (block.name === "read_file") {
+        changeLog.push(`Read: ${block.input.file_path}`);
+      } else if (block.name === "list_directory") {
+        changeLog.push(`Listed: ${block.input.dir_path || "."}`);
+      } else if (block.name === "search_files") {
+        changeLog.push(`Searched: "${block.input.pattern}" in ${block.input.dir_path || "."} (${(result.matches || result.results?.length || 0)} matches)`);
+      }
       if (block.name === "write_file" && result.success) {
         changeLog.push(`Wrote: ${block.input.file_path}`);
         filesChanged[block.input.file_path] = { action: "written", size: (block.input.content || "").length };
@@ -441,7 +562,7 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
         changeLog.push(`Edited: ${block.input.file_path}`);
         filesChanged[block.input.file_path] = { action: "edited", oldSnippet: (block.input.old_string || "").slice(0, 100) + "...", newSnippet: (block.input.new_string || "").slice(0, 100) + "..." };
       }
-      if (block.name === "run_command") {
+      if (block.name === "run_command" && !result.error) {
         changeLog.push(`Ran: ${block.input.command} (exit: ${result.exitCode})`);
         if (block.input.command.startsWith("npm test") || block.input.command.startsWith("npm run lint") || block.input.command.startsWith("npm run build")) {
           testResults.push({ command: block.input.command, exitCode: result.exitCode, output: (result.output || result.error || "").slice(0, 1000), passed: result.exitCode === 0 });
@@ -457,20 +578,43 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
 
     messages.push({ role: "user", content: toolResults });
 
+    const remaining = AGENT_CONFIG.maxToolIterations - iterationCount;
+    if (remaining === AGENT_CONFIG.windDownBuffer && Object.keys(filesChanged).length > 0) {
+      messages.push({ role: "user", content: [{ type: "text", text:
+        `BUDGET PAUSE WARNING: You have ${remaining} tool rounds remaining before this session is paused. Your work will NOT be lost — a continuation card will be created so you (or another agent) can resume later. Use your remaining rounds to: 1) Ensure all modified files are saved and in a working state, 2) Write a PAUSE REPORT starting with "PAUSE:" that documents: a) What you accomplished, b) What files were changed and why, c) What specific next steps remain, d) Any context the next agent needs to pick up where you left off.`
+      }] });
+    } else if (remaining === 1) {
+      messages.push({ role: "user", content: [{ type: "text", text:
+        `FINAL ROUND: This is your LAST tool round. Do NOT use any more tools. Write your PAUSE REPORT now. Start with "PAUSE:" and list: 1) Files changed and what was done, 2) Specific remaining work items, 3) Important context for resumption. This report will be used to create a continuation card.`
+      }] });
+    }
+
     if (iterationCount % 3 === 0 && changeLog.length > 0) {
       await reportProgress(cardId, AGENT_CONFIG.agentId, "in_progress",
         `Agent progress (step ${iterationCount}): ${changeLog.slice(-3).join("; ")}`);
     }
   }
 
-  if (iterationCount >= AGENT_CONFIG.maxToolIterations) {
-    changeLog.push("Reached max iterations (" + AGENT_CONFIG.maxToolIterations + ")");
-    if (!agentSummary && changeLog.length > 0) {
-      agentSummary = `Agent completed ${iterationCount} iterations (budget exhausted). ` +
-        (Object.keys(filesChanged).length > 0
-          ? `Files modified: ${Object.keys(filesChanged).join(", ")}. `
-          : "Explored codebase but made no file changes. ") +
-        `Activities: ${changeLog.length} operations performed.`;
+  const budgetExhausted = iterationCount >= AGENT_CONFIG.maxToolIterations;
+  const failedOps = changeLog.filter(l => l.startsWith("FAILED:"));
+  const hadChanges = Object.keys(filesChanged).length > 0;
+
+  // Classify the outcome
+  let failureReason = null;
+  if (budgetExhausted && !hadChanges) {
+    failureReason = failedOps.length > 0 ? "edit_failed" : "exhausted_budget_no_changes";
+  } else if (budgetExhausted && hadChanges) {
+    failureReason = "exhausted_budget_partial";
+  }
+
+  if (budgetExhausted) {
+    changeLog.push("Reached max iterations (" + AGENT_CONFIG.maxToolIterations + ") — pausing for continuation");
+    if (!agentSummary) {
+      if (hadChanges) {
+        agentSummary = `Agent paused at budget limit (${iterationCount}/${AGENT_CONFIG.maxToolIterations} iterations). Files modified: ${Object.keys(filesChanged).join(", ")}. Activities: ${changeLog.length} operations (${failedOps.length} failed). Work preserved — continuation card will be created for resumption.`;
+      } else {
+        agentSummary = `Agent paused at budget limit (${iterationCount}/${AGENT_CONFIG.maxToolIterations} iterations). Explored codebase but made no file changes. Activities: ${changeLog.length} operations (${failedOps.length} failed).`;
+      }
     }
   }
 
@@ -481,14 +625,72 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
     iterations: iterationCount,
     filesChanged,
     testResults,
+    failedOperations: failedOps,
+    failureReason,
     summary: agentSummary || changeLog.join("\n"),
     changeLog,
     completedAt: new Date().toISOString(),
-    hadChanges: Object.keys(filesChanged).length > 0,
+    hadChanges,
     allTestsPassed: testResults.length === 0 || testResults.every(t => t.passed),
+    budgetExhausted,
+    resumeContext: budgetExhausted ? extractResumeContext(agentSummary, filesChanged, changeLog) : null,
   };
 
   return completionReport;
+}
+
+function extractResumeContext(summary, filesChanged, changeLog) {
+  const pauseMatch = summary && summary.match(/PAUSE:\s*([\s\S]*)/i);
+  const remainingWork = pauseMatch ? pauseMatch[1].trim() : null;
+  return {
+    whatWasDone: Object.keys(filesChanged).length > 0
+      ? `Modified ${Object.keys(filesChanged).length} files: ${Object.keys(filesChanged).join(", ")}`
+      : "Explored codebase, no files changed yet",
+    filesModified: Object.keys(filesChanged),
+    recentActivity: changeLog.slice(-10),
+    remainingWork: remainingWork || "Review the agent summary and original card for remaining work items.",
+    resumeInstructions: "Start by reading the files listed above to understand what was already done. Then continue implementing the remaining acceptance criteria from the original card.",
+  };
+}
+
+async function pauseAndCreateContinuation(report) {
+  try {
+    const pauseResult = await safeHubCall(`${KANBAI_URL}/api/agent/pause`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({
+        cardId: report.cardId,
+        agentId: report.agentId,
+        reason: "budget_exhausted",
+        resumeContext: report.resumeContext ? report.resumeContext.remainingWork : report.summary,
+        filesChanged: report.filesChanged,
+        changeLog: report.changeLog,
+        iterations: report.iterations,
+        summary: report.summary,
+      }),
+    }, "pauseAndContinue");
+
+    if (pauseResult.continuationCardId) {
+      console.log(`[KanbaiAgent] Created continuation card #${pauseResult.continuationCardId} for paused card #${report.cardId}`);
+    }
+    return pauseResult;
+  } catch (err) {
+    console.error(`[KanbaiAgent] Failed to create continuation card for #${report.cardId}:`, err.message);
+    return { error: err.message };
+  }
+}
+
+async function checkDailyBudget() {
+  try {
+    const result = await safeHubCall(`${KANBAI_URL}/api/agent/budget/check`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ agentId: AGENT_CONFIG.agentId }),
+    }, "checkDailyBudget");
+    return result.allowed !== false;
+  } catch (err) {
+    return true;
+  }
 }
 
 async function notifyHubCompletion(report) {
@@ -508,12 +710,60 @@ let activeTasks = new Map();
 let pendingApproval = new Map();
 let pendingReview = new Map();
 let running = false;
+let dailyBudgetPaused = false;
+let consecutiveHubErrors = 0;
+
+// ── File-based persistence for pending reviews ──────────────────────
+const REVIEW_DIR = path.resolve(PROJECT_ROOT, ".kanbai");
+
+function savePendingReview(cardId, report) {
+  try {
+    if (!fs.existsSync(REVIEW_DIR)) fs.mkdirSync(REVIEW_DIR, { recursive: true });
+    fs.writeFileSync(path.join(REVIEW_DIR, `review-${cardId}.json`), JSON.stringify(report, null, 2), "utf-8");
+  } catch (err) {
+    console.warn("[KanbaiAgent] Failed to persist review:", err.message);
+  }
+}
+
+function deletePendingReview(cardId) {
+  try {
+    const filePath = path.join(REVIEW_DIR, `review-${cardId}.json`);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  } catch {}
+}
+
+function loadPendingReviews() {
+  try {
+    if (!fs.existsSync(REVIEW_DIR)) return;
+    const files = fs.readdirSync(REVIEW_DIR).filter(f => f.startsWith("review-") && f.endsWith(".json"));
+    for (const file of files) {
+      try {
+        const report = JSON.parse(fs.readFileSync(path.join(REVIEW_DIR, file), "utf-8"));
+        if (report.cardId) {
+          pendingReview.set(report.cardId, report);
+          console.log(`[KanbaiAgent] Restored pending review for card #${report.cardId}`);
+        }
+      } catch {}
+    }
+    if (pendingReview.size > 0) {
+      console.log(`[KanbaiAgent] Restored ${pendingReview.size} pending review(s) from disk`);
+    }
+  } catch {}
+}
+
+// Restore pending reviews on load
+loadPendingReviews();
 
 async function startAgent() {
   let Anthropic;
   try { Anthropic = require("@anthropic-ai/sdk"); } catch {
     console.warn("[KanbaiAgent] @anthropic-ai/sdk not installed. Run: npm install @anthropic-ai/sdk");
     console.warn("[KanbaiAgent] Agent runner disabled. Connector and routes still work.");
+    return;
+  }
+  if (!DEPLOY_SECRET) {
+    console.error("[KanbaiAgent] No auth secret configured. Set DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY.");
+    console.error("[KanbaiAgent] Agent cannot communicate with hub. Aborting start.");
     return;
   }
   const anthropicConfig = {};
@@ -528,17 +778,55 @@ async function startAgent() {
     return;
   }
   const anthropic = new Anthropic(anthropicConfig);
-  console.log(`[KanbaiAgent] Starting ${AGENT_CONFIG.agentId} in ${AGENT_CONFIG.mode} mode (with tool-use)`);
+  console.log(`[KanbaiAgent] Starting ${AGENT_CONFIG.agentId} in ${AGENT_CONFIG.mode} mode (tool-use, budget: ${AGENT_CONFIG.maxToolIterations} iterations)`);
   running = true;
 
   while (running) {
     try {
+      // Check daily budget before claiming new work
+      if (dailyBudgetPaused) {
+        const budgetOk = await checkDailyBudget();
+        if (budgetOk) {
+          dailyBudgetPaused = false;
+          console.log("[KanbaiAgent] Daily budget restored. Resuming work.");
+        } else {
+          await sleep(AGENT_CONFIG.pollInterval * 5);
+          continue;
+        }
+      }
+
       if (activeTasks.size < AGENT_CONFIG.maxConcurrent) {
+        const budgetOk = await checkDailyBudget();
+        if (!budgetOk) {
+          if (!dailyBudgetPaused) {
+            dailyBudgetPaused = true;
+            console.log("[KanbaiAgent] Daily budget exhausted. Pausing until admin increases limits.");
+          }
+          await sleep(AGENT_CONFIG.pollInterval * 5);
+          continue;
+        }
+
         for (const priority of AGENT_CONFIG.priorities) {
           const { cards } = await getAvailableTasks(priority);
           if (!cards || cards.length === 0) continue;
-          const card = cards[0];
-          console.log(`[KanbaiAgent] Found task: #${card.id} "${card.title}" [${card.priority}]`);
+
+          // Skip cards that need approval (continuation cards waiting for review)
+          const eligible = cards.filter(c => {
+            const tags = c.tags || [];
+            return !tags.includes("needs-approval");
+          });
+          if (eligible.length === 0) continue;
+          const card = eligible[0];
+
+          // If this is a continuation card, load resume context
+          const isContinuation = (card.tags || []).includes("agent-continuation") || (card.title && card.title.startsWith("[CONTINUE"));
+          if (isContinuation && card.technicalNotes) {
+            try {
+              card._resumeContext = JSON.parse(card.technicalNotes);
+            } catch { /* non-JSON technicalNotes, proceed without context */ }
+          }
+
+          console.log(`[KanbaiAgent] Found task: #${card.id} "${card.title}" [${card.priority}]${isContinuation ? " (CONTINUATION)" : ""}`);
           if (AGENT_CONFIG.mode === "semi" && !AGENT_CONFIG.autoApprove) {
             pendingApproval.set(card.id, card);
             break;
@@ -555,9 +843,19 @@ async function startAgent() {
           await reportProgress(cardId, AGENT_CONFIG.agentId, "in_progress", "Agent starting task with tool-use...");
           const report = await executeTaskWithTools(anthropic, cardId, card);
           const summary = report.summary || report.changeLog.join("\n") || "No changes made";
-          const reportSummary = `Completed in ${report.iterations} steps | ${Object.keys(report.filesChanged).length} files changed | Tests: ${report.testResults.length === 0 ? "none ran" : report.allTestsPassed ? "all passed" : "some failed"}\n\nFiles: ${Object.keys(report.filesChanged).join(", ") || "none"}\n\n${summary}`;
+          const reportSummary = `${report.budgetExhausted ? "PAUSED" : "Completed"} in ${report.iterations} steps | ${Object.keys(report.filesChanged).length} files changed | Tests: ${report.testResults.length === 0 ? "none ran" : report.allTestsPassed ? "all passed" : "some failed"}\n\nFiles: ${Object.keys(report.filesChanged).join(", ") || "none"}\n\n${summary}`;
 
-          if (AGENT_CONFIG.mode === "semi") {
+          if (report.budgetExhausted) {
+            // Budget exhausted: pause, preserve work, create continuation card
+            const pauseResult = await pauseAndCreateContinuation(report);
+            // If no changes at all, set card to blocked so it doesn't look "done"
+            if (!report.hadChanges) {
+              await reportProgress(cardId, AGENT_CONFIG.agentId, "in_progress",
+                `BLOCKED: Agent exhausted budget with 0 files changed (${report.failedOperations.length} failed ops). Reason: ${report.failureReason}. Needs attention.\n${reportSummary}`);
+            }
+            console.log(`[KanbaiAgent] #${cardId} PAUSED (budget limit, ${report.iterations} steps, ${Object.keys(report.filesChanged).length} files, ${report.failedOperations.length} failed). Continuation: #${pauseResult.continuationCardId || "failed"}`);
+          } else if (AGENT_CONFIG.mode === "semi") {
+            savePendingReview(cardId, report);
             pendingReview.set(cardId, report);
             await reportProgress(cardId, AGENT_CONFIG.agentId, "review",
               `Agent finished work. Awaiting human review.\n${reportSummary}`);
@@ -578,7 +876,8 @@ async function startAgent() {
         }
       }
     } catch (err) { console.error("[KanbaiAgent] Loop error:", err.message); }
-    await sleep(AGENT_CONFIG.pollInterval);
+    const backoff = consecutiveHubErrors >= 5 ? Math.min(AGENT_CONFIG.pollInterval * 3, 300000) : AGENT_CONFIG.pollInterval;
+    await sleep(backoff);
   }
 }
 
@@ -661,6 +960,7 @@ function mount(app) {
       const report = pendingReview.get(cardId);
       if (!report) return res.status(404).json({ error: "No pending review for this card" });
       pendingReview.delete(cardId);
+      deletePendingReview(cardId);
       const summary = report.summary || report.changeLog.join("\n");
       const reportSummary = `Confirmed by human review | ${report.iterations} steps | ${Object.keys(report.filesChanged).length} files changed\n\nFiles: ${Object.keys(report.filesChanged).join(", ") || "none"}\n\n${summary}`;
       await completeTask(cardId, AGENT_CONFIG.agentId, reportSummary);
@@ -676,6 +976,7 @@ function mount(app) {
       const report = pendingReview.get(cardId);
       if (!report) return res.status(404).json({ error: "No pending review for this card" });
       pendingReview.delete(cardId);
+      deletePendingReview(cardId);
       const { reason } = req.body || {};
       await releaseTask(cardId, AGENT_CONFIG.agentId);
       await reportProgress(cardId, AGENT_CONFIG.agentId, "in_progress",

@@ -70,14 +70,55 @@ The agent operates within strict safety boundaries:
 - **File size limit**: Cannot read or write files larger than 200KB
 - **Command allowlist**: Only these commands are permitted: `npm test`, `npm run lint`, `npm run build`, `ls`, `cat`, `grep`, `find`, `wc`, `head`, `tail`, `diff`
 - **Command timeout**: Shell commands time out after 30 seconds
-- **Iteration cap**: Maximum 15 tool-use steps per task (prevents runaway loops)
-- **Progress reporting**: Every 3 steps, the agent reports what it's done back to Kanbai
+- **Iteration cap**: Default 25 tool-use steps per task (configurable via `KANBAI_AGENT_MAX_ITERATIONS` env var)
+- **Pause-and-continue**: When budget is reached, agent pauses (instead of hard-stopping), preserves all work, and creates a continuation card
+- **Wind-down buffer**: 3 rounds before budget limit, the agent receives a pause warning to document work-in-progress
+- **Final round prompt**: On the last round, the agent writes a PAUSE REPORT documenting remaining work
+- **Daily budget limits**: Configurable daily caps on iterations and tasks across all agents
+- **Approval gates**: Continuation cards require admin approval before another agent can resume
+- **Progress reporting**: Every step, the agent reports what it's done back to Kanbai
+
+### Pause-and-Continue Workflow
+
+When an agent reaches its iteration budget mid-task, the system follows a graceful pause-and-continue flow instead of hard-stopping:
+
+1. **Wind-down warning** (3 rounds before limit): Agent is prompted to save all work and write a PAUSE REPORT
+2. **Pause**: Agent execution stops, all work-in-progress is preserved
+3. **Continuation card created**: A new card is automatically created with:
+   - Title: `[CONTINUE] {original title}`
+   - Tags: `agent-continuation`, `needs-approval`
+   - Full resume context in technicalNotes (JSON): files changed, remaining work, activity log
+   - Link to original card via dependencies
+4. **Admin reviews**: The continuation card appears on the board with a "needs-approval" tag
+5. **Admin approves**: `POST /api/agent/approve-continuation/:cardId` removes the needs-approval tag
+6. **Agent resumes**: On next poll, the agent picks up the continuation card, reads the resume context, and continues from where the previous agent left off — without redoing completed work
+
+### Daily Budget Controls
+
+Daily budgets prevent runaway agent costs across your ecosystem:
+
+```bash
+KANBAI_DAILY_BUDGET_ITERATIONS=500   # Max tool iterations per day across all agents (default: 500)
+KANBAI_DAILY_BUDGET_TASKS=50         # Max tasks claimed per day (default: 50)
+```
+
+When daily budget is exhausted:
+- Agent pauses and waits (polls every 5 minutes to check if budget is restored)
+- Console log: "Daily budget exhausted. Pausing until admin increases limits."
+- Admin can increase limits or reset via Kanbai's `POST /api/agent/budget` endpoint
 
 ### Customizing Guardrails
 
-You can adjust safety settings in the `AGENT_CONFIG` object:
+**Via environment variables (recommended — no code changes needed):**
+```bash
+KANBAI_AGENT_MAX_ITERATIONS=40       # Allow 40 tool rounds per task (default: 25)
+KANBAI_AGENT_WINDDOWN_BUFFER=5       # Start wind-down 5 rounds before limit (default: 3)
+KANBAI_DAILY_BUDGET_ITERATIONS=500   # Daily iteration budget (default: 500)
+KANBAI_DAILY_BUDGET_TASKS=50         # Daily task budget (default: 50)
+```
+
+**Via code (for other settings):**
 ```javascript
-AGENT_CONFIG.maxToolIterations = 20;        // Allow more steps per task
 AGENT_CONFIG.maxFileSize = 500 * 1024;      // Allow larger files (500KB)
 AGENT_CONFIG.commandTimeout = 60000;        // 60-second command timeout
 AGENT_CONFIG.allowedCommands.push("python"); // Add python to allowed commands
@@ -93,17 +134,22 @@ AGENT_CONFIG.blockedPaths.push("secrets/");  // Block additional paths
   4. You **confirm** (`POST /api/agent/confirm/:cardId`) to mark done, or **reject** (`POST /api/agent/reject-review/:cardId`) to release for rework
 - **auto**: Agent claims, implements, and completes tasks fully autonomously, posting structured completion reports back to Kanbai and the Hub
 
-## Completion Reports
+Both modes support **pause-and-continue**: when an agent hits its iteration budget, it pauses and creates a continuation card regardless of mode. In semi mode, continuation cards go through the same approval flow.
 
-When an agent finishes working on a task, it generates a structured completion report containing:
+## Completion and Pause Reports
+
+When an agent finishes working on a task, it generates a structured report containing:
 - **filesChanged**: Object mapping file paths to change details (action type, content size or before/after snippets)
 - **testResults**: Array of test runs with command, exit code, output, pass/fail status
 - **iterations**: Number of tool-use steps taken
 - **summary**: Claude's own summary of what it accomplished and any remaining work
 - **allTestsPassed**: Boolean indicating overall test status
+- **budgetExhausted**: Boolean — true if the agent was paused due to iteration limit
+- **resumeContext**: (when paused) Object with filesModified, remainingWork, resumeInstructions for the continuation card
 
 In **semi mode**, this report is held for human review before the card moves to "done".
 In **auto mode**, the report is sent to Kanbai and (optionally) the Hub immediately.
+When **budgetExhausted** is true, a continuation card is created automatically.
 
 ### Hub Notification
 
@@ -127,6 +173,18 @@ If `HUB_URL` or `PLATFORM_HUB_URL` is set, the agent will POST the completion re
 | `/health` | GET | Ecosystem health check |
 | `/api/hub-webhook` | POST | Receive card events from Kanbai |
 | `/api/specifications` | GET | Ecosystem capability discovery |
+
+### Kanbai-Side API Endpoints (for pause-and-continue)
+
+These are endpoints on the **Kanbai central server** that your agents call:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/agent/pause` | POST | Pause a task and create a continuation card with resume context |
+| `/api/agent/budget` | GET | View current daily budget status and usage |
+| `/api/agent/budget` | POST | Update daily budget limits (admin) |
+| `/api/agent/budget/check` | POST | Check if daily budget allows more work |
+| `/api/agent/approve-continuation/:cardId` | POST | Approve a continuation card for agent pickup |
 
 ## Alternative: Separate Files
 
