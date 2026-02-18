@@ -14,17 +14,24 @@ interface ReviewReport {
   cardId: number;
   cardTitle: string;
   iterations: number;
-  filesChanged: Record<string, number>;
+  filesChanged: Record<string, number | { action: string; size?: number; oldSnippet?: string; newSnippet?: string }>;
   changeLog: string[];
-  testResults: { command: string; passed: boolean; output: string }[];
+  testResults: { command: string; passed: boolean; output: string; exitCode?: number }[];
   allTestsPassed: boolean;
   summary: string;
+  budgetExhausted?: boolean;
+  failureReason?: string | null;
+  failedOperations?: string[];
+  hadChanges?: boolean;
 }
 
 interface AgentStatus {
   agentId: string;
   mode: string;
   running: boolean;
+  model?: string;
+  maxIterations?: number;
+  dailyBudgetPaused?: boolean;
   activeTasks: { id: number; title: string }[];
   pendingApproval: { id: number; title: string }[];
   pendingReview: PendingReviewItem[];
@@ -220,6 +227,16 @@ export function AgentControlPanel() {
         <span className="text-[10px] text-muted-foreground truncate">{status?.agentId}</span>
       </div>
 
+      {status && (
+        <div className="flex items-center gap-2 flex-wrap text-[10px] text-muted-foreground">
+          {status.model && <span data-testid="agent-model">Model: {status.model}</span>}
+          {status.maxIterations && <span>Budget: {status.maxIterations} rounds</span>}
+          {status.dailyBudgetPaused && (
+            <Badge variant="destructive" className="text-[10px]" data-testid="agent-budget-paused">Budget Paused</Badge>
+          )}
+        </div>
+      )}
+
       {status?.activeTasks && status.activeTasks.length > 0 && (
         <div data-testid="agent-active-tasks">
           <h4 className="text-xs font-medium mb-1.5 text-muted-foreground uppercase tracking-wide">Active Tasks</h4>
@@ -357,13 +374,25 @@ export function AgentControlPanel() {
                 <div className="space-y-1">
                   <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Files Changed</h4>
                   <div className="space-y-0.5">
-                    {Object.entries(reviewReport.filesChanged).map(([file, count]) => (
+                    {Object.entries(reviewReport.filesChanged).map(([file, info]) => (
                       <div key={file} className="flex items-center justify-between gap-2 text-xs p-1.5 rounded bg-muted/30">
                         <span className="font-mono truncate flex-1">{file}</span>
-                        <Badge variant="outline" className="text-[10px]">{count} edit{count > 1 ? "s" : ""}</Badge>
+                        <Badge variant="outline" className="text-[10px]">
+                          {typeof info === "number" ? `${info} edit${info > 1 ? "s" : ""}` : info.action}
+                        </Badge>
                       </div>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {reviewReport.budgetExhausted && (
+                <div className="p-2 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                  <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                    Agent paused at budget limit ({reviewReport.iterations} iterations).
+                    {reviewReport.failureReason && ` Reason: ${reviewReport.failureReason}`}
+                    {(reviewReport.failedOperations?.length ?? 0) > 0 && ` (${reviewReport.failedOperations!.length} failed operations)`}
+                  </p>
                 </div>
               )}
 
