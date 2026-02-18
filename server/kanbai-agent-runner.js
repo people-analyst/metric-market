@@ -1,7 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import fs from "fs";
 import pathMod from "path";
-import { execSync } from "child_process";
+import { execSync, execFileSync } from "child_process";
 import { pullBoard, claimTask, reportProgress, completeTask, releaseTask, getAvailableTasks, getSchema, getSpokeConfig } from "./kanbai-connector.js";
 
 const PROJECT_ROOT = process.cwd();
@@ -89,12 +89,19 @@ function executeTool(name, input) {
       }
       case "search_files": {
         const dir = input.dir_path ? sanitizePath(input.dir_path) : PROJECT_ROOT;
-        const glob = input.file_glob ? `--include="${input.file_glob}"` : "--include=\"*.ts\" --include=\"*.tsx\" --include=\"*.js\" --include=\"*.json\"";
+        const args = ["-rn"];
+        if (input.file_glob) {
+          args.push(`--include=${input.file_glob}`);
+        } else {
+          args.push("--include=*.ts", "--include=*.tsx", "--include=*.js", "--include=*.json");
+        }
+        args.push("--", input.pattern, dir);
         try {
-          const out = execSync(
-            `grep -rn ${glob} "${input.pattern}" "${dir}" 2>/dev/null | head -50`,
-            { timeout: AGENT_CONFIG.commandTimeout, encoding: "utf-8", maxBuffer: 1024 * 1024 }
-          );
+          const out = execFileSync("grep", args, {
+            timeout: AGENT_CONFIG.commandTimeout,
+            encoding: "utf-8",
+            maxBuffer: 1024 * 1024,
+          });
           return { matches: out.trim().split("\n").filter(Boolean).slice(0, 50) };
         } catch {
           return { matches: [], message: "No matches found" };

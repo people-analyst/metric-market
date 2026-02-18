@@ -14,9 +14,9 @@ const DEFAULT_STATUS_LABELS: Record<string, string> = {
   ready: "Ready", assignment: "Assignment", in_progress: "In Progress", review: "Review", done: "Done"
 };
 const PRIORITY_COLORS: Record<string, string> = {
-  critical: "bg-red-600 text-red-50",
-  high: "bg-orange-500 text-orange-50",
-  medium: "bg-blue-500 text-blue-50",
+  critical: "bg-destructive text-destructive-foreground",
+  high: "bg-orange-500 dark:bg-orange-600 text-white",
+  medium: "bg-primary text-primary-foreground",
   low: "bg-muted text-muted-foreground",
 };
 
