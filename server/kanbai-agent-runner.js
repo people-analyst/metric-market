@@ -190,6 +190,9 @@ async function claimAndStart(card) {
     console.warn(`[KanbaiAgent] Could not claim #${card.id}: ${result.error}`);
     return;
   }
+  if (result.local) {
+    console.log(`[KanbaiAgent] Hub unreachable — proceeding with local claim for #${card.id}`);
+  }
   console.log(`[KanbaiAgent] Claimed #${card.id}: "${card.title}"`);
   activeTasks.set(card.id, { ...card, claimedAt: new Date() });
 }
