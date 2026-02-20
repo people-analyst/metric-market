@@ -13,12 +13,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 const _require = createRequire(import.meta.url);
-const hubSdk = _require("../hub-sdk.cjs");
+const hubSdk = _require("../hub-sdk.js");
 hubSdk.init(app, {
   pollDirectives: true,
   pollIntervalMs: 300000,
   onDirective: handleDirective,
 });
+
+try {
+  const embeddedAiSdk = _require("../embedded-ai-sdk.js");
+  embeddedAiSdk.mount(app);
+} catch (e) {
+  log(`Embedded AI SDK not loaded: ${(e as Error).message}`);
+}
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -71,6 +78,9 @@ app.use((req, res, next) => {
   // guard: if an /api/* or /health request reaches here, it was not handled
   // by any registered route — return 404 JSON instead of falling through
   // to the static file catch-all
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({ status: "ok", app: "metric-market", sdkVersion: "2.3.0", timestamp: new Date().toISOString() });
+  });
   app.use("/api/*", (_req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
   });
