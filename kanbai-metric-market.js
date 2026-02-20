@@ -15,12 +15,12 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T21:14:20.590Z
+// Connector v2.1.3 | Generated 2026-02-20T23:00:00.000Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY;
-const CONNECTOR_VERSION = "2.1.1";
+const CONNECTOR_VERSION = "2.1.3";
 const APP_SLUG = "metric-market";
 
 if (!DEPLOY_SECRET) {
@@ -40,7 +40,7 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function safeHubCall(url, options, label) {
   try {
-    const resp = await fetch(url, options);
+    const resp = await fetch(url, { ...options, signal: AbortSignal.timeout(10000) });
     const text = await resp.text();
     try {
       const parsed = JSON.parse(text);
@@ -59,7 +59,8 @@ async function safeHubCall(url, options, label) {
       return { error: "invalid_json", status: resp.status, local: true };
     }
   } catch (err) {
-    console.warn(`[Kanbai] ${label}: Hub unreachable — ${err.message}`);
+    const isTimeout = err.name === "TimeoutError" || err.name === "AbortError";
+    console.warn(`[Kanbai] ${label}: Hub ${isTimeout ? "timed out (10s)" : "unreachable"} — ${err.message}`);
     return { error: err.message, local: true };
   }
 }
@@ -832,6 +833,10 @@ async function checkDailyBudget() {
       headers: headers(),
       body: JSON.stringify({ agentId: AGENT_CONFIG.agentId }),
     }, "checkDailyBudget");
+    if (result.error) {
+      console.warn(`[KanbaiAgent] Budget check failed: ${result.error} — pausing agent`);
+      return false;
+    }
     return result.allowed !== false;
   } catch (err) {
     return true;

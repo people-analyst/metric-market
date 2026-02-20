@@ -1,8 +1,10 @@
-// ── Kanbai Connector v2.1.0 for metric-market ──────────────────
+// ── Kanbai Connector v2.1.3 for metric-market ──────────────────
 // Set one of DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY in your Replit Secrets.
+// v2.1.3 changelog: fetch timeout (10s), HTTP error → local:true, SDK version header
 
-const KANBAI_URL = process.env.KANBAI_URL || "https://cdeb1be5-0bf9-40c9-9f8a-4b50dbea18f1-00-2133qt2hcwgu.picard.replit.dev";
+const KANBAI_URL = process.env.KANBAI_URL || "https://people-analytics-kanban.replit.app";
 const DEPLOY_SECRET = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY;
+const CONNECTOR_VERSION = "2.1.3";
 
 if (!DEPLOY_SECRET) {
   console.error("[Kanbai] WARNING: No auth secret found. Set DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY.");
@@ -11,13 +13,23 @@ if (!DEPLOY_SECRET) {
 const kanbaiHeaders = () => ({
   "Content-Type": "application/json",
   "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY}`,
+  "X-Kanbai-SDK-Version": CONNECTOR_VERSION,
+  "X-Kanbai-Spoke-App": "metric-market",
 });
 
 async function safeHubCall(url, options, label) {
   try {
-    const resp = await fetch(url, options);
+    const resp = await fetch(url, { ...options, signal: AbortSignal.timeout(10000) });
     const text = await resp.text();
-    try { return JSON.parse(text); } catch {
+    try {
+      const parsed = JSON.parse(text);
+      if (!resp.ok || parsed.error) {
+        console.warn(`[Kanbai] ${label}: Hub returned error. Status: ${resp.status}, error: ${parsed.error || "unknown"}`);
+        parsed.local = true;
+        if (!parsed.error) parsed.error = "hub_error_" + resp.status;
+      }
+      return parsed;
+    } catch {
       if (text.includes("<!DOCTYPE") || text.includes("<html")) {
         console.warn(`[Kanbai] ${label}: Hub returned HTML (redirect or auth page). Status: ${resp.status}`);
         return { error: "hub_html_response", status: resp.status, local: true };
@@ -25,7 +37,8 @@ async function safeHubCall(url, options, label) {
       return { error: "invalid_json", status: resp.status, local: true };
     }
   } catch (err) {
-    console.warn(`[Kanbai] ${label}: Hub unreachable — ${err.message}`);
+    const isTimeout = err.name === "TimeoutError" || err.name === "AbortError";
+    console.warn(`[Kanbai] ${label}: Hub ${isTimeout ? "timed out (10s)" : "unreachable"} — ${err.message}`);
     return { error: err.message, local: true };
   }
 }

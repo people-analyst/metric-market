@@ -1,4 +1,4 @@
-// ── Kanbai Agent Runner v2.1.0 for metric-market ──────────────────
+// ── Kanbai Agent Runner v2.1.3 for metric-market ──────────────────
 // Claude agent with tool-use for READ, WRITE, EDIT code files.
 // Auth: DEPLOY_SECRET_KEY, DEPLOY_SECRET, or HUB_API_KEY
 // Anthropic: AI_INTEGRATIONS_ANTHROPIC_API_KEY (Replit) or ANTHROPIC_API_KEY
@@ -362,6 +362,10 @@ async function checkDailyBudget() {
       headers: { "Content-Type": "application/json", "Authorization": `Bearer ${process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY}` },
       body: JSON.stringify({ agentId: AGENT_CONFIG.agentId }),
     }, "checkDailyBudget");
+    if (result.error) {
+      console.warn(`[KanbaiAgent] Budget check failed: ${result.error} — pausing agent`);
+      return false;
+    }
     return result.allowed !== false;
   } catch { return true; }
 }
@@ -443,7 +447,11 @@ async function startAgent() {
           console.log(`[KanbaiAgent] Found task: #${card.id} "${card.title}" [${card.priority}]${isCont ? " (CONTINUATION)" : ""}`);
           if (AGENT_CONFIG.mode === "semi" && !AGENT_CONFIG.autoApprove) { pendingApproval.set(card.id, card); break; }
           const cr = await claimTask(card.id, AGENT_CONFIG.agentId);
-          if (!cr.error || cr.local) activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+          if (!cr.error || cr.local) {
+            activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+          } else {
+            console.log(`[KanbaiAgent] Failed to claim #${card.id}: ${cr.error}`);
+          }
           break;
         }
       }
@@ -495,7 +503,12 @@ async function approveTask(cardId) {
   if (!card) throw new Error("No pending task with id " + cardId);
   pendingApproval.delete(cardId);
   const cr = await claimTask(card.id, AGENT_CONFIG.agentId);
-  if (!cr.error || cr.local) activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+  if (!cr.error || cr.local) {
+    activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+  } else {
+    console.log(`[KanbaiAgent] Failed to claim #${card.id}: ${cr.error}`);
+    throw new Error(`Claim failed: ${cr.error}`);
+  }
 }
 
 function requireAgentAuth(req, res, next) {
