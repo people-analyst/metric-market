@@ -118,10 +118,35 @@ The PA Design System follows a **Google Finance / Yahoo Finance** visual languag
 - **TanStack Query v5**: Server state management
 - **wouter**: Client-side routing
 
+### GitHub Sync (Spoke GitHub Sync Standard v2.0)
+Bidirectional git-based sync with `people-analyst/metric-market` on GitHub. Uses the Replit GitHub connector for authentication (access token injected into git remote URL). All operations use git CLI with stash safety (stash uncommitted → pull/push → pop stash).
+
+**Endpoints:**
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/github/status` | GET | Git branch, uncommitted changes, last commit, IDE detection |
+| `/api/github/sync-status` | GET | Full sync metadata (push/pull history, auto-sync state) |
+| `/api/github/pull` | POST | Pull latest from GitHub (stash-safe). Body: `{branch?, source?, trigger?}` |
+| `/api/github/push` | POST | Push local changes to GitHub with IDE tagging. Body: `{branch?, ide?, message?}` |
+| `/api/github/auto-sync/start` | POST | Enable periodic auto-push (every 300s) |
+| `/api/github/auto-sync/stop` | POST | Disable periodic auto-push |
+
+**Auth:** Same-origin requests pass through. External requests require `Authorization: Bearer <DEPLOY_SECRET_KEY>`.
+
+**IDE Detection:** Automatically tags commits with the IDE/tool that made the change (replit, cursor, windsurf, claude-agent, etc.) via environment variable detection. Hub receives sync events for unified activity timeline.
+
+**Startup:** Auto-pull on server boot (non-fatal if it fails). Auto-sync (periodic push) enabled by default.
+
+**Key file:** `server/githubSync.ts` — all sync logic, auth helper, IDE detection.
+
 ### Environment Variables (Secrets)
 | Variable | Purpose |
 |----------|---------|
 | `DATABASE_URL` | PostgreSQL connection string (Neon) |
 | `HUB_API_KEY` | Authentication with People Analytics Hub |
-| `DEPLOY_SECRET_KEY` | Kanbai ecosystem shared key |
+| `DEPLOY_SECRET_KEY` | Kanbai ecosystem shared key + GitHub sync auth |
 | `ANTHROPIC_API_KEY` | Claude API for AI agent tasks |
+| `APP_SLUG` | App identifier for Hub sync events (default: `metric-market`) |
+| `HUB_URL` | Hub URL for sync event notifications (default: `https://pa-toolbox.replit.app`) |
+| `GIT_BRANCH` | Default branch for pull/push (default: `main`) |
+| `IDE_SOURCE` | Override IDE detection (e.g., `cursor`, `windsurf`) |

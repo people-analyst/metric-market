@@ -94,23 +94,28 @@ export function detectIDE(): string {
 // ── Auth Helper (shared by routes) ───────────────────────────────────
 
 export function authorizeGitHubSync(req: any, res: any): boolean {
-  const authHeader = req.headers.authorization || "";
-  const origin = req.headers.origin || req.headers.referer || "";
-  const host = req.headers.host || "";
-  const isSameOrigin = origin.includes(host) || !origin || req.headers.referer?.includes(host);
+  const clientIp = req.ip || req.connection?.remoteAddress || "";
+  const isLoopback = clientIp === "127.0.0.1" || clientIp === "::1" || clientIp === "::ffff:127.0.0.1";
+  if (isLoopback) return true;
 
-  if (!isSameOrigin) {
-    const expectedKey = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY || "";
-    if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
-      res.status(401).json({ error: "Unauthorized" });
-      return false;
-    }
-    if (!expectedKey) {
-      res.status(401).json({ error: "Unauthorized — no deploy secret configured" });
-      return false;
-    }
+  const authHeader = req.headers.authorization || "";
+  const expectedKey = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY || "";
+
+  if (expectedKey && authHeader === `Bearer ${expectedKey}`) return true;
+
+  const origin = req.headers.origin || "";
+  const referer = req.headers.referer || "";
+  const host = req.headers.host || "";
+  if (host && ((origin && origin.includes(host)) || (referer && referer.includes(host)))) {
+    return true;
   }
-  return true;
+
+  if (!expectedKey) {
+    res.status(401).json({ error: "Unauthorized — no deploy secret configured" });
+  } else {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+  return false;
 }
 
 // ── Pull from GitHub (git CLI with stash safety) ─────────────────────
