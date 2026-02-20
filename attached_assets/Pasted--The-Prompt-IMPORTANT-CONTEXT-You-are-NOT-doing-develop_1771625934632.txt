@@ -1,0 +1,204 @@
+## The Prompt
+
+```
+IMPORTANT CONTEXT: You are NOT doing development work yourself. You are acting as a QA test user for the Kanbai embedded AI agent system. Read this entire prompt before taking any action.
+
+YOUR ROLE: Test user and observer. You will trigger the Kanbai AI agent that is installed in this project, watch it work, and report what happens. You must NOT write code to fulfill any kanban card yourself.
+
+STEP 1 — AUTO-DETECT THIS APPLICATION
+
+Figure out which spoke application this is. Do the following:
+- Check package.json for the project name
+- Look for any file matching the pattern kanbai-*.js or kanbai-*.cjs in the project root
+- Check the main server file (server.js, app.js, index.js, or similar) for a line like: require("./kanbai-<appname>.js").mount(app) or similar mounting code
+- Check for a replit.md or README that identifies the application
+- Note the app slug (e.g., "anonymizer", "metric-engine", "segmentation-studio", "conductor", "reincarnation", "preference-modeler", "people-analyst", "insight-player", "meta-factory", "anycomp", "decision-wizard", "market-data-backend", "voi-calculator", "metric-market", "hub")
+
+Record what you find. This is your app identity for the rest of the test.
+
+STEP 2 — VERIFY KANBAI PLUGIN INSTALLATION
+
+Check all of the following and record the status of each:
+
+a) Kanbai unified bundle file exists (kanbai-<appslug>.js or similar)
+b) The bundle is mounted in the Express app (look for .mount(app) call)
+c) The /kanbai route loads (try accessing it via curl or browser)
+d) Environment variable ANTHROPIC_API_KEY or KANBAI_ANTHROPIC_KEY is set (check if it exists, do NOT log its value)
+e) Environment variable KANBAI_HUB_URL is set (if applicable)
+f) The /kanbai/api/agent/status endpoint responds
+
+If any of these are missing, STOP and report what is missing. Do not attempt to install or fix the Kanbai plugin yourself — that is Kanbai team's job.
+
+STEP 3 — CHECK AVAILABLE CARDS
+
+Before triggering the agent, see what work is available:
+- Check GET /kanbai/api/cards or GET /kanbai/api/board to see what cards exist
+- Identify cards in "backlog" or "planned" status that are available for the agent to pick up
+- If no cards are available, report that and STOP
+
+Record: How many cards are available? What are their IDs and titles?
+
+STEP 4 — TRIGGER THE KANBAI AGENT
+
+Start the embedded Kanbai Claude AI agent. Try the following approaches in order:
+a) POST /kanbai/api/agent/run — the standard agent trigger endpoint
+b) POST /kanbai/api/agent/start — alternative trigger
+c) If there's a specific card to process: POST /kanbai/api/agent/run with body {"cardId": "<id>"}
+d) Check if there's a UI button on the /kanbai board page to trigger the agent
+
+Record: How did you trigger the agent? What was the response?
+
+STEP 5 — MONITOR THE AGENT WHILE IT WORKS
+
+This is the most important step. Watch the agent as it processes a card:
+
+a) Check server/console logs continuously for agent output. The agent logs each iteration, tool call, and progress update. Look for lines containing "Agent", "iteration", "tool_use", "Claude", or "progress".
+
+b) Poll these endpoints periodically:
+   - GET /kanbai/api/agent/status — is it running, idle, completed, or errored?
+   - GET /kanbai/api/agent/activity — what actions has it taken?
+
+c) Note:
+   - How many iterations does the agent use?
+   - What tools does it call? (read_file, write_file, edit_file, list_directory, search_files, run_command)
+   - Does it encounter any errors during tool execution?
+   - Does it hit the iteration budget limit (default 15)?
+   - Does it produce a meaningful summary?
+
+STEP 6 — VERIFY THE RESULTS
+
+After the agent finishes (or fails):
+
+a) Check the completion report:
+   - Were any files actually changed? Which ones?
+   - Did it run tests? Did they pass?
+   - What was the agent's summary of its work?
+   - How many iterations did it use out of its budget?
+
+b) Verify the code changes (if any):
+   - Do the changes look reasonable and correct?
+   - Did the agent break anything?
+   - Run the application and confirm it still starts without errors
+
+c) Check card status:
+   - Was the card moved to "review" or "done"?
+   - If running in semi mode, check GET /kanbai/api/agent/review/:cardId for the held review
+
+d) If in semi mode, complete the cycle:
+   - Review the held changes
+   - Confirm via POST /kanbai/api/agent/confirm/:cardId (or reject via POST /kanbai/api/agent/reject-review/:cardId)
+
+STEP 7 — GENERATE YOUR REPORT
+
+Format your findings exactly like this:
+
+---
+KANBAI SPOKE AGENT TEST REPORT
+==============================
+Date: [today's date]
+Spoke Application: [app name / slug]
+Repository: [GitHub repo if known]
+Kanbai SDK File: [filename of the unified bundle]
+
+INSTALLATION STATUS
+- Bundle file present: [YES/NO]
+- Bundle mounted in Express: [YES/NO]
+- /kanbai route accessible: [YES/NO]
+- Anthropic API key configured: [YES/NO]
+- Agent status endpoint responding: [YES/NO]
+- Overall installation: [PASS/FAIL]
+
+CARDS AVAILABLE
+- Total cards: [number]
+- Cards in backlog/planned: [number]
+- Card tested: [ID] - [title]
+
+AGENT EXECUTION
+- Trigger method: [how you started it]
+- Agent started successfully: [YES/NO]
+- Agent mode: [auto/semi]
+- Iterations used: [X out of Y budget]
+- Tools called: [list of tools used]
+- Errors during execution: [list any errors, or NONE]
+- Agent completed: [YES/NO/TIMED OUT/BUDGET EXHAUSTED]
+
+RESULTS
+- Files changed: [list files, or NONE]
+- Tests run: [YES/NO]
+- Tests passed: [YES/NO/N/A]
+- Card moved to: [new status]
+- Code changes quality: [GOOD/ACCEPTABLE/POOR/N/A]
+- Application still runs: [YES/NO]
+
+ISSUES FOUND
+[List every problem encountered, with details. If none, write NONE]
+
+1. [Issue description]
+   - When it happened: [step]
+   - Error message: [exact error if any]
+   - Impact: [what broke or didn't work]
+
+FEEDBACK FOR KANBAI TEAM
+[Specific suggestions for improving the SDK, agent runner, documentation, or setup process]
+
+1. [Suggestion]
+---
+
+CRITICAL RULES — READ THESE CAREFULLY:
+- You are a TEST USER, not a developer. Do NOT write code to complete kanban cards.
+- Do NOT modify any kanbai-*.js files, connector files, or agent runner files.
+- Do NOT install the Kanbai plugin if it's missing. Report that as a finding.
+- If the agent fails, that IS your finding. Document it thoroughly.
+- If the agent succeeds, verify its work actually makes sense.
+- Be thorough in your monitoring — the iteration-by-iteration log data is the most valuable part of this test.
+- If you need to run curl commands to hit endpoints, that's fine — you're acting as a user interacting with the system.
+```
+
+---
+
+## Spoke Application Reference
+
+These are the 16 applications in the ecosystem. The prompt auto-detects which one it's in.
+
+| App Slug | GitHub Repository | Notes |
+|----------|------------------|-------|
+| hub | people-analytics-toolbox | Central hub — uses hub-specific SDK |
+| conductor | conductor | Orchestration layer |
+| segmentation-studio | segmentation-studio | |
+| reincarnation | reincarnation | |
+| preference-modeler | survey-respondent | |
+| people-analyst | people-analyst | |
+| kanbai | Kanbai | This app (self) |
+| anonymizer | data-anonymizer | |
+| metric-engine | metric-engine-calculus | |
+| metric-market | metric-market | |
+| insight-player | calculus | |
+| meta-factory | meta-factory | |
+| anycomp | anycomp | |
+| decision-wizard | decision-wizard | |
+| market-data-backend | headcount_modeling | |
+| voi-calculator | voi-calculator | |
+
+## Collecting Results
+
+After running the test at each spoke, you'll have a structured report. Bring any issues back to the Kanbai Replit Agent for resolution, specifically:
+- Installation failures (missing SDK, missing env vars)
+- Agent execution errors (crashes, API failures, tool errors)
+- Quality concerns (agent made bad changes, didn't understand the task)
+- SDK improvement suggestions
+
+## Optional: Target a Specific Card
+
+If you want the agent to work on a specific card, add this line at the top of the prompt:
+
+```
+TARGET CARD: Process card ID [CARD_ID] titled "[CARD TITLE]" specifically.
+```
+
+## Optional: Test Multiple Cards
+
+To have the agent cycle through more than one card:
+
+```
+MULTI-CARD TEST: After the first card completes, trigger the agent again to process a second card. Generate a separate report section for each card tested.
+```
