@@ -104,7 +104,7 @@ function BundleBrowserSection() {
                   <p className="text-xs text-foreground leading-relaxed">{selected.documentation}</p>
                 </div>
               )}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <div>
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">Data Schema</span>
                   <pre className="text-[10px] bg-[#232a31] text-[#e0f0ff] p-2 rounded-md overflow-auto max-h-40 font-mono" data-testid="bundle-data-schema">
@@ -115,6 +115,12 @@ function BundleBrowserSection() {
                   <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">Config Schema</span>
                   <pre className="text-[10px] bg-[#232a31] text-[#e0f0ff] p-2 rounded-md overflow-auto max-h-40 font-mono" data-testid="bundle-config-schema">
                     {JSON.stringify(selected.configSchema, null, 2)}
+                  </pre>
+                </div>
+                <div>
+                  <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider block mb-1">Output Schema</span>
+                  <pre className="text-[10px] bg-[#232a31] text-[#e0f0ff] p-2 rounded-md overflow-auto max-h-40 font-mono" data-testid="bundle-output-schema">
+                    {JSON.stringify(selected.outputSchema, null, 2)}
                   </pre>
                 </div>
               </div>
