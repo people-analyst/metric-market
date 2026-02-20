@@ -15,7 +15,7 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T21:05:53.431Z
+// Connector v2.1.1 | Generated 2026-02-20T21:08:22.892Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
@@ -1194,7 +1194,9 @@ function mount(app) {
         await updateLocalCardStatus(card.id, "in_progress");
         logActivity("APPROVED_LOCAL_FORCED", card.id, "Hub claim failed but user approved — forcing local claim so agent can proceed.");
       }
-      res.json({ success: true, local: result.local || !activeTasks.has(card.id) ? false : true, claimed: activeTasks.has(card.id), forced: !!result.error && !result.local });
+      const claimed = activeTasks.has(card.id);
+      const forced = claimed && !!(result.error && !result.local);
+      res.json({ success: claimed, claimed, local: !!(result.local || forced), forced, hubError: result.error || null });
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
