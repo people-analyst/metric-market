@@ -13,7 +13,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
 const _require = createRequire(import.meta.url);
-const hubSdk = _require("../hub-sdk.js");
+const hubSdk = _require("../hub-sdk.cjs");
 hubSdk.init(app, {
   pollDirectives: true,
   pollIntervalMs: 300000,
@@ -21,7 +21,7 @@ hubSdk.init(app, {
 });
 
 try {
-  const embeddedAiSdk = _require("../embedded-ai-sdk.js");
+  const embeddedAiSdk = _require("../embedded-ai-sdk.cjs");
   embeddedAiSdk.mount(app);
 } catch (e) {
   log(`Embedded AI SDK not loaded: ${(e as Error).message}`);
