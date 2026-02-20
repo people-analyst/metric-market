@@ -15,7 +15,7 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T20:22:49.513Z
+// Connector v2.1.1 | Generated 2026-02-20T20:53:18.067Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
