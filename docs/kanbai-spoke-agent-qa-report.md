@@ -210,7 +210,10 @@ clearTimeout(timeout);
 ### 6. Validate budget check result (LOW)
 ```javascript
 // In checkDailyBudget:
-if (result.error) return true; // treat auth errors as "budget OK" but log warning
+if (result.error) {
+  console.warn(`[KanbaiAgent] Budget check failed: ${result.error} — pausing agent`);
+  return false; // treat auth/network errors as "stop" to surface the problem
+}
 if (result.allowed === false) { ... }
 ```
 
