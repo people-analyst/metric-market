@@ -20,7 +20,7 @@ const path = require("path");
 
 let sdk;
 try {
-  sdk = require("./hub-sdk");
+  sdk = require("./hub-sdk.cjs");
 } catch {
   console.error("[Hub Sync] hub-sdk.js not found. Download it:");
   console.error("  curl -o hub-sdk.js http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev/api/sdk/metric-market");
