@@ -11,9 +11,12 @@
 
 ## Executive Summary
 
-**Result: FAIL — Agent execution pipeline broken. Tasks are discovered but never executed.**
+**Initial Result: FAIL — Agent execution pipeline broken. Tasks discovered but never executed.**
+**After Fix: PASS — Agent fully operational. Tasks claimed, executed, and pushed to GitHub.**
 
-The Kanbai spoke agent starts, finds kanban tasks via local database fallback, but fails to claim and execute them. The root cause is an authentication mismatch: the connector sends `HUB_API_KEY` (a `pat_...` format People Analytics Hub token) to the Kanbai kanban hub, which expects a different `DEPLOY_SECRET_KEY`. The hub returns 401 Unauthorized, and the agent silently skips the task without logging the failure.
+The Kanbai spoke agent initially failed because `DEPLOY_SECRET_KEY` was not set — the connector fell back to `HUB_API_KEY` (a PA Hub PAT token), which the Kanbai hub rejected with 401. After setting the correct `DEPLOY_SECRET_KEY`, the agent successfully claimed task #24, executed 25 Claude tool-use iterations across 4 files, created continuation card #340, and auto-pushed to GitHub (commit `13870ba`).
+
+Three code-level bugs in the Kanbai-provided connector/agent-runner were identified and reported back to Kanbai as card #341: (1) silent claim failure on auth errors, (2) no fetch timeout, (3) budget check false positive on error responses.
 
 ---
 
