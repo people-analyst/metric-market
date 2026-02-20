@@ -1,5 +1,7 @@
 import { createRequire } from "module";
 import { execSync } from "child_process";
+import { existsSync, unlinkSync } from "fs";
+import { join } from "path";
 
 const REPO_OWNER = "people-analyst";
 const REPO_NAME = "metric-market";
@@ -120,6 +122,18 @@ export function authorizeGitHubSync(req: any, res: any): boolean {
 
 // ── Pull from GitHub (git CLI with stash safety) ─────────────────────
 
+function clearGitLock(): void {
+  const lockPath = join(WORKSPACE, ".git", "index.lock");
+  if (existsSync(lockPath)) {
+    try {
+      unlinkSync(lockPath);
+      console.log("[github-sync] Cleared stale .git/index.lock");
+    } catch (e) {
+      console.warn("[github-sync] Could not remove index.lock:", e);
+    }
+  }
+}
+
 export async function pullFromGitHub(options?: {
   branch?: string;
   source?: string;
@@ -140,6 +154,7 @@ export async function pullFromGitHub(options?: {
   _isSyncing = true;
 
   try {
+    clearGitLock();
     await ensureGitHubRemote();
 
     const branch = options?.branch || process.env.GIT_BRANCH || "main";
@@ -227,6 +242,7 @@ export async function pushToGitHub(options?: {
   _isSyncing = true;
 
   try {
+    clearGitLock();
     await ensureGitHubRemote();
 
     const branch = options?.branch || process.env.GIT_BRANCH || "main";
