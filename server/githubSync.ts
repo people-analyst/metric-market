@@ -252,17 +252,26 @@ export async function pushToGitHub(options?: {
     execSync("git add -A", GIT_OPTS_SHORT);
 
     const status = execSync("git status --porcelain", GIT_OPTS_SHORT).trim();
-    if (!status) {
-      return { success: true, pushed: false, message: "No changes to push" };
+    let filesChanged: string[] = [];
+
+    if (status) {
+      filesChanged = status.split("\n").map((l: string) => {
+        const parts = l.trim().split(/\s+/);
+        return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
+      });
+
+      const escapedMsg = message.replace(/"/g, '\\"');
+      execSync(`git commit -m "${escapedMsg}"`, { ...GIT_OPTS_SHORT, timeout: 15000 });
     }
 
-    const filesChanged = status.split("\n").map((l: string) => {
-      const parts = l.trim().split(/\s+/);
-      return parts.length > 1 ? parts.slice(1).join(" ") : parts[0];
-    });
+    let ahead = 0;
+    try {
+      ahead = parseInt(execSync(`git rev-list --count github/${branch}..HEAD`, GIT_OPTS_SHORT).trim(), 10) || 0;
+    } catch {}
 
-    const escapedMsg = message.replace(/"/g, '\\"');
-    execSync(`git commit -m "${escapedMsg}"`, { ...GIT_OPTS_SHORT, timeout: 15000 });
+    if (!status && ahead === 0) {
+      return { success: true, pushed: false, message: "No changes to push" };
+    }
 
     execSync(`git push github ${branch}`, GIT_OPTS);
 
