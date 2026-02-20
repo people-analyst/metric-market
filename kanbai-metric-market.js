@@ -15,7 +15,7 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T20:53:18.067Z
+// Connector v2.1.1 | Generated 2026-02-20T21:01:14.563Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
@@ -793,10 +793,24 @@ let activeTasks = new Map();
 let pendingApproval = new Map();
 let pendingReview = new Map();
 let recentlyFailedClaims = new Set();
+let processedCards = new Set();
 let running = false;
 let dailyBudgetPaused = false;
 let consecutiveHubErrors = 0;
 const agentActivityLog = [];
+
+async function updateLocalCardStatus(cardId, newStatus) {
+  if (!process.env.DATABASE_URL) return;
+  try {
+    const { Pool } = require("pg");
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+    await pool.query("UPDATE kanban_cards SET status = $1 WHERE id = $2", [newStatus, cardId]);
+    await pool.end();
+    console.log(`[KanbaiAgent] Local DB: card #${cardId} → ${newStatus}`);
+  } catch (err) {
+    console.warn(`[KanbaiAgent] Local DB update failed for #${cardId}: ${err.message}`);
+  }
+}
 function logActivity(event, cardId, details) {
   const entry = { ts: new Date().toISOString(), event, cardId: cardId || null, details: details || "" };
   agentActivityLog.push(entry);
@@ -1004,7 +1018,7 @@ async function startAgent() {
             const tags = c.tags || [];
             if (tags.includes("needs-approval")) return false;
             if (pendingApproval.has(c.id) || activeTasks.has(c.id)) return false;
-            if (recentlyFailedClaims.has(c.id)) return false;
+            if (recentlyFailedClaims.has(c.id) || processedCards.has(c.id)) return false;
             return true;
           });
           if (eligible.length === 0) continue;
@@ -1028,6 +1042,7 @@ async function startAgent() {
             activeTasks.set(card.id, { ...card, claimedAt: new Date() });
             saveActiveTask(card.id, card, []);
             recentlyFailedClaims.delete(card.id);
+            await updateLocalCardStatus(card.id, "in_progress");
           } else {
             console.warn(`[KanbaiAgent] Claim gate blocked task #${card.id}: error=${claimResult.error}, local=${claimResult.local}`);
             recentlyFailedClaims.add(card.id);
@@ -1073,8 +1088,12 @@ async function startAgent() {
           }
           activeTasks.delete(cardId);
           clearActiveTask(cardId);
+          processedCards.add(cardId);
+          const localStatus = report.circuitBroken ? "backlog" : (AGENT_CONFIG.mode === "semi" ? "review" : (report.hadChanges ? "done" : "review"));
+          await updateLocalCardStatus(cardId, localStatus);
         } catch (err) {
           console.error(`[KanbaiAgent] Error on #${cardId}:`, err.message);
+          logActivity("TASK_ERROR", cardId, err.message);
           await reportProgress(cardId, AGENT_CONFIG.agentId, "in_progress", `Agent error: ${err.message}`);
           // Don't clear active task on transient errors — will retry on next restart
         }
@@ -1160,8 +1179,11 @@ function mount(app) {
       const result = await claimTask(card.id, AGENT_CONFIG.agentId);
       if (!result.error || result.local) {
         activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+        saveActiveTask(card.id, card, []);
         recentlyFailedClaims.delete(card.id);
-        logActivity("APPROVED", card.id, `Claimed${result.local ? " (local mode)" : ""}. Now in activeTasks.`);
+        processedCards.delete(card.id);
+        await updateLocalCardStatus(card.id, "in_progress");
+        logActivity("APPROVED", card.id, `Claimed${result.local ? " (local mode)" : ""}. Now in activeTasks. Local DB updated.`);
       } else {
         logActivity("APPROVE_FAILED", card.id, `Claim blocked: error=${result.error}, local=${result.local}`);
         recentlyFailedClaims.add(card.id);
