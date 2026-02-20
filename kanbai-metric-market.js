@@ -15,7 +15,7 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T21:08:22.892Z
+// Connector v2.1.1 | Generated 2026-02-20T21:14:20.590Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
@@ -424,6 +424,22 @@ function executeTool(name, input) {
         const bakPath = absPath + ".bak";
         try { fs.writeFileSync(bakPath, content, "utf-8"); } catch {}
         const updated = content.replace(input.old_string, input.new_string);
+        // Duplicate declaration detection: check for duplicate exports/declarations
+        const dupWarnings = [];
+        if (input.file_path.match(/\.(ts|js|tsx|jsx|mjs|cjs)$/)) {
+          const exportMatches = updated.match(/^export\s+(?:const|let|var|function|class|enum|type|interface|default)\s+(\w+)/gm);
+          if (exportMatches) {
+            const exportNames = exportMatches.map(m => m.replace(/^export\s+(?:const|let|var|function|class|enum|type|interface|default)\s+/, ""));
+            const seen = {};
+            for (const n of exportNames) { seen[n] = (seen[n] || 0) + 1; }
+            const dups = Object.entries(seen).filter(([, c]) => c > 1).map(([n, c]) => n + " (x" + c + ")");
+            if (dups.length > 0) {
+              // REVERT: restore from backup to prevent app crash
+              fs.writeFileSync(absPath, content, "utf-8");
+              return { error: "EDIT REVERTED: Would create duplicate export declarations: " + dups.join(", ") + ". Search the file for existing declarations before adding new ones. Use read_file or search_files to check first." };
+            }
+          }
+        }
         fs.writeFileSync(absPath, updated, "utf-8");
         return { success: true, path: input.file_path, backupCreated: bakPath.replace(PROJECT_ROOT + "/", ""), ...(destructiveWarning ? { warning: destructiveWarning } : {}) };
       }
@@ -516,6 +532,12 @@ RULES:
 - Track which acceptance criteria you have and haven't addressed
 - When you finish, provide a clear summary starting with "SUMMARY:" listing every file created/modified
 
+CRITICAL GUARDRAILS:
+- BEFORE editing any shared/schema file: Use search_files to check if the declaration/export you want to add already exists. Duplicate exports will crash the app.
+- AFTER creating any API/route file: You MUST register it in the main routes/server file. Unregistered routes = dead code = wasted budget.
+- BEFORE your final summary: Run "npm run build" or "npm test" to verify the app still compiles. Leaving a broken build for the next person is unacceptable.
+- COMPLETION CHECKLIST: Before declaring done, verify: (1) All new files are registered/imported, (2) App compiles, (3) No empty files created, (4) Route handlers are accessible.
+
 PROJECT: ${APP_SLUG}
 WORKING DIRECTORY: ${PROJECT_ROOT}${AGENT_CONFIG.projectContext ? "\n\nPROJECT CONTEXT (from kanbai-context.md):\n" + AGENT_CONFIG.projectContext : ""}`;
 
@@ -523,15 +545,23 @@ WORKING DIRECTORY: ${PROJECT_ROOT}${AGENT_CONFIG.projectContext ? "\n\nPROJECT C
   let resumeBlock = "";
   if (isContinuation && card._resumeContext) {
     const ctx = card._resumeContext;
+    const fileDetails = ctx.filesChanged ? Object.entries(ctx.filesChanged).map(([f, info]) => `  - ${f} (${info.action || "modified"}, ${info.size || "?"} bytes)`).join("\n") : "  none";
     resumeBlock = `\n\n=== CONTINUATION CONTEXT (from previous agent session) ===
 Previous agent: ${ctx.pausedBy || "unknown"}
-Previous iterations: ${ctx.iterations || "?"}
-Files already modified: ${(ctx.filesChanged ? Object.keys(ctx.filesChanged).join(", ") : "none")}
+Previous iterations used: ${ctx.iterations || "?"}
+Files already modified (DO NOT recreate these — read them to see current state):
+${fileDetails}
+Full activity log from previous session:
+${(ctx.changeLog || []).join("\n")}
 Resume instructions: ${ctx.resumeInstructions || "Continue from where the previous agent left off."}
-Recent activity: ${(ctx.changeLog || []).slice(-5).join("; ")}
 === END CONTINUATION CONTEXT ===
 
-IMPORTANT: This is a CONTINUATION task. Start by reading the files listed above to understand what was already done. Do NOT redo completed work. Focus on the remaining items.`;
+CRITICAL CONTINUATION RULES:
+1. Do NOT re-explore directories you already know about. Skip list_directory calls — the activity log above shows what was found.
+2. Do NOT recreate files that were already written — read them to verify, then continue with remaining work.
+3. Focus ONLY on unfinished items from the resume instructions above.
+4. Your budget is limited — every round spent re-reading known files is a round lost for implementation.
+5. If the previous agent created API/route files, check if they are REGISTERED in the main routes file. Route registration is often the missing step.`;
   }
 
   const taskPrompt = `Task to implement (you have ${maxIter} tool rounds — explore briefly, then implement):
@@ -681,6 +711,37 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
   const failedOps = changeLog.filter(l => l.startsWith("FAILED:"));
   const hadChanges = Object.keys(filesChanged).length > 0;
 
+  // Auto build verification: check if app still compiles after changes
+  let buildVerified = false;
+  if (hadChanges) {
+    try {
+      const buildCmd = isCommandAllowed("npm run build") ? "npm run build" : (isCommandAllowed("npm test") ? "npm test" : null);
+      if (buildCmd) {
+        const buildResult = executeTool("run_command", { command: buildCmd });
+        if (buildResult.exitCode === 0) {
+          changeLog.push("AUTO_VERIFY: Build check passed (" + buildCmd + ")");
+          buildVerified = true;
+        } else {
+          changeLog.push("AUTO_VERIFY: Build check FAILED (" + buildCmd + "). Output: " + (buildResult.output || buildResult.stderr || "").slice(0, 500));
+          // Try to restore from .bak files for any schema/shared files that were modified
+          for (const [filePath] of Object.entries(filesChanged)) {
+            if (filePath.includes("schema") || filePath.includes("shared/")) {
+              const bakPath = sanitizePath(filePath) + ".bak";
+              try {
+                if (fs.existsSync(bakPath)) {
+                  fs.copyFileSync(bakPath, sanitizePath(filePath));
+                  changeLog.push("AUTO_RESTORE: Restored " + filePath + " from backup due to build failure");
+                }
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch (err) {
+      changeLog.push("AUTO_VERIFY: Build check error: " + err.message);
+    }
+  }
+
   // Classify the outcome
   let failureReason = null;
   if (budgetExhausted && !hadChanges) {
@@ -693,7 +754,7 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
     changeLog.push("Reached max iterations (" + AGENT_CONFIG.maxToolIterations + ") — pausing for continuation");
     if (!agentSummary) {
       if (hadChanges) {
-        agentSummary = `Agent paused at budget limit (${iterationCount}/${AGENT_CONFIG.maxToolIterations} iterations). Files modified: ${Object.keys(filesChanged).join(", ")}. Activities: ${changeLog.length} operations (${failedOps.length} failed). Work preserved — continuation card will be created for resumption.`;
+        agentSummary = `Agent paused at budget limit (${iterationCount}/${AGENT_CONFIG.maxToolIterations} iterations). Files modified: ${Object.keys(filesChanged).join(", ")}. Build verified: ${buildVerified ? "YES" : "NO"}. Activities: ${changeLog.length} operations (${failedOps.length} failed). Work preserved — continuation card will be created for resumption.`;
       } else {
         agentSummary = `Agent paused at budget limit (${iterationCount}/${AGENT_CONFIG.maxToolIterations} iterations). Explored codebase but made no file changes. Activities: ${changeLog.length} operations (${failedOps.length} failed).`;
       }
@@ -713,6 +774,7 @@ Begin by briefly exploring the project structure (2-3 rounds), then implement th
     changeLog,
     completedAt: new Date().toISOString(),
     hadChanges,
+    buildVerified,
     allTestsPassed: testResults.length === 0 || testResults.every(t => t.passed),
     budgetExhausted,
     circuitBroken,
