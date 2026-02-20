@@ -216,13 +216,93 @@ if (result.allowed === false) { ... }
 
 ---
 
+## Post-Fix Validation (DEPLOY_SECRET_KEY set)
+
+After setting the correct `DEPLOY_SECRET_KEY`, the full integration test suite was re-run.
+
+### Automated Test Suite Results: 18 PASS, 0 FAIL, 3 WARN
+
+| # | Test | Result | Details |
+|---|------|--------|---------|
+| 1 | DEPLOY_SECRET_KEY is set | PASS | Configured correctly |
+| 2 | KANBAI_URL env var set | PASS | `https://people-analytics-kanban.replit.app` |
+| 3 | ANTHROPIC_API_KEY is set | PASS | Functional |
+| 4 | Kanbai hub health check | PASS | Status: ok |
+| 5 | DEPLOY_SECRET_KEY accepted by hub | PASS | HTTP 200 |
+| 6 | Daily budget allowed | PASS | 9 tasks, 50 iterations, $1.75 today |
+| 7 | Task discovery (critical) | PASS | 0 tasks |
+| 8 | Task discovery (high) | PASS | 13 tasks |
+| 9 | Task discovery (medium) | PASS | 2 tasks |
+| 10 | Task discovery (low) | PASS | 0 tasks |
+| 11 | Total remote tasks | PASS | 15 tasks available |
+| 12 | Claim task #123 | PASS | Claimed successfully |
+| 13 | Report progress on #123 | PASS | Status updated |
+| 14 | Release task #123 to planned | PASS | Released (note: `backlog` is not a valid status via progress API) |
+| 15 | Claude API (claude-sonnet-4-5) | PASS | Responded "OK" in 1443ms |
+| 16 | GET /api/agent/status | PASS | HTTP 200 |
+| 17 | POST /api/agent/mode (semi) | PASS | HTTP 200 |
+| 18 | POST /api/agent/mode (auto) | PASS | HTTP 200 |
+
+### Connector Code Quality Warnings (Kanbai-provided code)
+
+| # | Check | Status | Issue |
+|---|-------|--------|-------|
+| W1 | `safeHubCall` has fetch timeout | WARN | No `AbortController` — unbounded fetch could hang indefinitely |
+| W2 | Agent logs claim failures | WARN | Silent skip when `claimTask()` returns error object |
+| W3 | `checkDailyBudget` validates errors | WARN | `undefined !== false` evaluates to `true` on auth/network errors |
+
+### Agent Execution Verification
+
+| Check | Result |
+|-------|--------|
+| Agent claimed task #24 | PASS — Card claimed and executed |
+| Claude tool-use iterations | PASS — 25 iterations completed |
+| Files modified | PASS — 4 files (1 edited, 3 created) |
+| WorkbenchPage.tsx change | PASS — Added Output Schema column (2-col → 3-col grid), no regressions |
+| Documentation created | PASS — API_BUNDLES_TEST.md, BUNDLE_DISCOVERY_API.md, IMPLEMENTATION_SUMMARY.md |
+| Continuation card created | PASS — Card #340 created for follow-up work |
+| Git push to GitHub | PASS — Commit `13870ba` pushed to `people-analyst/metric-market` |
+| Application health after changes | PASS — All 26 bundles, 9 cards, all endpoints responding |
+
+---
+
+## Structured Feedback for Kanbai
+
+### What Works Well
+1. **Agent-hub protocol is solid** — claim/progress/complete lifecycle works correctly once auth is established
+2. **Tool-use architecture effective** — Claude successfully reads, searches, edits files, and creates documentation across 25 iterations
+3. **Auto-push integration** — Agent changes automatically pushed to GitHub with proper commit messages
+4. **Budget tracking** — Daily budget system (tasks, iterations, cost) provides useful guardrails
+5. **Continuation cards** — Agent properly creates follow-up cards when work exceeds single session
+
+### Bugs to Fix in Connector/Agent-Runner Code
+
+| ID | Severity | Component | Issue | Evidence |
+|----|----------|-----------|-------|----------|
+| BUG-1 | HIGH | `kanbai-connector.js:18` | **No fetch timeout** — `safeHubCall` uses bare `fetch()` without `AbortController`. When hub is cold-starting or unreachable, the fetch blocks indefinitely, potentially freezing the entire poll loop. | Verified via code inspection: no `AbortSignal`, no timeout parameter |
+| BUG-2 | HIGH | `kanbai-agent-runner.js:446` | **Silent claim failure** — When `claimTask()` returns `{error: "..."}` (valid JSON error from hub), the agent silently skips the task. No log line emitted. Only `console.error` in catch block, which may not appear in Replit workflow logs. | Reproduced: with wrong auth key, agent logged "Found task: #24" then went silent for 90 seconds |
+| BUG-3 | MEDIUM | `kanbai-agent-runner.js:417-425` | **Budget check false positive** — `checkDailyBudget()` checks `result.allowed !== false`. When hub returns error JSON (`{error: "..."}`) without `allowed` field, `undefined !== false` is `true`, so budget is reported OK despite auth failure. | Reproduced: hub returned 401, agent logged "Budget OK" |
+
+### Suggestions for Improvement
+
+| ID | Priority | Suggestion |
+|----|----------|------------|
+| SUG-1 | HIGH | Add `AbortSignal.timeout(10000)` to all `fetch()` calls in `safeHubCall` |
+| SUG-2 | HIGH | Log claim failures: `console.log(\`[KanbaiAgent] Claim #${id} failed: ${cr.error}\`)` |
+| SUG-3 | MEDIUM | Validate budget response: check for `result.error` before trusting `result.allowed` |
+| SUG-4 | LOW | Document the valid status values for `/api/agent/progress` (discovered: `planned`, `in_progress`, `review`, `done` — not `backlog`) |
+| SUG-5 | LOW | Add `stderr` capture guidance in spoke setup docs (Replit may not surface `console.error` in workflow logs) |
+
+---
+
 ## Test Environment
 
 | Component | Value |
 |-----------|-------|
 | Server | Express on port 5000 |
-| Database | PostgreSQL (Neon) — 85 kanban cards (81 backlog, 4 planned) |
-| Node.js | v20.x with built-in fetch |
-| Anthropic SDK | @anthropic-ai/sdk (installed) |
-| Kanbai Hub | `cdeb1be5-...picard.replit.dev` (online, 401 on all endpoints) |
+| Database | PostgreSQL (Neon) — 85 kanban cards |
+| Node.js | v20.20.0 with built-in fetch |
+| Anthropic SDK | @anthropic-ai/sdk (installed, functional) |
+| Kanbai Hub | `people-analytics-kanban.replit.app` (online, auth working) |
 | PA Hub | `682eb7bd-...spock.replit.dev` (separate, uses HUB_API_KEY) |
+| Git Remote | `people-analyst/metric-market` on GitHub |
