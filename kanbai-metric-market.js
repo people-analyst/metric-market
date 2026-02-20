@@ -15,7 +15,7 @@
 //     1. Replit AI Integration (recommended) — auto-provides AI_INTEGRATIONS_ANTHROPIC_API_KEY
 //     2. ANTHROPIC_API_KEY — your own direct Anthropic key
 //
-// Connector v2.1.1 | Generated 2026-02-20T21:01:14.563Z
+// Connector v2.1.1 | Generated 2026-02-20T21:05:53.431Z
 // ════════════════════════════════════════════════════════════════════
 
 const KANBAI_URL = process.env.KANBAI_URL || "https://localhost:5000";
@@ -1045,6 +1045,7 @@ async function startAgent() {
             await updateLocalCardStatus(card.id, "in_progress");
           } else {
             console.warn(`[KanbaiAgent] Claim gate blocked task #${card.id}: error=${claimResult.error}, local=${claimResult.local}`);
+            logActivity("CLAIM_GATE_BLOCKED", card.id, `Hub error=${claimResult.error}, local=${claimResult.local}. Full result: ${JSON.stringify(claimResult).substring(0, 200)}`);
             recentlyFailedClaims.add(card.id);
           }
           break;
@@ -1185,10 +1186,15 @@ function mount(app) {
         await updateLocalCardStatus(card.id, "in_progress");
         logActivity("APPROVED", card.id, `Claimed${result.local ? " (local mode)" : ""}. Now in activeTasks. Local DB updated.`);
       } else {
-        logActivity("APPROVE_FAILED", card.id, `Claim blocked: error=${result.error}, local=${result.local}`);
-        recentlyFailedClaims.add(card.id);
+        logActivity("APPROVE_FAILED", card.id, `Claim blocked: error=${result.error}, local=${result.local}. Will force local claim.`);
+        activeTasks.set(card.id, { ...card, claimedAt: new Date() });
+        saveActiveTask(card.id, card, []);
+        recentlyFailedClaims.delete(card.id);
+        processedCards.delete(card.id);
+        await updateLocalCardStatus(card.id, "in_progress");
+        logActivity("APPROVED_LOCAL_FORCED", card.id, "Hub claim failed but user approved — forcing local claim so agent can proceed.");
       }
-      res.json({ success: true, local: result.local || false, claimed: activeTasks.has(card.id) });
+      res.json({ success: true, local: result.local || !activeTasks.has(card.id) ? false : true, claimed: activeTasks.has(card.id), forced: !!result.error && !result.local });
     } catch (err) { res.status(500).json({ error: err.message }); }
   });
 
