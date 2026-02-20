@@ -1,0 +1,335 @@
+## Prompt
+
+Implement the **Spoke GitHub Sync Standard v2.0** for this application. This enables:
+- The Hub to automatically notify this app to pull the latest code after SDK pushes
+- Any IDE (Replit, Cursor, Windsurf) to push changes and notify the ecosystem
+- Auto-pull on server startup so the app always has the latest code
+- Pre-pull safety checks to prevent losing uncommitted local changes
+- IDE activity tracking so the Hub knows which tool made each change
+
+### What to Build
+
+Add the following to this app's Express server. Extract the auth check into a shared helper to keep endpoints DRY.
+
+---
+
+#### Shared Auth Helper
+
+```typescript
+function authorizeGitHubSync(req: any, res: any): boolean {
+  const authHeader = req.headers.authorization;
+  const origin = req.headers.origin || req.headers.referer || "";
+  const host = req.headers.host || "";
+  const isSameOrigin = origin.includes(host) || !origin || req.headers.referer?.includes(host);
+
+  if (!isSameOrigin) {
+    const expectedKey = process.env.DEPLOY_SECRET_KEY;
+    if (expectedKey && authHeader !== `Bearer ${expectedKey}`) {
+      res.status(401).json({ error: "Unauthorized" });
+      return false;
+    }
+  }
+  return true;
+}
+```
+
+---
+
+#### 1. `POST /api/github/pull` — Pull latest changes from GitHub
+
+Called by the Hub after SDK pushes, or manually from any IDE. Includes pre-pull safety: stashes uncommitted changes before pulling, then pops them after.
+
+```typescript
+app.post("/api/github/pull", async (req, res) => {
+  if (!authorizeGitHubSync(req, res)) return;
+
+  try {
+    const { execSync } = require("child_process");
+    const branch = req.body?.branch || "main";
+
+    // Pre-pull safety: check for uncommitted changes
+    const status = execSync("git status --porcelain", {
+      cwd: process.cwd(), timeout: 10000, encoding: "utf-8"
+    }).trim();
+
+    let stashed = false;
+    if (status) {
+      console.log("[github-sync] Stashing uncommitted changes before pull...");
+      execSync("git stash push -m 'auto-stash before hub pull'", {
+        cwd: process.cwd(), timeout: 10000, encoding: "utf-8"
+      });
+      stashed = true;
+    }
+
+    // Pull from the specified branch
+    const output = execSync(`git pull origin ${branch}`, {
+      cwd: process.cwd(), timeout: 30000, encoding: "utf-8"
+    });
+
+    // Pop stash if we stashed
+    let stashConflict = false;
+    if (stashed) {
+      try {
+        execSync("git stash pop", { cwd: process.cwd(), timeout: 10000, encoding: "utf-8" });
+        console.log("[github-sync] Restored stashed changes");
+      } catch (e: any) {
+        stashConflict = true;
+        console.warn("[github-sync] Stash pop conflict — changes remain in stash. Run 'git stash show' to inspect.");
+      }
+    }
+
+    console.log(`[github-sync] Pull from ${branch} completed:`, output.trim());
+    res.json({
+      success: true,
+      branch,
+      output: output.trim(),
+      stashed,
+      stashConflict,
+      source: req.body?.source || "manual",
+      trigger: req.body?.trigger || "unknown",
+      pulledAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error("[github-sync] Pull failed:", err.message);
+    res.status(500).json({ success: false, error: err.stderr || err.message });
+  }
+});
+```
+
+---
+
+#### 2. `POST /api/github/push` — Push local changes to GitHub
+
+Push local changes with IDE tracking. The `ide` field identifies which tool made the changes so the Hub's activity feed can show "Cursor pushed 3 files to conductor" vs "Replit pushed UI updates to kanbai".
+
+```typescript
+app.post("/api/github/push", async (req, res) => {
+  if (!authorizeGitHubSync(req, res)) return;
+
+  try {
+    const { execSync } = require("child_process");
+    const branch = req.body?.branch || "main";
+    const ide = req.body?.ide || detectIDE();
+    const message = req.body?.message || `[${ide}] auto-sync: ${new Date().toISOString()}`;
+
+    // Stage all changes
+    execSync("git add -A", { cwd: process.cwd(), timeout: 10000, encoding: "utf-8" });
+
+    // Check if there's anything to commit
+    const status = execSync("git status --porcelain", { cwd: process.cwd(), timeout: 10000, encoding: "utf-8" });
+    if (!status.trim()) {
+      return res.json({ success: true, pushed: false, message: "No changes to push" });
+    }
+
+    const filesChanged = status.trim().split("\n").map(l => l.trim().split(/\s+/).pop());
+
+    // Commit and push
+    execSync(`git commit -m "${message.replace(/"/g, '\\"')}"`, {
+      cwd: process.cwd(), timeout: 15000, encoding: "utf-8"
+    });
+    const pushOutput = execSync(`git push origin ${branch}`, {
+      cwd: process.cwd(), timeout: 30000, encoding: "utf-8"
+    });
+
+    // Get the commit SHA
+    let commitSha: string | null = null;
+    try {
+      commitSha = execSync("git rev-parse HEAD", {
+        cwd: process.cwd(), timeout: 5000, encoding: "utf-8"
+      }).trim();
+    } catch {}
+
+    // Notify the Hub about the push (fire and forget)
+    const hubUrl = process.env.HUB_URL || "https://pa-toolbox.replit.app";
+    fetch(`${hubUrl}/api/github/sync-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sourceApp: process.env.APP_SLUG || "unknown",
+        targetRepo: process.env.APP_SLUG || "unknown",
+        eventType: "code_push",
+        action: "push",
+        commitSha,
+        filesChanged,
+        details: { ide, branch, filesCount: filesChanged.length },
+      }),
+    }).catch(() => {});
+
+    console.log(`[github-sync] Push to ${branch} completed via ${ide}:`, pushOutput.trim());
+    res.json({
+      success: true,
+      pushed: true,
+      branch,
+      ide,
+      message,
+      commitSha,
+      filesChanged,
+      pushedAt: new Date().toISOString(),
+    });
+  } catch (err: any) {
+    console.error("[github-sync] Push failed:", err.message);
+    res.status(500).json({ success: false, error: err.stderr || err.message });
+  }
+});
+```
+
+---
+
+#### 3. `GET /api/github/status` — Show current git state
+
+Quick endpoint to check what branch you're on, if there are uncommitted changes, and the last commit.
+
+```typescript
+app.get("/api/github/status", async (req, res) => {
+  if (!authorizeGitHubSync(req, res)) return;
+
+  try {
+    const { execSync } = require("child_process");
+    const opts = { cwd: process.cwd(), timeout: 10000, encoding: "utf-8" as const };
+
+    const branch = execSync("git branch --show-current", opts).trim();
+    const status = execSync("git status --porcelain", opts).trim();
+    const lastCommit = execSync("git log -1 --format='%H|%s|%ai'", opts).trim();
+    const [sha, msg, date] = lastCommit.split("|");
+    const stashList = execSync("git stash list", opts).trim();
+
+    res.json({
+      branch,
+      uncommittedChanges: status ? status.split("\n").length : 0,
+      uncommittedFiles: status ? status.split("\n").map(l => l.trim()) : [],
+      lastCommit: { sha, message: msg, date },
+      stashedChanges: stashList ? stashList.split("\n").length : 0,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+```
+
+---
+
+#### 4. Auto-Pull on Startup
+
+Add this at the end of your server startup (after `app.listen()`), so every time the app restarts it grabs the latest code from GitHub:
+
+```typescript
+// Auto-pull latest code on startup
+(async () => {
+  try {
+    const { execSync } = require("child_process");
+    const branch = process.env.GIT_BRANCH || "main";
+
+    // Check for uncommitted changes first
+    const status = execSync("git status --porcelain", {
+      cwd: process.cwd(), timeout: 10000, encoding: "utf-8"
+    }).trim();
+
+    if (status) {
+      console.log(`[github-sync] Startup: ${status.split("\\n").length} uncommitted changes detected, stashing before pull...`);
+      execSync("git stash push -m 'auto-stash on startup'", {
+        cwd: process.cwd(), timeout: 10000, encoding: "utf-8"
+      });
+    }
+
+    const output = execSync(`git pull origin ${branch}`, {
+      cwd: process.cwd(), timeout: 30000, encoding: "utf-8"
+    });
+
+    if (status) {
+      try {
+        execSync("git stash pop", { cwd: process.cwd(), timeout: 10000, encoding: "utf-8" });
+        console.log("[github-sync] Startup: Restored stashed changes after pull");
+      } catch {
+        console.warn("[github-sync] Startup: Stash pop had conflicts — inspect with 'git stash show'");
+      }
+    }
+
+    if (!output.includes("Already up to date")) {
+      console.log("[github-sync] Startup: Pulled latest changes:", output.trim());
+    } else {
+      console.log("[github-sync] Startup: Already up to date");
+    }
+  } catch (err: any) {
+    console.warn("[github-sync] Startup auto-pull failed (non-fatal):", err.message);
+  }
+})();
+```
+
+---
+
+#### 5. IDE Detection Helper
+
+Detects which IDE/platform is running the code. Used to tag commits and sync events.
+
+```typescript
+function detectIDE(): string {
+  if (process.env.REPL_SLUG || process.env.REPL_ID) return "replit";
+  if (process.env.CURSOR_TRACE_ID || process.env.CURSOR_SESSION) return "cursor";
+  if (process.env.WINDSURF_SESSION) return "windsurf";
+  if (process.env.CODESPACES) return "codespaces";
+  if (process.env.GITPOD_WORKSPACE_ID) return "gitpod";
+  if (process.env.KANBAI_AGENT_ID || process.env.KANBAI_TASK_ID) return "claude-agent";
+  if (process.env.IDE_SOURCE) return process.env.IDE_SOURCE;
+  return "unknown";
+}
+```
+
+> **Note on Claude Embedded AI (Kanbai):** Every spoke app has (or will have) a Claude-powered embedded AI agent installed via Kanbai. When this agent makes changes — editing files, running commands, pushing code — it operates as another "IDE" in the ecosystem. The agent sets `KANBAI_AGENT_ID` and `KANBAI_TASK_ID` environment variables during task execution, allowing the detection helper to tag its changes as `claude-agent`. This gives the Hub full visibility into AI-driven changes alongside human-driven changes from Replit, Cursor, and Windsurf.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DEPLOY_SECRET_KEY` | Yes | Shared secret for Hub-to-spoke auth (set in Secrets) |
+| `APP_SLUG` | Yes | This app's identifier (e.g., `kanbai`, `conductor`) |
+| `HUB_URL` | No | Hub URL (default: `https://pa-toolbox.replit.app`) |
+| `GIT_BRANCH` | No | Default branch for pull/push (default: `main`) |
+| `IDE_SOURCE` | No | Override IDE detection (e.g., `cursor`, `windsurf`, `claude-agent`) |
+| `KANBAI_AGENT_ID` | Auto | Set by Kanbai when Claude agent is executing a task |
+| `KANBAI_TASK_ID` | Auto | Set by Kanbai when Claude agent is executing a task |
+
+### Multi-IDE + AI Agent Workflow
+
+Here's how different IDEs and AI agents work together on the same codebase:
+
+1. **Replit** — Used for UI/UX work and deployment. Changes auto-push on deploy.
+2. **Cursor** — Used for backend development. Push changes with `ide: "cursor"` in the request body.
+3. **Windsurf** — Used for code reviews. Can pull latest and push review fixes.
+4. **Claude Embedded AI (via Kanbai)** — AI agent that autonomously executes tasks, edits files, and pushes changes. Detected automatically via `KANBAI_AGENT_ID` / `KANBAI_TASK_ID` env vars set during task execution. Shows as `claude-agent` in the Hub's activity feed.
+5. **Hub** — Pushes SDK updates to all spokes, auto-notifies them to pull.
+
+Each tool — human or AI — pushes to the same GitHub repo. The Hub's sync event feed shows which IDE or agent made each change, creating a unified activity timeline across all tools and agents. This means you can see at a glance whether a change was made by a developer in Cursor, by the Replit agent during a UI session, or by Claude's embedded AI agent working through a Kanbai task.
+
+### Branch Strategy (Recommended)
+
+For safety when multiple IDEs work simultaneously:
+
+- **`main`** — Production branch. All IDEs pull from here by default.
+- **`cursor/backend`** — Cursor works on backend features here, merges to main when ready.
+- **`replit/ui`** — Replit works on UI changes here, merges to main when ready.
+- **`review/windsurf`** — Windsurf makes review fixes here.
+- **`agent/kanbai`** — Claude embedded AI agent pushes task-driven changes here for human review before merging to main.
+
+Pass `branch` in the pull/push request body to work on a specific branch:
+```bash
+curl -X POST http://localhost:5000/api/github/push \
+  -H "Content-Type: application/json" \
+  -d '{"branch":"cursor/backend", "ide":"cursor", "message":"Add new API endpoint"}'
+```
+
+### Quick Test
+
+```bash
+# Check git status
+curl -s http://localhost:5000/api/github/status | jq .
+
+# Test pull from main
+curl -X POST http://localhost:5000/api/github/pull \
+  -H "Content-Type: application/json" \
+  -d '{"source":"test","trigger":"manual","branch":"main"}'
+
+# Test push with IDE tagging
+curl -X POST http://localhost:5000/api/github/push \
+  -H "Content-Type: application/json" \
+  -d '{"message":"test push","ide":"replit","branch":"main"}'
+```

@@ -1,80 +1,127 @@
-# People Analytics Toolbox — Metric Market
+# Metric Market
 
 ## Overview
 
-Metric Market is the **card workbench** of the People Analytics Toolbox ecosystem. It provides a comprehensive platform for creating, configuring, testing, and distributing interactive data visualization components ("cards") for people analytics dashboards. It serves two main audiences: a **Workbench** for administrators and AI agents to author and manage card bundles, and a **Dashboard** for end-users to consume published analytics insights.
+Metric Market is the **data visualization and dashboard layer** of the People Analytics Toolbox ecosystem — a hub-and-spoke platform with 13+ specialized HR analytics applications. It serves as the primary consumer-facing display surface where outputs from every other app (compensation scenarios, HR metrics, Monte Carlo forecasts, segmentation data) become visible through a card-based visualization system.
 
-The core value proposition lies in **standardized, machine-readable card bundles**. These self-contained definitions declare data schemas, configuration options, output representations, documentation, and example data. This approach ensures consistent UI/UX across the ecosystem and facilitates AI agent discovery and automated card assembly. Each bundle uses JSON Schema contracts, allowing spoke applications to discover data requirements, push conforming payloads, and render visualizations without manual integration.
+The app provides 25 card bundles covering 23 chart types (built with D3.js), 1 form control (the Range Builder for interactive compensation range simulation), and 1 PA Design Kit component library. It exposes ingestion endpoints so other spoke apps can push data that automatically creates and populates visualization cards. The Range Builder is the most integration-rich component — it emits `RangeBuilderChangeEvent` signals consumed by AnyComp (the compensation decision engine) and receives market data from Conductor.
 
-Key capabilities include:
-- 24 distinct D3-powered SVG chart types (including Range Strip, Aligned Range Strip, Range Target Bullet for compensation range visualization, and Range Dot Plot for employee position-in-range analysis).
-- **Range Builder form control** — a dedicated interactive control (not a chart) for compensation range simulation with real-time KPI Index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) each showing a 0-100 goodness index plus supporting metrics. Located at `/range-builder` and registered as `range_builder` control type. Supports job structure filtering by Super Job Function (GTM, R&D, OPS, G&A) and Level Type (Professional P1-P6, Manager M1-M6, Executive E1-E5, Support S1-S4). Includes Target Range Statistics table with Spread %, Min/Max Overlap %, Level Below/Above %, and Promo Opp %. **Custom Level Structure**: users can select Standard (market-defined levels) or custom level count (2-10) which partitions the overall compensation range into N evenly-spaced levels with interpolated market data and proportionally distributed employees.
-- Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals). See `CHART_TYPES` and `CONTROL_TYPES` in `shared/schema.ts`.
-- Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs.
-- Machine-readable data contracts (`dataSchema`, `configSchema`, `outputSchema`) for inter-application data exchange.
-- Hub-and-spoke integration for cross-application coordination, directive processing, and documentation management.
-- A scoring and prioritization system for cards.
-- Configurable refresh tracking with policies (`manual`, `scheduled`, `on_push`) and cadences.
-- **Component Export System** — Discoverable component registry (`GET /api/components`) and export packaging (`GET /api/export/:key`) for cross-app integration. Includes formal data contracts between Conductor (market data producer), AnyComp (KPI output consumer), and Metric Engine (bidirectional metric definition standardization and computed value exchange), with field mappings, example payloads, and integration guides. Frontend at `/export`.
-- **PA Design Kit Distribution** — Design System specification API (`GET /api/design-system`) serving the full PA Design Kit v1.1.0 component catalog (15 components), data contracts (9 interfaces), style tokens (brand colors, classification, trends, status, spacing, typography), and spoke consumption guide. Individual components discoverable via `GET /api/design-system/:component`. Hub broadcast directive notifies all 14 spoke apps of design kit updates.
-- **Kanbai Board** — Local database-backed kanban system (replaced remote proxy). Tables: `kanban_cards` (serial PK, 9 statuses, 4 priorities) and `kanban_subtasks` (cascade FK). API at `/api/kanban/cards` (CRUD + import/export) with backward-compatible `/api/kanbai/cards` endpoints. Frontend at `/kanban` with 9-column board, card detail dialog with status transitions. Pre-seeded with 32 work cards from install package. Storage in `server/kanban-storage.ts`, routes in `server/kanban-routes.ts`, UI in `client/src/components/kanban/`.
+Key capabilities:
+- Card bundle system with auto-discovery and auto-creation of visualization cards
+- Interactive Range Builder for compensation range simulation (form control, not a chart)
+- 4 spoke ingestion endpoints (Conductor, Metric Engine, AnyComp, PeopleAnalyst)
+- 13 seeded metric definitions with bidirectional sync to Metric Engine
+- Hub integration with documentation scoring (98/100), directives, webhooks, and Field Exchange SDK
 
 ## User Preferences
 
-- Yahoo Finance inspired design (colors `#0f69ff`, `#e0f0ff`, `#232a31`, `#5b636a`, `#e0e4e9`)
-- Components should be reusable form elements for People Analytics toolbox
-- Elements should be attachable to different database elements
-- All buttons should be refined and usable
-- "P" branding instead of Yahoo "Y" icons
-- Compact, minimal spacing design aesthetic (`rounded-[3px]`, tight padding)
-- Charts should be minimal, toned down, use simple lines/greys/blacks/blues
-- Two-audience design: admin workbench for superusers/AI, consumer dashboard for end users
-- Self-contained card bundles: composable, machine-readable, agent-accessible
-- No live drill-down: use database references between cards
-- GitHub sync via API: each application pushes to its own GitHub repo automatically. Metric Market syncs to `people-analyst/metric-market` every 5 minutes and on-demand via `/api/github/push`
+Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-The application is built as a full-stack TypeScript monorepo with shared type definitions.
+### Stack
+- **Frontend**: React 18 + TypeScript, bundled by Vite
+- **UI Components**: shadcn/ui (New York style) on Radix UI primitives, styled with Tailwind CSS
+- **Client Routing**: wouter for client-side routing
+- **State Management**: TanStack Query for server state
+- **Charting**: D3.js for all 23 chart types
+- **Backend**: Express.js on Node.js with TypeScript (via tsx)
+- **Database**: PostgreSQL (Neon-hosted) with Drizzle ORM
+- **Schema Validation**: Zod (via drizzle-zod)
+- **Fonts**: DM Sans, Fira Code, Geist Mono, Architects Daughter (loaded via Google Fonts)
 
-**Frontend:**
-- **UI Framework:** React 18 with functional components and hooks.
-- **Styling:** Tailwind CSS 3 for utility-first styling and `shadcn/ui` for headless components.
-- **Charting:** D3.js v7 powers all 20 SVG chart components.
-- **Routing:** `wouter` for client-side SPA routing.
-- **State Management:** `TanStack React Query v5` for server-state, `react-hook-form` with Zod for form state and validation.
+### Project Structure
+```
+client/               # React frontend
+  src/
+    components/       # UI components including shadcn/ui
+    lib/              # Utility functions
+    hooks/            # Custom React hooks
+    pages/            # Route-level page components
+server/               # Express backend
+  index.ts            # Server entry point (Express on port 5000)
+  routes.ts           # All REST + Hub + AI endpoints
+  storage.ts          # IStorage interface + DatabaseStorage implementation
+  aiAgent.ts          # AI agent for processing natural language instructions
+  vite.ts             # Vite dev server integration + static file serving
+shared/
+  schema.ts           # Drizzle table definitions + Zod schemas + TypeScript types
+docs/                 # Documentation (Kanbai setup, design system, integration specs)
+```
 
-**Backend:**
-- **Server:** Express.js 4 handling over 30 API endpoints.
-- **ORM:** Drizzle ORM for TypeScript-first PostgreSQL interaction.
-- **Database Driver:** `node-postgres (pg)`.
-- **Validation:** `drizzle-zod` for Zod schema generation from Drizzle table definitions.
+### Route Registration Order (Critical)
+API routes MUST be registered BEFORE the Vite catch-all middleware. The `registerRoutes(app)` call must come first, then static file serving / `app.get("*", ...)`. Otherwise Vite's catch-all swallows `/api/*` and `/health` requests and returns HTML instead of JSON.
 
-**Core Architectural Decisions & Features:**
-- **Card Bundles:** Self-contained JSON definitions (`dataSchema`, `configSchema`, `outputSchema`) for each chart type, enabling machine-readable contracts and consistent rendering.
-- **Hub-and-Spoke Model:** Metric Market operates as a "spoke" application, integrating with a central "Hub" for coordination, directive processing, and documentation.
-- **Two User Interfaces:** A "Workbench" for authoring and an "Dashboard" for consumption.
-- **Dynamic Chart Rendering:** `CardWrapper` component dynamically renders charts based on bundle definitions.
-- **Data Schemas:** Explicit JSON schemas define data contracts for inter-application data exchange, ensuring data integrity.
-- **Card Lifecycle Management:** Comprehensive API for managing the creation, configuration, and data flow of cards.
-- **UI/UX Design:** Inspired by Yahoo Finance, emphasizing compact design, refined components, and minimal chart aesthetics.
-- **Database Schema:** PostgreSQL 16 managed by Drizzle ORM, with tables for `card_bundles`, `metric_definitions`, `chart_configs`, `cards`, `card_relations`, and `card_data`. These tables define the relationships and store all application data.
+### Database Schema (Drizzle ORM)
+Key tables defined in `shared/schema.ts`:
+- **`users`** — Authentication (id UUID PK, username unique, password)
+- **`card_bundles`** — Visualization card type registry (id UUID PK, key unique, chartType, displayName, plus additional config columns)
+- Additional tables for card instances, metric definitions, and other domain objects
+
+### Card Bundle System
+The core data model: a **card bundle** defines a visualization type (one of 25 registered bundles mapping to 23 chart types + 1 control + PA Design Kit components). **Card instances** are created from bundles and populated with data. Cards can be auto-created when spoke apps push data through ingestion endpoints.
+
+### Range Builder Architecture
+The Range Builder is classified as a **form control** (component type `range_builder`), not a chart. It produces output signals (RangeBuilderChangeEvent) consumed by downstream apps. Users select a slice of job architecture (by Super Job Function and Level Type), then interact with segmented strips to adjust target ranges. It calculates structural measures (spread, overlap, gap, symmetry) and displays 4 KPI index cards (0-100 goodness scores).
+
+### AI Agent
+`server/aiAgent.ts` provides a simple natural language instruction processor for managing bundles, cards, and system status. It pattern-matches on keywords (list bundles, create bundle, status, etc.) and delegates to storage operations.
+
+### Hub-and-Spoke Integration
+Metric Market is a **spoke application** in the People Analytics Toolbox ecosystem:
+- **Hub SDK**: `hub-sdk.js` (or `.cjs`) in project root handles all hub communication
+- **Authentication**: `X-API-Key` header with `pat_...` format key (stored as `HUB_API_KEY` secret)
+- **Endpoints registered with hub**: `GET /health`, `POST /api/hub-webhook`, `GET /api/specifications`
+- **Documentation sync**: `hub-docs.md` is the stable documentation file pushed to the hub (NOT `replit.md` which is volatile)
+- **Directives**: Fetched from hub, acknowledged, and completed via Hub SDK
+- **Field Exchange**: Canonical field mappings registered for compensation fields
+
+### Kanbai Integration
+The app integrates with the Kanbai kanban system for automated task processing:
+- Unified bundle file `kanbai-metric-market.js` provides connector + AI agent runner
+- Mounted with `require("./kanbai-metric-market").mount(app)`
+- Requires `DEPLOY_SECRET_KEY` and `ANTHROPIC_API_KEY` secrets
+- Claude-powered agent loop: poll tasks → claim → implement → verify → complete
+
+### Ingestion Architecture
+Four spoke-specific ingestion endpoints accept pushed data from other ecosystem apps:
+| Endpoint | Source App | Auto-creates |
+|----------|-----------|-------------|
+| `POST /api/ingest/conductor` | Conductor | range_strip, range_strip_aligned, range_target_bullet cards |
+| `POST /api/ingest/metric-engine` | Metric Engine Calculus | Auto-discovered metric bundles and cards |
+| `POST /api/ingest/anycomp` | AnyComp | Scenario comparison, recommendation, score cards |
+| `POST /api/ingest/people-analyst` | PeopleAnalyst | confidence_band and bubble_scatter cards |
+
+### Design System
+The PA Design System follows a **Google Finance / Yahoo Finance** visual language: information-dense, compact ticker rows, delta-aware metrics (green up / red down), semantic CSS custom properties for colors (never hardcoded hex), and dark/light mode parity. Signal colors for metric classification: Normal (emerald), Watch (amber), Alert (orange), Critical (red).
 
 ## External Dependencies
 
-- **PostgreSQL 16:** Primary relational database (Neon-backed via Replit).
-- **Hub SDK v2.3.0:** Unified communication module for hub-and-spoke coordination, handling standard endpoints (`/health`, `/api/hub-webhook`, `/api/specifications`), metric intent catalog, capability assessment, and HAVE metrics push. Documentation is read from `hub-docs.md` (stable) with fallback to `replit.md`.
-- **D3.js v7:** JavaScript library for producing dynamic, interactive data visualizations.
-- **Vite 5:** Frontend build tool.
-- **Tailwind CSS 3:** Utility-first CSS framework.
-- **shadcn/ui:** Headless component library.
-- **wouter:** Lightweight client-side router.
-- **TanStack React Query v5:** Data fetching and caching library.
-- **react-hook-form:** Form management library.
-- **lucide-react:** Icon library.
-- **Express.js 4:** Backend web application framework.
-- **Drizzle ORM:** TypeScript ORM for PostgreSQL.
-- **node-postgres (pg):** PostgreSQL client for Node.js.
-- **drizzle-zod:** Zod schema generation from Drizzle.
-- **esbuild:** Fast JavaScript bundler.
-- **tsx:** TypeScript execution for development.
+### Infrastructure
+- **PostgreSQL (Neon)**: Primary database, accessed via Drizzle ORM with `pg` connection pool
+- **Vite**: Frontend bundler for dev and production builds
+
+### Ecosystem Services
+- **People Analytics Toolbox Hub**: Central coordinator at configurable URL (see `hub-config.json`). Handles registration, directives, documentation scoring, Field Exchange, and webhook notifications
+- **Kanbai (Product Kanban)**: Task management and AI agent task distribution at `https://people-analytics-kanban.replit.app`
+- **AnyComp**: Downstream consumer of RangeBuilderChangeEvent; pushes optimization results back
+- **Conductor**: Pushes market compensation data (percentiles, employee counts, BLS wages)
+- **Metric Engine Calculus**: Pushes computed HR metrics (attrition, compa-ratio, etc.)
+- **PeopleAnalyst**: Pushes Monte Carlo forecasts and VOI analyses
+
+### AI Services
+- **Anthropic Claude**: Used by the Kanbai agent runner for autonomous task execution (requires `ANTHROPIC_API_KEY`)
+
+### UI Libraries
+- **shadcn/ui**: Component library (New York style, Tailwind CSS, Radix UI primitives)
+- **D3.js**: All chart rendering (23 chart types)
+- **TanStack Query v5**: Server state management
+- **wouter**: Client-side routing
+
+### Environment Variables (Secrets)
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | PostgreSQL connection string (Neon) |
+| `HUB_API_KEY` | Authentication with People Analytics Hub |
+| `DEPLOY_SECRET_KEY` | Kanbai ecosystem shared key |
+| `ANTHROPIC_API_KEY` | Claude API for AI agent tasks |
