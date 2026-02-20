@@ -13,7 +13,7 @@
  * Do NOT edit the core logic — pull updates from the Hub when a new version is available.
  */
 
-const HUB_URL = "http://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev";
+const HUB_URL = "http://localhost:5000";
 const APP_SLUG = "metric-market";
 const APP_NAME = "Metric Market";
 const SDK_VERSION = "2.3.0";
