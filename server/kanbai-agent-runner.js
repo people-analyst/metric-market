@@ -15,10 +15,11 @@ async function triggerGitHubPush(message) {
     const resp = await fetch(`http://localhost:${port}/api/github/push`, {
       method: "POST",
       headers: { "Content-Type": "application/json", "Referer": `http://localhost:${port}/` },
-      body: JSON.stringify({ message: message || "Auto-sync after agent work" }),
+      body: JSON.stringify({ message: message || "Auto-sync after agent work", ide: "claude-agent" }),
     });
     const result = await resp.json();
-    if (result.success) console.log(`[KanbaiAgent] GitHub push: ${result.filesCount} files → ${result.sha?.substring(0, 7)}`);
+    if (result.success && result.pushed) console.log(`[KanbaiAgent] GitHub push: ${result.filesChanged?.length || 0} files → ${result.commitSha?.substring(0, 7)}`);
+    else if (result.success && !result.pushed) console.log(`[KanbaiAgent] GitHub push: no changes to push`);
     else console.warn(`[KanbaiAgent] GitHub push failed: ${result.error}`);
   } catch (err) { console.warn(`[KanbaiAgent] GitHub push skipped: ${err.message}`); }
 }

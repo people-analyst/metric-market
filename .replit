@@ -45,6 +45,7 @@ waitForPort = 5000
 HUB_URL = "https://682eb7bd-f279-41bd-ac9e-1ad52cd23036-00-sc7pg47dpokt.spock.replit.dev"
 HUB_APP_SLUG = "metric-market"
 KANBAI_URL = "https://people-analytics-kanban.replit.app"
+APP_SLUG = "metric-market"
 
 [userenv.production]
 NODE_ENV = "production"

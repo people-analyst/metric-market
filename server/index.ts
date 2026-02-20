@@ -5,7 +5,7 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
 import { recordRequest, startMetricsPush } from "./hubMetrics";
-import { startAutoSync, pullFromGitHub } from "./githubSync";
+import { startAutoSync, startupPull } from "./githubSync";
 import { handleDirective } from "./directiveHandler";
 
 const app = express();
@@ -100,9 +100,6 @@ app.use((req, res, next) => {
     log(`serving on port ${port}`);
     startMetricsPush(300000);
     startAutoSync();
-    pullFromGitHub().then((r: any) => {
-      if (r.success) log(`[startup] GitHub pull: ${r.filesUpdated} updated (${r.sha?.substring(0, 7)})`);
-      else log(`[startup] GitHub pull skipped: ${r.error}`);
-    }).catch((e: any) => log(`[startup] GitHub pull error: ${e.message}`));
+    startupPull();
   });
 })();

@@ -15,7 +15,7 @@ import * as hub from "./hub-client";
 import { getComponentRegistry, getComponentDetail } from "./componentExport";
 import { getDesignSystemSpec, getDesignSystemComponent } from "./designSystemRegistry";
 import { registerIngestRoutes } from "./ingest";
-import { pushToGitHub, pullFromGitHub, getSyncStatus, startAutoSync, stopAutoSync } from "./githubSync";
+import { pushToGitHub, pullFromGitHub, getSyncStatus, getGitStatus, startAutoSync, stopAutoSync, authorizeGitHubSync, detectIDE } from "./githubSync";
 import { processAgentInstruction } from "./aiAgent";
 import { registerKanbanRoutes } from "./kanban-routes";
 // @ts-ignore - JS module
@@ -337,29 +337,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // --- Kanbai Agent Runner (Claude-powered task processing) ---
   registerAgentRoutes(app);
 
-  // --- GitHub Sync API ---
-  // Auth: X-Internal-Token, Authorization Bearer (deploy secret), or same-origin Referer
+  // --- GitHub Sync API (Spoke GitHub Sync Standard v2.0) ---
 
-  const INTERNAL_TOKEN = process.env.REPL_ID || "metric-market-internal";
+  app.get("/api/github/status", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
+    try {
+      res.json(getGitStatus());
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-  function requireGitHubAuth(req: any, res: any, next: any) {
-    const internalToken = req.headers["x-internal-token"];
-    if (internalToken === INTERNAL_TOKEN) return next();
-
-    const authHeader = req.headers["authorization"] || "";
-    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : "";
-    const deploySecret = process.env.DEPLOY_SECRET_KEY || process.env.DEPLOY_SECRET || process.env.HUB_API_KEY || "";
-    if (deploySecret && bearerToken === deploySecret) return next();
-
-    const referer = req.headers["referer"] || "";
-    const origin = req.headers["origin"] || "";
-    const host = req.headers["host"] || "";
-    if (referer.includes(host) || origin.includes(host)) return next();
-
-    return res.status(403).json({ error: "Forbidden" });
-  }
-
-  app.get("/api/github/status", requireGitHubAuth, async (_req, res) => {
+  app.get("/api/github/sync-status", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
     try {
       res.json(getSyncStatus());
     } catch (err: any) {
@@ -367,31 +357,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/github/push", requireGitHubAuth, async (req, res) => {
+  app.post("/api/github/pull", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
     try {
-      const message = req.body?.message;
-      const result = await pushToGitHub(message);
+      const result = await pullFromGitHub({
+        branch: req.body?.branch,
+        source: req.body?.source || "manual",
+        trigger: req.body?.trigger || "api",
+      });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: err.stderr || err.message });
     }
   });
 
-  app.post("/api/github/pull", requireGitHubAuth, async (_req, res) => {
+  app.post("/api/github/push", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
     try {
-      const result = await pullFromGitHub();
+      const result = await pushToGitHub({
+        branch: req.body?.branch,
+        ide: req.body?.ide || detectIDE(),
+        message: req.body?.message,
+      });
       res.json(result);
     } catch (err: any) {
-      res.status(500).json({ success: false, error: err.message });
+      res.status(500).json({ success: false, error: err.stderr || err.message });
     }
   });
 
-  app.post("/api/github/auto-sync/start", requireGitHubAuth, async (_req, res) => {
+  app.post("/api/github/auto-sync/start", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
     startAutoSync();
     res.json({ enabled: true, ...getSyncStatus() });
   });
 
-  app.post("/api/github/auto-sync/stop", requireGitHubAuth, async (_req, res) => {
+  app.post("/api/github/auto-sync/stop", async (req, res) => {
+    if (!authorizeGitHubSync(req, res)) return;
     stopAutoSync();
     res.json({ enabled: false, ...getSyncStatus() });
   });
