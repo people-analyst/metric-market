@@ -169,6 +169,7 @@ export function startMetricsPush(intervalMs = 300000) {
   async function push() {
     await pushOperationalMetrics();
     await pushStrategicMetrics();
+    await pushPerformanceMetrics();
   }
 
   setTimeout(() => {
@@ -186,4 +187,48 @@ export function resetCounters() {
   _latencies = [];
   _retryCount = 0;
   _totalRequests = 0;
+}
+
+export async function pushPerformanceMetrics() {
+  try {
+    const { buildHAVEEnvelopes } = await import("./performanceMetricDefinitions");
+    const envelopes = buildHAVEEnvelopes();
+
+    const metrics = envelopes.map((env) => ({
+      metric_id: env.metricId,
+      metric_key: env.metricKey,
+      label: env.label,
+      description: env.description,
+      domain: env.domain,
+      category: env.category,
+      unit: { unit_type: env.unit.unitType, unit_label: env.unit.unitLabel },
+      value: { current: null, prior: null, delta: 0, delta_percent: 0, trend_direction: "flat" },
+      status: { classification: "Normal", thresholds: {}, reasons: ["Catalog registration — awaiting first data push from Calculus"] },
+      quality: {
+        confidence_score: env.qualityProfile.confidenceScore,
+        data_quality_score: env.qualityProfile.dataQualityScore,
+        missingness_percent: 0,
+        sample_size: 0,
+      },
+      source: {
+        app: env.source.app,
+        join_source: env.source.joinSource,
+        compute_source: env.source.computeSource,
+        lineage: env.source.lineage,
+      },
+      ui: {
+        preferred_display: env.ui.preferredDisplay,
+        sort_weight: env.ui.sortWeight,
+        tags: env.ui.tags,
+      },
+    }));
+
+    return await pushEnvelope("performance", [{
+      section_id: "performance_cycle_catalog",
+      section_label: "Performance Cycle Analytics Catalog",
+      metrics,
+    }]);
+  } catch (e: any) {
+    console.error("[hub-metrics] Failed to push performance metrics:", e.message);
+  }
 }

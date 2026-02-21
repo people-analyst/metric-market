@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { seedBundles } from "./seedBundles";
+import { seedPerformanceMetrics } from "./seedMetrics";
 import { recordRequest, startMetricsPush } from "./hubMetrics";
 import { startAutoSync, startupPull } from "./githubSync";
 import { handleDirective } from "./directiveHandler";
@@ -63,6 +64,12 @@ app.use((req, res, next) => {
     await seedBundles();
   } catch (e) {
     log(`seedBundles failed (non-fatal): ${(e as Error).message}`);
+  }
+
+  try {
+    await seedPerformanceMetrics();
+  } catch (e) {
+    log(`seedPerformanceMetrics failed (non-fatal): ${(e as Error).message}`);
   }
 
   const server = await registerRoutes(app);
