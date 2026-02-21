@@ -20,6 +20,7 @@ import { processAgentInstruction } from "./aiAgent";
 import { registerKanbanRoutes } from "./kanban-routes";
 // @ts-ignore - JS module
 import { registerAgentRoutes } from "./kanbai-agent-runner.js";
+import { getSchedulerStatus } from "./refreshScheduler";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -341,6 +342,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // --- Kanbai Agent Runner (Claude-powered task processing) ---
   registerAgentRoutes(app);
+
+  // --- Refresh Scheduler Status ---
+  app.get("/api/scheduler/status", (_req, res) => {
+    res.json(getSchedulerStatus());
+  });
+
+  // --- Range Builder Market Data (Conductor fallback) ---
+  app.get("/api/range-builder/market-data", async (_req, res) => {
+    try {
+      const allCards = await storage.listCards();
+      const conductorCards = allCards.filter(
+        (c) => c.sourceAttribution === "Conductor" && c.refreshStatus === "current"
+      );
+
+      if (conductorCards.length > 0) {
+        const latest = conductorCards.sort((a, b) => {
+          const aTime = a.lastRefreshedAt ? new Date(a.lastRefreshedAt).getTime() : 0;
+          const bTime = b.lastRefreshedAt ? new Date(b.lastRefreshedAt).getTime() : 0;
+          return bTime - aTime;
+        })[0];
+
+        const cardWithData = await storage.getCardWithLatest(latest.id);
+        if (cardWithData?.latestData?.payload) {
+          return res.json({
+            source: "conductor",
+            refreshedAt: latest.lastRefreshedAt,
+            data: cardWithData.latestData.payload,
+          });
+        }
+      }
+
+      res.json({ source: "fallback", data: null });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 
   // --- GitHub Sync API (Spoke GitHub Sync Standard v2.0) ---
 

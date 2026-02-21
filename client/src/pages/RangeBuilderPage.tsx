@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -367,12 +368,56 @@ export function RangeBuilderPage() {
   const [lastEvent, setLastEvent] = useState<RangeBuilderChangeEvent | null>(null);
   const [levelStructure, setLevelStructure] = useState<LevelStructureMode>("standard");
 
+  const { data: marketDataResponse } = useQuery<{ source: string; refreshedAt?: string; data: any }>({
+    queryKey: ["/api/range-builder/market-data"],
+    refetchInterval: 60000,
+  });
+
+  const dataSource = marketDataResponse?.source === "conductor" ? "live" : "sample";
+
+  const conductorOverlay = useMemo(() => {
+    if (marketDataResponse?.source !== "conductor" || !marketDataResponse.data?.marketData) return null;
+    const overlay: Record<string, { p50: number; p75: number; p10?: number; p25?: number; p90?: number }> = {};
+    for (const item of marketDataResponse.data.marketData) {
+      const key = `${item.jobFunction || ""}:${item.levelType || ""}:${item.level || ""}`;
+      const m = item.market || item;
+      if (m.p50 != null) {
+        overlay[key] = {
+          p10: m.p10,
+          p25: m.p25,
+          p50: m.p50,
+          p75: m.p75,
+          p90: m.p90,
+        };
+      }
+    }
+    return Object.keys(overlay).length > 0 ? overlay : null;
+  }, [marketDataResponse]);
+
   const standardCount = getStandardLevelCount(levelType);
 
-  const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom } = useMemo(
-    () => getLevelDataForSelection(superFn, levelType, levelStructure === "standard" ? undefined : levelStructure),
-    [superFn, levelType, levelStructure]
-  );
+  const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom } = useMemo(() => {
+    const base = getLevelDataForSelection(superFn, levelType, levelStructure === "standard" ? undefined : levelStructure);
+    if (!conductorOverlay) return base;
+
+    const fnMap: Record<string, string> = { "R&D": "R&D", "GTM": "GTM", "OPS": "OPS", "G&A": "G&A" };
+    const ltMap: Record<string, string> = { Professional: "P", Manager: "M", Executive: "E", Support: "S" };
+    const fnKey = fnMap[superFn] || superFn;
+    const ltKey = ltMap[levelType] || levelType.charAt(0);
+    const cfg = LEVEL_TYPE_CONFIG[levelType];
+    const levels = cfg.levels.filter((l) => JOB_STRUCTURE_DATA[superFn]?.[levelType]?.[l]);
+
+    const updatedMarketData = base.marketData.map((md, i) => {
+      const lvl = levels[i];
+      if (lvl == null) return md;
+      const key = `${fnKey}:${ltKey}:${lvl}`;
+      const o = conductorOverlay[key];
+      if (o) return { p50: o.p50, p75: o.p75 };
+      return md;
+    });
+
+    return { ...base, marketData: updatedMarketData };
+  }, [superFn, levelType, levelStructure, conductorOverlay]);
 
   const handleSuperFnChange = useCallback((fn: SuperFunction) => {
     setSuperFn(fn);
@@ -462,7 +507,16 @@ export function RangeBuilderPage() {
   return (
     <div className="p-4 max-w-5xl mx-auto space-y-4" data-testid="page-range-builder">
       <div>
-        <h1 className="text-lg font-bold text-foreground" data-testid="text-page-title">Range Builder</h1>
+        <div className="flex items-center gap-2">
+          <h1 className="text-lg font-bold text-foreground" data-testid="text-page-title">Range Builder</h1>
+          <Badge
+            variant="secondary"
+            className={`text-[10px] ${dataSource === "live" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400" : "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400"}`}
+            data-testid="badge-data-source"
+          >
+            {dataSource === "live" ? "Conductor Live" : "Sample Data"}
+          </Badge>
+        </div>
         <p className="text-xs text-muted-foreground mt-0.5" data-testid="text-page-description">
           Adjust compensation ranges and see real-time impact on cost, peer equity, competitiveness, and people impact
         </p>

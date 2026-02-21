@@ -8,6 +8,7 @@ import { seedPerformanceMetrics } from "./seedMetrics";
 import { recordRequest, startMetricsPush } from "./hubMetrics";
 import { startAutoSync, startupPull } from "./githubSync";
 import { handleDirective } from "./directiveHandler";
+import { startRefreshScheduler } from "./refreshScheduler";
 
 const app = express();
 app.use(express.json());
@@ -116,6 +117,7 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
     startMetricsPush(300000);
+    startRefreshScheduler(60000);
     startAutoSync();
     startupPull();
   });

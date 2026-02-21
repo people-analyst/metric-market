@@ -86,9 +86,14 @@ const METRIC_TO_CHART_MAP: Record<string, string> = {
   comparison: "slope_comparison",
   composition: "stacked_area",
   forecast: "confidence_band",
+  test_result: "heatmap",
+  z_score: "strip_dot",
+  scorecard: "sparkline_rows",
+  correlation: "bubble_scatter",
 };
 
 function inferChartType(metricKey: string, unit?: string, category?: string): string {
+  if (unit && METRIC_TO_CHART_MAP[unit]) return METRIC_TO_CHART_MAP[unit];
   if (category && METRIC_TO_CHART_MAP[category]) return METRIC_TO_CHART_MAP[category];
   if (unit === "%" || unit === "rate") return "multi_line";
   if (unit === "$" || unit === "currency") return "bullet_bar";
