@@ -1,0 +1,200 @@
+{
+  "sdk": {
+    "name": "Embedded AI Developer SDK",
+    "version": "1.1.0",
+    "status": "operational",
+    "installedDate": "2026-02-21",
+    "lastVerified": "2026-02-21"
+  },
+  "installation": {
+    "files": {
+      "esModule": {
+        "path": "embedded-ai-sdk.js",
+        "present": true,
+        "version": "1.1.0"
+      },
+      "commonJS": {
+        "path": "embedded-ai-sdk.cjs",
+        "present": true,
+        "version": "1.1.0",
+        "active": true
+      }
+    },
+    "scripts": {
+      "installer": {
+        "path": "scripts/install-embedded-ai-sdk.js",
+        "present": true
+      },
+      "verifier": {
+        "path": "scripts/verify-sdk-installation.js",
+        "present": true
+      }
+    },
+    "documentation": {
+      "quickstart": {
+        "path": "EMBEDDED_AI_SDK_QUICKSTART.md",
+        "present": true
+      },
+      "installationReport": {
+        "path": "EMBEDDED_AI_SDK_V1.1.0_INSTALLATION_REPORT.md",
+        "present": true
+      },
+      "statusFile": {
+        "path": "EMBEDDED_AI_SDK_V1.1.0_STATUS.json",
+        "present": true
+      }
+    }
+  },
+  "integration": {
+    "server": {
+      "file": "server/index.ts",
+      "status": "mounted",
+      "lines": "27-31",
+      "method": "_require('../embedded-ai-sdk.cjs').mount(app)"
+    },
+    "api": {
+      "file": "server/routes.ts",
+      "endpoints": [
+        {
+          "method": "GET",
+          "path": "/api/sdk/embedded-ai",
+          "purpose": "Download ES Module",
+          "status": "configured"
+        },
+        {
+          "method": "GET",
+          "path": "/api/sdk/embedded-ai.cjs",
+          "purpose": "Download CommonJS Module",
+          "status": "configured"
+        },
+        {
+          "method": "GET",
+          "path": "/api/sdk/info",
+          "purpose": "SDK metadata and status",
+          "status": "available"
+        }
+      ]
+    }
+  },
+  "features": {
+    "v1.1.0": [
+      {
+        "name": "Wind-down buffer",
+        "description": "Graceful task completion with configurable buffer",
+        "configKey": "AGENT_WINDDOWN_BUFFER",
+        "defaultValue": 3,
+        "status": "active"
+      },
+      {
+        "name": "Pause-and-continue",
+        "description": "Ability to pause and resume operations",
+        "status": "active"
+      },
+      {
+        "name": "Environment-configurable budget",
+        "description": "Tool-use iterations configurable via environment",
+        "configKey": "AGENT_MAX_ITERATIONS",
+        "defaultValue": 25,
+        "status": "active"
+      },
+      {
+        "name": "Project context loading",
+        "description": "Load custom context from agent-context.md",
+        "configFile": "agent-context.md",
+        "status": "active"
+      },
+      {
+        "name": "Same-origin auth middleware",
+        "description": "Security middleware for SDK endpoints",
+        "status": "active"
+      }
+    ]
+  },
+  "configuration": {
+    "agentId": "agent-metric-market",
+    "appSlug": "metric-market",
+    "appName": "Metric Market",
+    "defaults": {
+      "mode": "semi",
+      "model": "claude-sonnet-4-5",
+      "pollInterval": 60000,
+      "maxConcurrent": 1,
+      "priorities": ["critical", "high", "medium"],
+      "maxToolIterations": 25,
+      "windDownBuffer": 3
+    },
+    "environmentVariables": {
+      "AGENT_MODE": {
+        "description": "Agent operation mode",
+        "values": ["semi", "auto"],
+        "default": "semi"
+      },
+      "AGENT_MODEL": {
+        "description": "AI model to use",
+        "default": "claude-sonnet-4-5"
+      },
+      "AGENT_MAX_ITERATIONS": {
+        "description": "Maximum tool-use iterations per task",
+        "type": "integer",
+        "default": 25
+      },
+      "AGENT_WINDDOWN_BUFFER": {
+        "description": "Buffer for graceful completion",
+        "type": "integer",
+        "default": 3
+      },
+      "HUB_URL": {
+        "description": "Hub URL for task polling",
+        "default": "http://localhost:5000"
+      },
+      "HUB_API_KEY": {
+        "description": "API key for hub authentication",
+        "optional": true
+      }
+    }
+  },
+  "verification": {
+    "checklist": {
+      "sdkFilesPresent": true,
+      "esModuleInstalled": true,
+      "commonJSInstalled": true,
+      "serverIntegrationActive": true,
+      "apiEndpointsConfigured": true,
+      "documentationComplete": true,
+      "versionConfirmed": true,
+      "featuresOperational": true
+    },
+    "commands": {
+      "verifyInstallation": "node scripts/verify-sdk-installation.js",
+      "checkApiEndpoint": "curl http://localhost:5000/api/sdk/info",
+      "downloadModule": "curl http://localhost:5000/api/sdk/embedded-ai > embedded-ai-sdk.js"
+    }
+  },
+  "dependencies": {
+    "required": [
+      {
+        "package": "@anthropic-ai/sdk",
+        "version": "^0.75.0",
+        "status": "installed",
+        "location": "package.json"
+      }
+    ],
+    "runtime": "Node.js",
+    "framework": "Express"
+  },
+  "metadata": {
+    "project": "Metric Market",
+    "projectType": "TypeScript monorepo",
+    "generatedDate": "2026-02-21T02:10:06.204Z",
+    "reportDate": "2026-02-21",
+    "sdkOrigin": "http://localhost:5000",
+    "installationMethod": "Direct download and integration"
+  },
+  "summary": {
+    "status": "INSTALLED_AND_OPERATIONAL",
+    "version": "1.1.0",
+    "readyForUse": true,
+    "requiresAction": false,
+    "notes": "SDK is fully installed, integrated, and operational. All v1.1.0 features are active and available."
+  }
+}
