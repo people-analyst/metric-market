@@ -9,6 +9,7 @@ import { recordRequest, startMetricsPush } from "./hubMetrics";
 import { startAutoSync, startupPull } from "./githubSync";
 import { handleDirective } from "./directiveHandler";
 import { startRefreshScheduler } from "./refreshScheduler";
+import { mountSpokeCockpit } from "./spokeCockpit";
 
 const app = express();
 app.use(express.json());
@@ -28,6 +29,9 @@ try {
 } catch (e) {
   log(`Embedded AI SDK not loaded: ${(e as Error).message}`);
 }
+
+// Mount Spoke Cockpit SDK v2.0
+mountSpokeCockpit(app);
 
 app.use((req, res, next) => {
   const start = Date.now();
