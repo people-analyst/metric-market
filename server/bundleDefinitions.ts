@@ -1927,7 +1927,10 @@ Click any cell to view the list of employees in that performance-tier × compa-r
 **Required Data Sources:**
 - **Calculus**: Per-employee increase calculations, compa-ratio computations
 - **Conductor**: Performance ratings, merit matrix policy targets
-- **MetaFactory**: Cycle configuration, employee-to-cell mapping`,
+- **MetaFactory**: Cycle configuration, employee-to-cell mapping
+
+**Hub SDK Integration:**
+Spoke apps push data via POST /api/ingest/conductor (performance tiers, matrix targets) or POST /api/ingest/metric-engine (calculated metrics). Cards auto-populate when data arrives.`,
     infrastructureNotes: "D3.js heatmap with SVG text overlays for population counts. Click handler emits drill-down events with employee IDs. Variance threshold is configurable to control sensitivity of color coding.",
   },
 
@@ -2096,6 +2099,9 @@ Click any cell to view the list of employees in that performance-tier × compa-r
 - **Conductor**: Demographic data, peer group definitions, equity flag rules
 - **MetaFactory**: Protected category definitions, compliance thresholds
 
+**Hub SDK Integration:**
+Spoke apps push equity analysis data via POST /api/ingest/conductor (demographic data, flag rules) or POST /api/ingest/metric-engine (computed equity metrics). Cards auto-populate when data arrives.
+
 **Statistical Notes:**
 - Pay gaps should be calculated as (maleAvg - femaleAvg) / maleAvg × 100
 - Statistical significance is typically assessed via regression controlling for job level, tenure, location, and performance
@@ -2261,7 +2267,10 @@ Click any cell to view the list of employees in that performance-tier × compa-r
 **Required Data Sources:**
 - **Conductor**: Governance rules, flag definitions, threshold configurations
 - **Calculus**: Per-employee calculations that trigger flags (range checks, matrix variance, equity analysis)
-- **MetaFactory**: Organizational hierarchy for department/manager roll-ups`,
+- **MetaFactory**: Organizational hierarchy for department/manager roll-ups
+
+**Hub SDK Integration:**
+Spoke apps push governance data via POST /api/ingest/conductor (flags, governance rules, resolution status). Cards auto-populate when data arrives.`,
     infrastructureNotes: "Composite dashboard. Horizontal bars and dual-line chart use D3.js. Table component is pure HTML/CSS with sort capability. Drill-down panel loads on click. Flag data should be pushed via POST /api/ingest/conductor.",
   },
 
@@ -2414,6 +2423,9 @@ Click any cell to view the list of employees in that performance-tier × compa-r
 - **Calculus**: Per-employee increase calculations, compa-ratio computations
 - **Conductor**: Country-level budget allocations, inflation data, FX rates
 - **MetaFactory**: Country-to-geo-zone mapping, currency configurations, organizational hierarchy
+
+**Hub SDK Integration:**
+Spoke apps push geographic compensation data via POST /api/ingest/conductor (country budgets, inflation rates, FX rates). Cards auto-populate when data arrives.
 
 **FX Normalization:**
 All costs are converted to a base currency (default USD) using the fxRate provided. The fxRate should represent the conversion factor: localAmount × fxRate = baseCurrencyAmount. FX rates should be snapshotted at cycle open to avoid mid-cycle volatility.
