@@ -8,7 +8,8 @@ Metric Market is the **card workbench and visualization engine** of the People A
 - **Dashboard (End Users):** A consumer-facing interface where published analytics cards are browsed, filtered, and consumed in a polished, Yahoo Finance-inspired layout.
 
 Core capabilities include:
-- 28 distinct D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, range dot plots, and 5 compensation cycle dashboard composites (comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation).
+- 24 standard D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, range dot plots, and more.
+- 5 compensation cycle dashboard composites (comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation) — composite bundles containing multiple sub-visualizations with machine-readable data contracts.
 - **Range Builder form control** — an interactive compensation range simulator with real-time KPI Index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) producing 0-100 goodness scores. Supports job structure filtering by Super Job Function (GTM, R&D, OPS, G&A) and Level Type (Professional P1-P6, Manager M1-M6, Executive E1-E5, Support S1-S4). Custom Level Structure allows partitioning ranges into 2-10 evenly-spaced levels with interpolated market data.
 - Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals like `range_builder`).
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs via database references.
@@ -26,7 +27,7 @@ Core capabilities include:
 | **Build Tool** | Vite | 5.x | Fast HMR development server and production bundling |
 | **Styling** | Tailwind CSS | 3.x | Utility-first CSS framework for compact, responsive design |
 | **Component Library** | shadcn/ui | Latest | Headless, accessible UI primitives (Button, Card, Dialog, Select, etc.) |
-| **Charting** | D3.js | 7.x | SVG-based data visualization for all 28 chart types |
+| **Charting** | D3.js | 7.x | SVG-based data visualization for all chart types (24 standard + 5 compensation cycle dashboards) |
 | **Routing** | wouter | 3.x | Lightweight client-side SPA routing (~1.5KB) |
 | **Server State** | TanStack React Query | 5.x | Data fetching, caching, and synchronization |
 | **Form Management** | react-hook-form | 7.x | Performant form state management with Zod validation |
@@ -84,14 +85,14 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | `/metric-market` | Metric Market | Full workbench for card authoring | Create/edit cards, assign bundles, configure charts, push data, manage lifecycle | Implemented |
 | `/detail-card` | Detail Card | Single card deep-dive view | Full card rendering, data history, refresh controls, drill-down links | Implemented |
 | `/google-finance` | Finance View | Finance-inspired analytics layout | Multi-panel analytics display inspired by Google Finance UX patterns | Implemented |
-| `/card-types` | Card Types | Chart type reference library | Grid of all 28 chart types + 1 control type with descriptions, example data | Implemented |
+| `/card-types` | Card Types | Chart type reference library | Grid of all chart types (24 standard + 5 dashboards) + 1 control type with descriptions, example data | Implemented |
 | `/metric-detail` | Metric Detail | Individual metric explorer | Metric definition, calculation notes, cadence, source attribution, linked cards | Implemented |
 | `/chart-library` | Chart Library | Interactive chart preview gallery | Live D3 previews of all chart components with example data rendering | Implemented |
 | `/workbench` | Workbench | Admin authoring workspace | Full CRUD for bundles, metrics, configs; JSON schema editor; bulk operations | Implemented |
 | `/range-builder` | Range Builder | Compensation range simulator | Interactive range adjustment, 4 KPI index cards, stats table, custom levels (2-10), job function/level type filtering | Implemented |
 | `/export` | Component Export | Cross-app component packaging | Component registry, export packaging, data contracts for Conductor/AnyComp/Metric Engine | Implemented |
 
-**23 Standard Chart Types:** confidence_band, alluvial, waffle_bar, bullet_bar, slope_comparison, bubble_scatter, box_whisker, strip_timeline, waffle_percent, heatmap, strip_dot, multi_line, tile_cartogram, timeline_milestone, dendrogram, radial_bar, bump, sparkline_rows, stacked_area, range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet, range_dot_plot
+**24 Standard Chart Types:** confidence_band, alluvial, waffle_bar, bullet_bar, slope_comparison, bubble_scatter, box_whisker, strip_timeline, waffle_percent, heatmap, strip_dot, multi_line, tile_cartogram, timeline_milestone, dendrogram, radial_bar, bump, sparkline_rows, stacked_area, range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet, range_dot_plot
 
 **5 Compensation Cycle Dashboard Types:** comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation
 
@@ -202,7 +203,7 @@ The database uses PostgreSQL 16 managed by Drizzle ORM. All tables use UUID prim
 ```sql
 id          VARCHAR PRIMARY KEY DEFAULT gen_random_uuid()
 key         TEXT NOT NULL UNIQUE          -- Machine-readable identifier (e.g., "confidence_band")
-chart_type  TEXT NOT NULL                 -- One of 23 chart types or control types
+chart_type  TEXT NOT NULL                 -- One of 30 chart/control/dashboard types
 display_name TEXT NOT NULL                -- Human-readable name
 description TEXT                          -- Bundle purpose and usage
 version     INTEGER NOT NULL DEFAULT 1    -- Schema version for migrations
@@ -903,7 +904,7 @@ Performance metrics are pushed to the Hub on the same periodic cycle (every 300s
 | Metric | Value | Target | Status |
 |---|---|---|---|
 | API endpoints operational | 35+ | 30+ | Met |
-| Chart types implemented | 28 | 20+ | Met |
+| Chart types implemented | 24+5 dashboards | 20+ | Met |
 | Control types implemented | 1 | 1 | Met |
 | Bundle definitions loaded | 31 | 23+ | Met |
 | Metric definitions seeded | 23 | 13+ | Met |
