@@ -25,6 +25,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   registerIngestRoutes(app);
 
+  // ========================================
+  // Card Bundle Discovery API for Spoke Apps
+  // ========================================
+  // Returns all available card bundles with dataSchema, configSchema, and outputSchema
+  // Enables Spoke apps to discover and integrate metric visualization components
   app.get("/api/bundles", async (_req, res) => {
     const bundles = await storage.listCardBundles();
     res.json(bundles);
