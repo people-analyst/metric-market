@@ -73,5 +73,20 @@ export type { BulletRangeRow, RangeTargetBulletChartProps } from "./RangeTargetB
 export { RangeDotPlotChart } from "./RangeDotPlotChart";
 export type { RangeDotPlotLevel, RangeDotPlotEmployee, RangeDotPlotChartProps } from "./RangeDotPlotChart";
 
+export { CompCycleOverviewChart } from "./CompCycleOverviewChart";
+export type { CompCycleOverviewChartProps } from "./CompCycleOverviewChart";
+
+export { MeritMatrixHeatmapChart } from "./MeritMatrixHeatmapChart";
+export type { MeritMatrixHeatmapChartProps } from "./MeritMatrixHeatmapChart";
+
+export { PayEquityDashboardChart } from "./PayEquityDashboardChart";
+export type { PayEquityDashboardChartProps } from "./PayEquityDashboardChart";
+
+export { GovernanceFlagsChart } from "./GovernanceFlagsChart";
+export type { GovernanceFlagsChartProps } from "./GovernanceFlagsChart";
+
+export { GeoCompensationChart } from "./GeoCompensationChart";
+export type { GeoCompensationChartProps } from "./GeoCompensationChart";
+
 export { TILE_PRESETS } from "./tilePresets";
 export type { TilePreset } from "./tilePresets";

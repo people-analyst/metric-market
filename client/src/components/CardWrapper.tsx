@@ -26,6 +26,11 @@ import {
   RangeStripChart,
   RangeStripAlignedChart,
   InteractiveRangeStripChart,
+  CompCycleOverviewChart,
+  MeritMatrixHeatmapChart,
+  PayEquityDashboardChart,
+  GovernanceFlagsChart,
+  GeoCompensationChart,
 } from "@/components/charts";
 import { RangeBuilderControl } from "@/components/controls/RangeBuilderControl";
 import { RangeTargetBulletChart } from "@/components/charts/RangeTargetBulletChart";
@@ -58,6 +63,11 @@ const CHART_COMPONENT_MAP: Record<string, React.ComponentType<any>> = {
   range_target_bullet: RangeTargetBulletChart,
   range_dot_plot: RangeDotPlotChart,
   range_builder: RangeBuilderControl,
+  comp_cycle_overview: CompCycleOverviewChart,
+  merit_matrix_heatmap: MeritMatrixHeatmapChart,
+  pay_equity_dashboard: PayEquityDashboardChart,
+  governance_flags: GovernanceFlagsChart,
+  geo_compensation: GeoCompensationChart,
 };
 
 export interface CardWrapperProps {
