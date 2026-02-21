@@ -2,15 +2,17 @@
 
 ## Overview
 
-Metric Market is the **data visualization and dashboard layer** of the People Analytics Toolbox ecosystem — a hub-and-spoke platform with 13+ specialized HR analytics applications. It serves as the primary consumer-facing display surface where outputs from every other app (compensation scenarios, HR metrics, Monte Carlo forecasts, segmentation data) become visible through a card-based visualization system.
+Metric Market is the **data visualization, dashboard layer, and metrics marketplace** of the People Analytics Toolbox ecosystem — a hub-and-spoke platform with 14 coordinated HR analytics applications. It serves as the primary consumer-facing display surface where outputs from every other app (compensation scenarios, HR metrics, Monte Carlo forecasts, segmentation data, performance analytics) become visible through a card-based visualization system.
 
-The app provides 25 card bundles covering 23 chart types (built with D3.js), 1 form control (the Range Builder for interactive compensation range simulation), and 1 PA Design Kit component library. It exposes ingestion endpoints so other spoke apps can push data that automatically creates and populates visualization cards. The Range Builder is the most integration-rich component — it emits `RangeBuilderChangeEvent` signals consumed by AnyComp (the compensation decision engine) and receives market data from Conductor.
+The app provides 31 card bundles covering 28 chart types (built with D3.js), 5 compensation cycle dashboard composites, 1 form control (the Range Builder for interactive compensation range simulation), and 1 PA Design Kit component library. It exposes ingestion endpoints so other spoke apps can push data that automatically creates and populates visualization cards. The Range Builder is the most integration-rich component — it emits `RangeBuilderChangeEvent` signals consumed by AnyComp (the compensation decision engine) and receives market data from Conductor.
 
 Key capabilities:
 - Card bundle system with auto-discovery and auto-creation of visualization cards
 - Interactive Range Builder for compensation range simulation (form control, not a chart)
+- 5 compensation cycle dashboard bundles (comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation)
 - 4 spoke ingestion endpoints (Conductor, Metric Engine, AnyComp, PeopleAnalyst)
-- 13 seeded metric definitions with bidirectional sync to Metric Engine
+- 23 seeded metric definitions: 13 standard HR metrics + 10 performance cycle metrics (HAVE Standard envelope format with Conductor/Calculus lineage)
+- HAVE Standard metric push to Hub for operational, strategic, and performance domains
 - Hub integration with documentation scoring (98/100), directives, webhooks, and Field Exchange SDK
 
 ## User Preferences
@@ -24,7 +26,7 @@ Preferred communication style: Simple, everyday language.
 - **UI Components**: shadcn/ui (New York style) on Radix UI primitives, styled with Tailwind CSS
 - **Client Routing**: wouter for client-side routing
 - **State Management**: TanStack Query for server state
-- **Charting**: D3.js for all 23 chart types
+- **Charting**: D3.js for all 28 chart types
 - **Backend**: Express.js on Node.js with TypeScript (via tsx)
 - **Database**: PostgreSQL (Neon-hosted) with Drizzle ORM
 - **Schema Validation**: Zod (via drizzle-zod)
@@ -42,6 +44,11 @@ server/               # Express backend
   index.ts            # Server entry point (Express on port 5000)
   routes.ts           # All REST + Hub + AI endpoints
   storage.ts          # IStorage interface + DatabaseStorage implementation
+  hubMetrics.ts       # HAVE Standard metric push (operational, strategic, performance domains)
+  performanceMetricDefinitions.ts  # 10 performance cycle metric definitions + HAVE envelope builder
+  seedMetrics.ts      # Performance metrics seeder (runs at startup)
+  seedBundles.ts      # Card bundle seeder (runs at startup)
+  bundleDefinitions.ts # All 31 card bundle definitions with schemas
   aiAgent.ts          # AI agent for processing natural language instructions
   vite.ts             # Vite dev server integration + static file serving
 shared/
@@ -59,7 +66,13 @@ Key tables defined in `shared/schema.ts`:
 - Additional tables for card instances, metric definitions, and other domain objects
 
 ### Card Bundle System
-The core data model: a **card bundle** defines a visualization type (one of 25 registered bundles mapping to 23 chart types + 1 control + PA Design Kit components). **Card instances** are created from bundles and populated with data. Cards can be auto-created when spoke apps push data through ingestion endpoints.
+The core data model: a **card bundle** defines a visualization type (one of 31 registered bundles mapping to 28 chart types + 1 control + PA Design Kit components). **Card instances** are created from bundles and populated with data. Cards can be auto-created when spoke apps push data through ingestion endpoints.
+
+Categories:
+- **Standard Charts** (23 types): confidence_band, alluvial, waffle_bar, bullet_bar, slope_comparison, bubble_scatter, box_whisker, strip_timeline, waffle_percent, heatmap, strip_dot, multi_line, tile_cartogram, timeline_milestone, dendrogram, radial_bar, bump, sparkline_rows, stacked_area, range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet, range_dot_plot
+- **Compensation Cycle Dashboards** (5 types): comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation
+- **Controls** (1): range_builder
+- **Design Kit** (1): PA Design Kit component library
 
 ### Range Builder Architecture
 The Range Builder is classified as a **form control** (component type `range_builder`), not a chart. It produces output signals (RangeBuilderChangeEvent) consumed by downstream apps. Users select a slice of job architecture (by Super Job Function and Level Type), then interact with segmented strips to adjust target ranges. It calculates structural measures (spread, overlap, gap, symmetry) and displays 4 KPI index cards (0-100 goodness scores).
@@ -105,8 +118,10 @@ The PA Design System follows a **Google Finance / Yahoo Finance** visual languag
 - **People Analytics Toolbox Hub**: Central coordinator at configurable URL (see `hub-config.json`). Handles registration, directives, documentation scoring, Field Exchange, and webhook notifications
 - **Kanbai (Product Kanban)**: Task management and AI agent task distribution at `https://people-analytics-kanban.replit.app`
 - **AnyComp**: Downstream consumer of RangeBuilderChangeEvent; pushes optimization results back
-- **Conductor**: Pushes market compensation data (percentiles, employee counts, BLS wages)
-- **Metric Engine Calculus**: Pushes computed HR metrics (attrition, compa-ratio, etc.)
+- **Conductor**: Pushes market compensation data (percentiles, employee counts, BLS wages), performance tier assignments, governance rules, country-level budget data
+- **Metric Engine Calculus**: Pushes computed HR metrics (attrition, compa-ratio, etc.) and performance cycle analytics
+- **Calculus**: Computes per-employee increase calculations, compa-ratio, chi-square tests, Cramer's V, harshness indices, flight risk scores
+- **MetaFactory**: Provides cycle configuration, org hierarchy, country/geo-zone mappings, protected category definitions
 - **PeopleAnalyst**: Pushes Monte Carlo forecasts and VOI analyses
 
 ### AI Services
@@ -114,7 +129,7 @@ The PA Design System follows a **Google Finance / Yahoo Finance** visual languag
 
 ### UI Libraries
 - **shadcn/ui**: Component library (New York style, Tailwind CSS, Radix UI primitives)
-- **D3.js**: All chart rendering (23 chart types)
+- **D3.js**: All chart rendering (28 chart types)
 - **TanStack Query v5**: Server state management
 - **wouter**: Client-side routing
 

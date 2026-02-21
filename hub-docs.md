@@ -8,7 +8,7 @@ Metric Market is the **card workbench and visualization engine** of the People A
 - **Dashboard (End Users):** A consumer-facing interface where published analytics cards are browsed, filtered, and consumed in a polished, Yahoo Finance-inspired layout.
 
 Core capabilities include:
-- 24 distinct D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, range dot plots, and more.
+- 28 distinct D3-powered SVG chart types covering confidence bands, alluvial diagrams, waffle bars, bullet bars, heatmaps, sparkline rows, dendrograms, range strips, range dot plots, and 5 compensation cycle dashboard composites (comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation).
 - **Range Builder form control** — an interactive compensation range simulator with real-time KPI Index cards (Cost Impact, Peer Equity, Competitiveness, People Impact) producing 0-100 goodness scores. Supports job structure filtering by Super Job Function (GTM, R&D, OPS, G&A) and Level Type (Professional P1-P6, Manager M1-M6, Executive E1-E5, Support S1-S4). Custom Level Structure allows partitioning ranges into 2-10 evenly-spaced levels with interpolated market data.
 - Two component categories: **Charts** (read-only visualizations) and **Controls** (interactive form elements with output signals like `range_builder`).
 - Full card lifecycle management: discovering bundles, defining metrics, configuring charts, assembling cards, pushing data, rendering, refreshing, and linking drill-downs via database references.
@@ -26,7 +26,7 @@ Core capabilities include:
 | **Build Tool** | Vite | 5.x | Fast HMR development server and production bundling |
 | **Styling** | Tailwind CSS | 3.x | Utility-first CSS framework for compact, responsive design |
 | **Component Library** | shadcn/ui | Latest | Headless, accessible UI primitives (Button, Card, Dialog, Select, etc.) |
-| **Charting** | D3.js | 7.x | SVG-based data visualization for all 23 chart types |
+| **Charting** | D3.js | 7.x | SVG-based data visualization for all 28 chart types |
 | **Routing** | wouter | 3.x | Lightweight client-side SPA routing (~1.5KB) |
 | **Server State** | TanStack React Query | 5.x | Data fetching, caching, and synchronization |
 | **Form Management** | react-hook-form | 7.x | Performant form state management with Zod validation |
@@ -59,9 +59,11 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 
 | Spoke Application | Relationship | Data Flow |
 |---|---|---|
-| **Conductor** | Data producer | Supplies market P50/P75 percentile data, employee snapshots, BLS OES wages, O*NET classifications, CPI adjustments, and ERI/CompAnalyst market anchors |
+| **Conductor** | Data producer | Supplies market P50/P75 percentile data, employee snapshots, BLS OES wages, O*NET classifications, CPI adjustments, ERI/CompAnalyst market anchors, performance tier assignments, governance rules, country-level budget data |
 | **AnyComp** | Decision consumer | Consumes `RangeBuilderChangeEvent` with active ranges + KPI indices for strategy modeling, scenario comparison, and budget optimization |
 | **Metric Engine** | Bidirectional | Provides canonical metric definitions to Metric Market; receives computed KPI values and visualization specifications for benchmarking |
+| **Calculus** | Computation engine | Produces per-employee increase calculations, compa-ratio computations, chi-square tests, Cramer's V effect sizes, harshness indices, flight risk scores, and performance analytics |
+| **MetaFactory** | Reference data | Provides cycle configuration, org hierarchy, country/geo-zone mappings, protected category definitions |
 | **Segmentation Studio** | Data consumer | Supplies workforce segmentation data used in Range Builder employee overlays |
 | **Hub** | Coordinator | Manages documentation scoring, directives, health checks, and inter-application webhooks |
 
@@ -76,20 +78,22 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | Route | Page Name | Purpose | Key Features | Status |
 |---|---|---|---|---|
 | `/` | Screener | Primary dashboard for browsing published cards | Card grid with filtering, scoring badges, status indicators, refresh tracking | Implemented |
-| `/chooser` | Chooser | Bundle selector for creating new cards | Browse 25 card bundles by chart type, category filter, search, preview | Implemented |
+| `/chooser` | Chooser | Bundle selector for creating new cards | Browse 31 card bundles by chart type, category filter, search, preview | Implemented |
 | `/range` | Range View | Compensation range visualization | Segmented range strips, aligned range comparisons, market overlay | Implemented |
 | `/menu` | Menu | Navigation hub | Quick links to all application sections with descriptions | Implemented |
 | `/metric-market` | Metric Market | Full workbench for card authoring | Create/edit cards, assign bundles, configure charts, push data, manage lifecycle | Implemented |
 | `/detail-card` | Detail Card | Single card deep-dive view | Full card rendering, data history, refresh controls, drill-down links | Implemented |
 | `/google-finance` | Finance View | Finance-inspired analytics layout | Multi-panel analytics display inspired by Google Finance UX patterns | Implemented |
-| `/card-types` | Card Types | Chart type reference library | Grid of all 23 chart types + 1 control type with descriptions, example data | Implemented |
+| `/card-types` | Card Types | Chart type reference library | Grid of all 28 chart types + 1 control type with descriptions, example data | Implemented |
 | `/metric-detail` | Metric Detail | Individual metric explorer | Metric definition, calculation notes, cadence, source attribution, linked cards | Implemented |
 | `/chart-library` | Chart Library | Interactive chart preview gallery | Live D3 previews of all chart components with example data rendering | Implemented |
 | `/workbench` | Workbench | Admin authoring workspace | Full CRUD for bundles, metrics, configs; JSON schema editor; bulk operations | Implemented |
 | `/range-builder` | Range Builder | Compensation range simulator | Interactive range adjustment, 4 KPI index cards, stats table, custom levels (2-10), job function/level type filtering | Implemented |
 | `/export` | Component Export | Cross-app component packaging | Component registry, export packaging, data contracts for Conductor/AnyComp/Metric Engine | Implemented |
 
-**23 Chart Types:** confidence_band, alluvial, waffle_bar, bullet_bar, slope_comparison, bubble_scatter, box_whisker, strip_timeline, waffle_percent, heatmap, strip_dot, multi_line, tile_cartogram, timeline_milestone, control, dendrogram, radial_bar, bump, sparkline_rows, stacked_area, range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet
+**23 Standard Chart Types:** confidence_band, alluvial, waffle_bar, bullet_bar, slope_comparison, bubble_scatter, box_whisker, strip_timeline, waffle_percent, heatmap, strip_dot, multi_line, tile_cartogram, timeline_milestone, dendrogram, radial_bar, bump, sparkline_rows, stacked_area, range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet, range_dot_plot
+
+**5 Compensation Cycle Dashboard Types:** comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation
 
 **1 Control Type:** range_builder
 
@@ -423,8 +427,8 @@ The deployed Metric Market instance at `metric-market.replit.app` contains the f
 
 | Resource | Count | Description |
 |---|---|---|
-| **Card Bundles** | 25 | Complete bundle definitions covering all 23 chart types + range_builder control + range_target_bullet |
-| **Metric Definitions** | 13 | Standard people analytics metrics: attrition_rate, compa_ratio, time_to_fill, voluntary_turnover_rate, headcount, span_of_control, revenue_per_employee, training_hours, offer_acceptance_rate, internal_mobility_rate, engagement_score, pay_equity_gap, benefits_participation_rate |
+| **Card Bundles** | 31 | Complete bundle definitions covering 23 standard chart types + 5 compensation cycle dashboards + range_builder control + range_dot_plot + PA Design Kit |
+| **Metric Definitions** | 23 | 13 standard HR metrics (attrition_rate, compa_ratio, time_to_fill, voluntary_turnover_rate, headcount, span_of_control, revenue_per_employee, training_hours, offer_acceptance_rate, internal_mobility_rate, engagement_score, pay_equity_gap, benefits_participation_rate) + 10 performance cycle metrics (performance_distribution_by_segment, chi_square_independence_test, cramers_v_effect_size, performance_trajectory, calibration_impact_rate, leader_harshness_index, eteam_scorecard, rto_performance_correlation, flight_risk_score_distribution, promotion_rate_by_segment) |
 | **Chart Configurations** | 0 | No preset configurations created yet (bundles use inline defaults) |
 | **Cards** | 9 | Active card instances from 4 sources: Conductor (3 compensation range cards), Metric Engine (1 attrition trend card), AnyComp (3 scenario/recommendation/score cards), PeopleAnalyst (2 forecast/VOI cards) |
 | **Card Data** | 9 | Data snapshots from all 4 spoke integrations, pushed via ingestion endpoints |
@@ -438,11 +442,12 @@ The deployed Metric Market instance at `metric-market.replit.app` contains the f
 - Timeline: strip_timeline, timeline_milestone, sparkline_rows, multi_line
 - Geographic: tile_cartogram, heatmap
 - Distribution: strip_dot
-- Compensation: range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet
+- Compensation: range_strip, range_strip_aligned, interactive_range_strip, range_target_bullet, range_dot_plot
+- Compensation Cycle Dashboards: comp_cycle_overview, merit_matrix_heatmap, pay_equity_dashboard, governance_flags, geo_compensation
 - Control: range_builder (interactive form element with KPI output)
 
 **Component Export Status:**
-- All 25 bundles are discoverable via `GET /api/components`
+- All 31 bundles are discoverable via `GET /api/components`
 - Export packaging available for cross-application embedding via `GET /api/export/:key`
 - Formal data contracts defined for Conductor, AnyComp, and Metric Engine integrations
 
@@ -852,6 +857,37 @@ Spoke apps that implement the Hub SDK webhook handler (`POST /api/hub-webhook`) 
 3. Create forecast dashboard layout with confidence bands and scenario toggles
 4. Wire VOI analysis results into bubble_scatter cards with investment value dimensions
 
+## Performance Metrics Catalog (HAVE Standard)
+
+Metric Market registers 10 performance cycle metrics in HAVE Standard envelope format, with source lineage tracing back to Conductor joins and Calculus computations. These metrics are pushed to the Hub via the `performance` domain alongside operational and strategic metrics.
+
+**Envelope Format:**
+Each metric is published as a HAVE Standard envelope with:
+- `metric_id`: `metric-market:performance:{key}`
+- `source.join_source`: Conductor join specification
+- `source.compute_source`: Calculus engine that produces the metric
+- `source.lineage`: Full pipeline path (Conductor join → Calculus computation → Metric Market catalog)
+
+**Registered Performance Metrics:**
+
+| Metric Key | Name | Unit | Calculus Engine |
+|---|---|---|---|
+| `performance_distribution_by_segment` | Performance Distribution by [Segment] | Rating Distribution + Odds Ratios | performance_distribution_engine |
+| `chi_square_independence_test` | Chi-Square Independence Test Results | χ² Statistic / p-value | chi_square_engine |
+| `cramers_v_effect_size` | Cramer's V Effect Size Rankings | Cramer's V (0-1) | cramers_v_engine |
+| `performance_trajectory` | Performance Trajectory (% Improved / Declined / Flatlined) | % of Population | trajectory_engine |
+| `calibration_impact_rate` | Calibration Impact Rate (% Changed, direction) | % Changed | calibration_impact_engine |
+| `leader_harshness_index` | Leader Harshness Index Score | Z-Score (σ from mean) | harshness_index_engine |
+| `eteam_scorecard` | E-Team Scorecard Metrics | Composite Scorecard | eteam_scorecard_engine |
+| `rto_performance_correlation` | RTO-Performance Correlation | r (Pearson Correlation) | rto_correlation_engine |
+| `flight_risk_score_distribution` | Flight Risk Score Distribution | Risk Tier Distribution | flight_risk_engine |
+| `promotion_rate_by_segment` | Promotion Rate by [Segment] | % Promoted | promotion_rate_engine |
+
+**Hub Push Schedule:**
+Performance metrics are pushed to the Hub on the same periodic cycle (every 300s) as operational and strategic metrics, via `pushPerformanceMetrics()` in `server/hubMetrics.ts`. Initial push contains catalog registrations with null values (awaiting first data push from Calculus).
+
+---
+
 ## System Health & Recommendations
 
 ### Current System Status
@@ -867,10 +903,11 @@ Spoke apps that implement the Hub SDK webhook handler (`POST /api/hub-webhook`) 
 | Metric | Value | Target | Status |
 |---|---|---|---|
 | API endpoints operational | 35+ | 30+ | Met |
-| Chart types implemented | 23 | 20+ | Met |
+| Chart types implemented | 28 | 20+ | Met |
 | Control types implemented | 1 | 1 | Met |
-| Bundle definitions loaded | 25 | 23+ | Met |
-| Hub SDK version | 2.1.0 | 2.0+ | Met |
+| Bundle definitions loaded | 31 | 23+ | Met |
+| Metric definitions seeded | 23 | 13+ | Met |
+| Hub SDK version | 2.3.0 | 2.0+ | Met |
 | Documentation sections | 9/9 | 9/9 | Met |
 | Frontend routes | 13 | 10+ | Met |
 | Database tables | 7 | 6+ | Met |
@@ -888,7 +925,7 @@ Spoke apps that implement the Hub SDK webhook handler (`POST /api/hub-webhook`) 
 
 ### Recommendations
 1. **Priority 1:** Wire Conductor to push live BigQuery market data to `POST /api/ingest/conductor` (endpoint ready, awaiting live data)
-2. **Priority 2:** Wire Metric Engine to push computed metrics to `POST /api/ingest/metric-engine` (endpoint ready, 13 metric definitions seeded)
+2. **Priority 2:** Wire Metric Engine to push computed metrics to `POST /api/ingest/metric-engine` (endpoint ready, 23 metric definitions seeded)
 3. **Priority 3:** Implement `RangeBuilderChangeEvent` emission to AnyComp and wire AnyComp to push optimization results back to `POST /api/ingest/anycomp`
 4. **Priority 4:** Wire PeopleAnalyst to push Monte Carlo/VOI results to `POST /api/ingest/people-analyst` (endpoint ready)
 5. **Priority 5:** Implement scheduled refresh automation using the refresh_policy/refresh_cadence fields
