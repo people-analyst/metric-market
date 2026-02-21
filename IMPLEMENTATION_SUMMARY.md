@@ -1,164 +1,295 @@
-# Bundle Discovery API Implementation Summary
+# Card Bundle Discovery API - Implementation Summary
 
 ## Task Completed
 **Title**: Expose Card Bundle Discovery API for Spoke Apps  
 **Status**: ✅ COMPLETED  
 **Priority**: Critical  
+**Type**: Feature Enhancement
 
 ## Acceptance Criteria
-✅ **GET /api/bundles returns all bundle schemas** - FULLY IMPLEMENTED
+✅ **GET /api/bundles returns all bundle schemas** - VERIFIED & DOCUMENTED
 
-## What Was Implemented
+## Overview
 
-### 1. API Endpoint (Already Existed - Verified)
-- **Endpoint**: `GET /api/bundles`
-- **Location**: `server/routes.ts` (line 28-31)
-- **Implementation**: Returns all card bundles via `storage.listCardBundles()`
-- **Response**: Full CardBundle objects including:
-  - `dataSchema` (JSON Schema for input data)
-  - `configSchema` (JSON Schema for configuration)
-  - `outputSchema` (JSON Schema for output format)
-  - Plus all metadata (key, displayName, description, etc.)
+The Card Bundle Discovery API was already implemented but lacked comprehensive documentation and developer tooling for Spoke app integration. This implementation provides:
 
-### 2. UI Enhancement (NEW)
-- **File Modified**: `client/src/pages/WorkbenchPage.tsx`
-- **Change**: Added outputSchema display to bundle browser
-- **Before**: Only showed dataSchema and configSchema in 2-column grid
-- **After**: Shows all three schemas (dataSchema, configSchema, outputSchema) in 3-column grid
-- **Test ID**: `data-testid="bundle-output-schema"`
+1. ✅ Verification that `GET /api/bundles` correctly returns all bundles
+2. ✅ Complete API documentation for Spoke developers
+3. ✅ TypeScript types and client library
+4. ✅ Integration examples and patterns
+5. ✅ Testing utilities
 
-### 3. Documentation (NEW)
-Created two comprehensive documentation files:
+## Implemented Components
 
-#### docs/BUNDLE_DISCOVERY_API.md
-- Complete API documentation
-- Schema contract explanations
-- Usage examples for Spoke apps
-- Integration patterns (validation, type generation, dynamic UI)
-- Testing instructions
-- All available bundles table
+### 1. API Endpoint (Verified - Already Exists)
 
-#### docs/API_BUNDLES_TEST.md
-- Quick testing guide
-- Example request/response
-- Schema validation examples
-- Status confirmation
+**Location**: `server/routes.ts` (lines 26-31)
 
-## Files Changed
-
-1. **client/src/pages/WorkbenchPage.tsx** (Modified)
-   - Changed grid from `grid-cols-2` to `grid-cols-3`
-   - Added outputSchema display section
-   - Purpose: Complete visualization of all three schema contracts
-
-2. **docs/BUNDLE_DISCOVERY_API.md** (Created)
-   - Comprehensive API documentation
-   - Usage patterns for Spoke apps
-   - Testing instructions
-
-3. **docs/API_BUNDLES_TEST.md** (Created)
-   - Quick reference guide
-   - Example responses
-   - Testing commands
-
-## Technical Verification
-
-### API Endpoint Status
-- ✅ Endpoint exists and is functional
-- ✅ Returns all bundles from database
-- ✅ Includes dataSchema, configSchema, outputSchema
-- ✅ Ordered by category and displayName
-- ✅ No authentication required (public endpoint)
-
-### Data Flow
-1. Bundle definitions in `server/bundleDefinitions.ts`
-2. Seeded to database via `seedBundles()` in `server/seedBundles.ts`
-3. Retrieved via `storage.listCardBundles()` in `server/storage.ts`
-4. Exposed via `GET /api/bundles` in `server/routes.ts`
-5. Consumed by React UI in `client/src/pages/WorkbenchPage.tsx`
-
-### Schema Structure
-Each bundle includes:
 ```typescript
-{
-  id: string;
-  key: string;
-  chartType: string;
-  displayName: string;
-  description: string;
-  version: number;
-  dataSchema: JSONSchema;      // ✅ Input data contract
-  configSchema: JSONSchema;    // ✅ Configuration contract
-  outputSchema: JSONSchema;    // ✅ Output format contract
-  defaults: object;
-  exampleData: object;
-  exampleConfig: object;
-  documentation: string;
-  category: string;
-  tags: string[];
-  infrastructureNotes: string;
-  createdAt: Date;
-  updatedAt: Date;
+app.get("/api/bundles", async (_req, res) => {
+  const bundles = await storage.listCardBundles();
+  res.json(bundles);
+});
+```
+
+**Returns**: Array of `CardBundle` objects, each containing:
+- `id`, `key`, `chartType`, `displayName`, `description`
+- **`dataSchema`** - JSON Schema defining required data structure
+- **`configSchema`** - JSON Schema defining configuration options
+- **`outputSchema`** - JSON Schema describing output format
+- `defaults`, `exampleData`, `exampleConfig`
+- `documentation`, `category`, `tags`, `version`
+- `createdAt`, `updatedAt`
+
+### 2. TypeScript Types & Client Library (NEW)
+
+**File**: `shared/bundle-api-types.ts`
+
+Created a complete TypeScript client library with:
+
+- `BundleDiscoveryClient` class for type-safe API access
+- Type definitions: `BundleListResponse`, `BundleDetailResponse`, `JSONSchema`
+- Helper methods:
+  - `getAllBundles()` - Fetch all bundles
+  - `getBundleById(id)` - Get specific bundle
+  - `getBundleByKey(key)` - Get bundle by key
+  - `getBundlesByCategory(category)` - Filter by category
+  - `getBundlesByTag(tag)` - Filter by tag
+  - `getCategories()` - List all categories
+  - `getTags()` - List all tags
+  - `validateData()` - Basic data validation
+  - `validateConfig()` - Basic config validation
+- Factory function: `createBundleClient(baseUrl?)`
+
+**Usage Example**:
+```typescript
+import { createBundleClient } from '@shared/bundle-api-types';
+
+const client = createBundleClient('/api');
+const bundles = await client.getAllBundles();
+const forecastBundles = await client.getBundlesByCategory('Forecasting');
+```
+
+### 3. Comprehensive Documentation (NEW)
+
+#### A. docs/API_BUNDLES.md
+- Complete API reference for `GET /api/bundles`
+- Detailed schema contract explanations
+- Response format with examples
+- Usage patterns for Spoke apps
+- Integration flow with code examples
+
+#### B. docs/SPOKE_APP_BUNDLE_DISCOVERY.md
+- Quick start guide for Spoke developers
+- Key concepts: What is a Card Bundle?
+- Schema usage guide (dataSchema, configSchema, outputSchema)
+- Discovery patterns (browse, filter, search)
+- TypeScript integration examples
+- Validation patterns
+- Use case examples (AI agents, dashboard builders)
+
+#### C. docs/BUNDLE_INTEGRATION_EXAMPLE.md
+- Complete integration walkthrough
+- Real-world scenario: Creating forecast cards
+- Discovery patterns with code
+- Working with schemas (detailed examples)
+- Error handling patterns
+- React hook example: `useBundles()`
+- AI agent integration patterns
+
+### 4. Testing & Verification (NEW)
+
+#### A. server/bundles.test.ts
+Jest/integration tests covering:
+- `GET /api/bundles` returns all bundles with schemas
+- Bundles are ordered by category and displayName
+- All bundles have valid JSON Schemas
+- Unique keys constraint
+- Documentation and examples presence
+
+#### B. scripts/verify-bundle-api.ts
+Standalone verification script that:
+- Tests endpoint connectivity
+- Verifies schema presence on all bundles
+- Tests filtering by category and tag
+- Displays sample bundle details
+- Provides summary report
+
+**Run with**: `npx ts-node scripts/verify-bundle-api.ts`
+
+### 5. Code Documentation (Enhanced)
+
+**File**: `server/routes.ts` (lines 24-31)
+
+Added clear documentation comment:
+```typescript
+// ========================================
+// Card Bundle Discovery API for Spoke Apps
+// ========================================
+// Returns all available card bundles with dataSchema, configSchema, and outputSchema
+// Enables Spoke apps to discover and integrate metric visualization components
+```
+
+## Database Schema (Existing - No Changes)
+
+The `cardBundles` table in `shared/schema.ts` already includes all required fields:
+
+```typescript
+export const cardBundles = pgTable("card_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  key: text("key").notNull().unique(),
+  chartType: text("chart_type").notNull(),
+  displayName: text("display_name").notNull(),
+  description: text("description"),
+  version: integer("version").notNull().default(1),
+  dataSchema: jsonb("data_schema").notNull(),        // ✅
+  configSchema: jsonb("config_schema").notNull(),    // ✅
+  outputSchema: jsonb("output_schema").notNull().default({}), // ✅
+  defaults: jsonb("defaults").notNull().default({}),
+  exampleData: jsonb("example_data").notNull().default({}),
+  exampleConfig: jsonb("example_config").notNull().default({}),
+  documentation: text("documentation"),
+  category: text("category"),
+  tags: text("tags").array(),
+  infrastructureNotes: text("infrastructure_notes"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+```
+
+## Files Created/Modified
+
+### Created (6 files):
+1. ✅ `shared/bundle-api-types.ts` - TypeScript client library (217 lines)
+2. ✅ `docs/API_BUNDLES.md` - API documentation (172 lines)
+3. ✅ `docs/SPOKE_APP_BUNDLE_DISCOVERY.md` - Developer guide (338 lines)
+4. ✅ `docs/BUNDLE_INTEGRATION_EXAMPLE.md` - Integration examples (287 lines)
+5. ✅ `server/bundles.test.ts` - Integration tests (136 lines)
+6. ✅ `scripts/verify-bundle-api.ts` - Verification script (109 lines)
+
+### Modified (1 file):
+1. ✅ `server/routes.ts` - Added documentation comment (7 lines changed)
+
+**Total**: 7 files, ~1,260 lines of code and documentation
+
+## How Spoke Apps Use This API
+
+### 1. Discovery
+```bash
+curl http://localhost:5000/api/bundles
+```
+
+### 2. Integration
+```typescript
+import { createBundleClient } from '@shared/bundle-api-types';
+
+const client = createBundleClient();
+const bundles = await client.getAllBundles();
+
+// Find appropriate bundle
+const bundle = await client.getBundleByKey('confidence_band');
+
+// Create card with bundle
+const card = await fetch('/api/cards', {
+  method: 'POST',
+  body: JSON.stringify({
+    bundleId: bundle.id,
+    title: 'My Chart',
+    config: { ...bundle.defaults, xLabel: 'Time' }
+  })
+});
+
+// Push data conforming to dataSchema
+await fetch(`/api/cards/${card.id}/data`, {
+  method: 'POST',
+  body: JSON.stringify({
+    data: [{ x: 0, y: 50 }] // Must match bundle.dataSchema
+  })
+});
+```
+
+### 3. Validation
+```typescript
+const validation = client.validateData(bundle, myData);
+if (!validation.valid) {
+  console.error('Errors:', validation.errors);
 }
 ```
 
-## Testing Instructions
+## Testing
 
-### Quick Test
+### Unit Tests
 ```bash
-# Test API endpoint
+npm test server/bundles.test.ts
+```
+
+### Manual Verification
+```bash
+npx ts-node scripts/verify-bundle-api.ts
+```
+
+### API Test
+```bash
 curl http://localhost:5000/api/bundles | jq '.[0] | {key, dataSchema, configSchema, outputSchema}'
-
-# Test in UI
-1. Navigate to http://localhost:5000/workbench
-2. Expand "Card Bundles" section
-3. Click any bundle to see all three schemas
 ```
 
-### Validation
-- ✅ API returns array of bundles
-- ✅ Each bundle has dataSchema field
-- ✅ Each bundle has configSchema field
-- ✅ Each bundle has outputSchema field
-- ✅ Schemas are valid JSON Schema objects
-- ✅ UI displays all three schemas
+## Benefits for Spoke Apps
 
-## Integration for Spoke Apps
+1. **Dynamic Discovery**: No hardcoded chart types
+2. **Type Safety**: Full TypeScript support with generated types
+3. **Schema Validation**: Validate data before submission
+4. **Auto-generated UIs**: Build config forms from schemas
+5. **Documentation**: Every bundle includes usage docs and examples
+6. **Versioning**: Bundles track versions for compatibility
+7. **Categorization**: Filter by category and tags
 
-Spoke apps can now:
-1. Discover available chart types dynamically
-2. Access JSON Schema contracts for validation
-3. Generate TypeScript types from schemas
-4. Build dynamic UIs from configSchema
-5. Validate data before submission
-6. Document API integrations automatically
+## Related Endpoints
 
-Example:
-```javascript
-// Fetch bundles
-const bundles = await fetch('/api/bundles').then(r => r.json());
-
-// Find desired bundle
-const bundle = bundles.find(b => b.key === 'confidence_band');
-
-// Use schemas
-validate(myData, bundle.dataSchema);
-generateUI(bundle.configSchema);
-```
-
-## No Additional Changes Required
-
-The implementation is **COMPLETE** and **PRODUCTION-READY**:
-- ✅ API endpoint functional
-- ✅ All schemas included in response
-- ✅ UI enhanced to show all schemas
-- ✅ Documentation comprehensive
-- ✅ No breaking changes
-- ✅ No new dependencies needed
-
-## Related Endpoints (Already Implemented)
+- `GET /api/bundles` - List all bundles
 - `GET /api/bundles/:id` - Get bundle by ID
 - `GET /api/bundles/key/:key` - Get bundle by key
-- `POST /api/bundles` - Create new bundle
-- `PATCH /api/bundles/:id` - Update bundle
-- `DELETE /api/bundles/:id` - Delete bundle
+- `POST /api/cards` - Create card with bundle
+- `POST /api/cards/:id/data` - Push data to card
+
+## Existing Bundle Definitions
+
+The system includes 25+ pre-defined bundles in `server/bundleDefinitions.ts`:
+- Confidence Band Chart
+- Alluvial/Flow Chart
+- Heatmap
+- Multi-line Chart
+- Bubble Scatter
+- Range Strip
+- Control Components (Range Builder)
+- And many more...
+
+## Next Steps for Spoke Apps
+
+1. Read `docs/SPOKE_APP_BUNDLE_DISCOVERY.md` for quick start
+2. Import `createBundleClient` from `@shared/bundle-api-types`
+3. Call `GET /api/bundles` to discover available bundles
+4. Use `dataSchema` to validate data structure
+5. Use `configSchema` to generate config UI
+6. Create cards with `POST /api/cards`
+7. Push data with `POST /api/cards/:id/data`
+
+## Verification Status
+
+✅ Endpoint exists and returns correct data  
+✅ All bundles include dataSchema, configSchema, outputSchema  
+✅ Documentation complete  
+✅ TypeScript types available  
+✅ Integration examples provided  
+✅ Test suite created  
+✅ Verification script available  
+
+## Conclusion
+
+The Card Bundle Discovery API is **fully functional and documented**. Spoke apps can now:
+- Discover all available bundles via `GET /api/bundles`
+- Access complete JSON Schema contracts for each bundle
+- Integrate using the provided TypeScript client library
+- Follow documented patterns and examples
+- Validate data before submission
+
+**Status**: ✅ READY FOR SPOKE APP INTEGRATION
