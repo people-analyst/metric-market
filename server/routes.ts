@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import { readFileSync } from "fs";
+import { resolve } from "path";
 import { storage } from "./storage";
 import {
   insertMetricDefinitionSchema,
@@ -437,6 +439,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!authorizeGitHubSync(req, res)) return;
     stopAutoSync();
     res.json({ enabled: false, ...getSyncStatus() });
+  });
+
+  // --- SDK Distribution Endpoints ---
+  // Serve Embedded AI Developer SDK v1.1.0
+  app.get("/api/sdk/embedded-ai", (_req, res) => {
+    try {
+      const sdkPath = resolve(process.cwd(), "embedded-ai-sdk.js");
+      const sdkContent = readFileSync(sdkPath, "utf-8");
+      res.setHeader("Content-Type", "application/javascript");
+      res.setHeader("X-SDK-Version", "1.1.0");
+      res.send(sdkContent);
+    } catch (err: any) {
+      res.status(500).json({ error: "SDK not found", message: err.message });
+    }
+  });
+
+  app.get("/api/sdk/embedded-ai.cjs", (_req, res) => {
+    try {
+      const sdkPath = resolve(process.cwd(), "embedded-ai-sdk.cjs");
+      const sdkContent = readFileSync(sdkPath, "utf-8");
+      res.setHeader("Content-Type", "application/javascript");
+      res.setHeader("X-SDK-Version", "1.1.0");
+      res.send(sdkContent);
+    } catch (err: any) {
+      res.status(500).json({ error: "SDK not found", message: err.message });
+    }
+  });
+
+  // SDK metadata endpoint
+  app.get("/api/sdk/info", (_req, res) => {
+    res.json({
+      name: "Embedded AI Developer SDK",
+      version: "1.1.0",
+      app: "Metric Market",
+      endpoints: {
+        esModule: "/api/sdk/embedded-ai",
+        commonjs: "/api/sdk/embedded-ai.cjs",
+      },
+      features: [
+        "Wind-down buffer",
+        "Pause-and-continue",
+        "Environment-configurable budget",
+        "Project context loading",
+        "Same-origin auth middleware"
+      ],
+      status: "operational"
+    });
   });
 
   const httpServer = createServer(app);
