@@ -1,0 +1,120 @@
+{
+  "sdk_name": "Spoke Cockpit SDK",
+  "version": "2.0.0",
+  "installation_date": "2024",
+  "status": "installed",
+  "operational": true,
+  "file_path": "spoke-cockpit-sdk.js",
+  "file_size_kb": "calculated on demand",
+  "integration_points": {
+    "server_module": "server/spokeCockpit.ts",
+    "server_index": "server/index.ts",
+    "mount_function": "mountSpokeCockpit(app)"
+  },
+  "configuration": {
+    "app_slug": "metric-market",
+    "app_name": "Metric Market",
+    "hub_url": "http://localhost:5000",
+    "default_interval_ms": 300000,
+    "environment_variables": {
+      "HUB_URL": "Hub server URL (default: http://localhost:5000)",
+      "HUB_API_KEY": "API key for hub authentication (optional)",
+      "COCKPIT_INTERVAL_MS": "Metric collection interval in ms (default: 300000)"
+    }
+  },
+  "features": {
+    "v2": [
+      "Enhanced metric collection engine",
+      "Real-time monitoring improvements",
+      "Advanced cockpit dashboard",
+      "Better performance tracking",
+      "Extended metric intent support (80+)"
+    ],
+    "core": [
+      "Self-contained cockpit bundle",
+      "Express middleware integration",
+      "Configurable recording intervals",
+      "Environment variable support",
+      "PostgreSQL database integration",
+      "Hub synchronization",
+      "Metric intent mapping"
+    ]
+  },
+  "endpoints": {
+    "dashboard": "/cockpit",
+    "api": {
+      "metrics_post": "/cockpit/api/metrics",
+      "metrics_get": "/cockpit/api/metrics",
+      "status": "/cockpit/api/status",
+      "version": "/cockpit/api/version",
+      "intents": "/cockpit/api/intents"
+    }
+  },
+  "metric_domains": {
+    "strategic": {
+      "count": 3,
+      "examples": [
+        "Workflow Completion Rate",
+        "Data Quality Score",
+        "Active Users (7d)"
+      ]
+    },
+    "operational": {
+      "count": 8,
+      "examples": [
+        "Avg Job Runtime",
+        "Retry Rate",
+        "Recruiter Efficiency"
+      ]
+    },
+    "analytical": {
+      "count": 70,
+      "categories": [
+        "Talent Acquisition",
+        "Total Rewards",
+        "Headcount & Movement",
+        "Leadership & Development",
+        "Company Health",
+        "Survey & Engagement",
+        "HR Efficiency"
+      ]
+    }
+  },
+  "scripts": {
+    "download": "scripts/download-spoke-sdk.ts",
+    "install": "scripts/install-spoke-sdk.ts",
+    "verify": "scripts/verify-spoke-sdk.ts",
+    "shell_install": "scripts/install-spoke-sdk.sh"
+  },
+  "documentation": {
+    "setup_guide": "SPOKE_COCKPIT_SETUP.md",
+    "installation_report": "SPOKE_COCKPIT_V2_INSTALLATION.md",
+    "quick_reference": "SPOKE_SDK_V2_QUICK_REFERENCE.md",
+    "npm_scripts_guide": "SPOKE_SDK_NPM_SCRIPTS.md",
+    "checklist": "SPOKE_SDK_CHECKLIST.md",
+    "status_file": "SPOKE_SDK_V2_STATUS.json"
+  },
+  "upgrade_info": {
+    "previous_version": "1.0.0",
+    "current_version": "2.0.0",
+    "breaking_changes": false,
+    "backward_compatible": true,
+    "migration_required": false
+  },
+  "verification": {
+    "version_check_command": "grep 'COCKPIT_VERSION' spoke-cockpit-sdk.js",
+    "expected_output": "const COCKPIT_VERSION = \"2.0.0\";",
+    "file_exists_command": "ls -lh spoke-cockpit-sdk.js",
+    "server_log_message": "✓ Spoke Cockpit SDK v2.0 mounted successfully"
+  },
+  "support": {
+    "troubleshooting_guide": "See SPOKE_COCKPIT_V2_INSTALLATION.md#troubleshooting",
+    "common_issues": [
+      "SDK not loading: Check file exists and has correct permissions",
+      "Version mismatch: Re-download SDK using install script",
+      "Hub connection: Verify HUB_URL and network connectivity"
+    ]
+  },
+  "last_updated": "2024",
+  "maintained_by": "Metric Market Development Team"
+}

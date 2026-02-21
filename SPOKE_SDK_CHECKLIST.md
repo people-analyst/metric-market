@@ -2,21 +2,21 @@
 
 ## Pre-Installation
 
-- [ ] Hub server is running at `http://localhost:5000` (or configured URL)
-- [ ] Database is accessible and configured
-- [ ] Project dependencies are installed (`npm install`)
+- [x] Hub server is running at `http://localhost:5000` (or configured URL)
+- [x] Database is accessible and configured
+- [x] Project dependencies are installed (`npm install`)
 
 ## Installation Steps
 
 ### 1. Download SDK
-- [ ] Run: `npx tsx scripts/install-spoke-sdk.ts`
-- [ ] OR manually: `curl -o spoke-cockpit-sdk.js "http://localhost:5000/api/sdk/cockpit/metric-market"`
-- [ ] Verify file exists: `ls -lh spoke-cockpit-sdk.js`
+- [x] Run: `npx tsx scripts/install-spoke-sdk.ts`
+- [x] OR manually: `curl -o spoke-cockpit-sdk.js "http://localhost:5000/api/sdk/cockpit/metric-market"`
+- [x] Verify file exists: `ls -lh spoke-cockpit-sdk.js`
 
 ### 2. Verify Installation
-- [ ] Run: `npx tsx scripts/verify-spoke-sdk.ts`
-- [ ] All checks pass with ✓ marks
-- [ ] SDK version is 2.0 or higher
+- [x] Run: `npx tsx scripts/verify-spoke-sdk.ts`
+- [x] All checks pass with ✓ marks
+- [x] SDK version is 2.0 or higher
 
 ### 3. Review Integration
 - [ ] File exists: `server/spokeCockpit.ts`
