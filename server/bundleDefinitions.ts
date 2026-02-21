@@ -1599,4 +1599,827 @@ A dot strip visualization showing individual employee base compensation position
 - Link to individual employee detail cards for drill-down`,
     infrastructureNotes: "Pure SVG rendering. Dot collision avoidance via simple jitter algorithm. Supports any level naming convention (Level 1-6, P1-P6, M1-M6, etc.). Color-coding is automatic based on employee salary vs. band min/max.",
   },
+
+  // ════════════════════════════════════════════════════════════════════
+  // COMPENSATION CYCLE VISUALIZATION BUNDLES
+  // ════════════════════════════════════════════════════════════════════
+
+  {
+    key: "comp_cycle_overview",
+    chartType: "comp_cycle_overview",
+    displayName: "Comp Cycle Overview",
+    description: "Executive compensation cycle dashboard with budget utilization gauge, average increase by performance tier, compa-ratio distribution before vs after, merit cost by business unit, and cycle completion stage indicator.",
+    version: 1,
+    category: "Compensation Cycle",
+    tags: ["compensation", "cycle", "budget", "merit", "executive", "dashboard", "compa-ratio", "performance-tier"],
+    dataSchema: {
+      type: "object",
+      required: ["budgetUtilization", "increaseByTier", "compaRatioBuckets", "meritCostByUnit"],
+      properties: {
+        budgetUtilization: {
+          type: "object",
+          required: ["allocated", "spent"],
+          description: "Budget utilization gauge data",
+          properties: {
+            allocated: { type: "number", description: "Total allocated budget in dollars" },
+            spent: { type: "number", description: "Total spent/committed budget in dollars" },
+            currency: { type: "string", description: "Currency code (e.g., USD)" },
+            asOfDate: { type: "string", description: "ISO date when budget snapshot was taken" },
+          },
+        },
+        increaseByTier: {
+          type: "array",
+          description: "Average increase percentage grouped by performance tier",
+          items: {
+            type: "object",
+            required: ["tier", "avgIncreasePct", "headcount"],
+            properties: {
+              tier: { type: "string", description: "Performance tier label (e.g., Exceeds, Meets, Below)" },
+              avgIncreasePct: { type: "number", description: "Average merit increase percentage for this tier" },
+              headcount: { type: "number", description: "Number of employees in this tier" },
+              targetPct: { type: "number", description: "Target increase percentage from merit matrix" },
+            },
+          },
+        },
+        compaRatioBuckets: {
+          type: "object",
+          required: ["before", "after"],
+          description: "Compa-ratio distribution buckets before and after the cycle",
+          properties: {
+            bucketLabels: {
+              type: "array",
+              items: { type: "string" },
+              description: "Bucket labels (e.g., '<0.80', '0.80-0.90', '0.90-1.00', '1.00-1.10', '1.10-1.20', '>1.20')",
+            },
+            before: {
+              type: "array",
+              items: { type: "number" },
+              description: "Headcount per bucket before the cycle",
+            },
+            after: {
+              type: "array",
+              items: { type: "number" },
+              description: "Headcount per bucket after the cycle",
+            },
+          },
+        },
+        meritCostByUnit: {
+          type: "array",
+          description: "Total merit cost by business unit",
+          items: {
+            type: "object",
+            required: ["unit", "totalCost"],
+            properties: {
+              unit: { type: "string", description: "Business unit name" },
+              totalCost: { type: "number", description: "Total merit cost in dollars" },
+              headcount: { type: "number", description: "Employees in this unit" },
+              avgIncreasePct: { type: "number", description: "Average increase for this unit" },
+            },
+          },
+        },
+        cycleStage: {
+          type: "object",
+          description: "Cycle completion stage indicator",
+          properties: {
+            currentStage: { type: "string", description: "Current stage (e.g., Planning, Manager Review, Approval, Finalized)" },
+            stages: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["name", "status"],
+                properties: {
+                  name: { type: "string" },
+                  status: { type: "string", description: "completed | in_progress | pending" },
+                  completedPct: { type: "number", description: "Completion percentage (0-100)" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        gaugeColors: { type: "array", items: { type: "string" }, description: "[underBudget, onTrack, overBudget] colors" },
+        tierColors: { type: "object", additionalProperties: { type: "string" }, description: "Map of tier name to bar color" },
+        currency: { type: "string", description: "Display currency symbol" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Read-only executive dashboard; no output signals.",
+      properties: {},
+    },
+    defaults: {
+      gaugeColors: ["#10b981", "#f59e0b", "#ef4444"],
+      currency: "$",
+    },
+    exampleData: {
+      budgetUtilization: { allocated: 5200000, spent: 4680000, currency: "USD", asOfDate: "2026-02-15" },
+      increaseByTier: [
+        { tier: "Exceeds", avgIncreasePct: 5.2, headcount: 180, targetPct: 5.0 },
+        { tier: "Meets", avgIncreasePct: 3.1, headcount: 620, targetPct: 3.0 },
+        { tier: "Developing", avgIncreasePct: 1.5, headcount: 140, targetPct: 1.5 },
+        { tier: "Below", avgIncreasePct: 0.0, headcount: 60, targetPct: 0.0 },
+      ],
+      compaRatioBuckets: {
+        bucketLabels: ["<0.80", "0.80-0.90", "0.90-1.00", "1.00-1.10", "1.10-1.20", ">1.20"],
+        before: [45, 120, 310, 280, 160, 85],
+        after: [20, 80, 290, 350, 180, 80],
+      },
+      meritCostByUnit: [
+        { unit: "Engineering", totalCost: 1850000, headcount: 320, avgIncreasePct: 3.8 },
+        { unit: "Sales", totalCost: 1200000, headcount: 250, avgIncreasePct: 3.2 },
+        { unit: "Operations", totalCost: 980000, headcount: 230, avgIncreasePct: 2.9 },
+        { unit: "Corporate", totalCost: 650000, headcount: 200, avgIncreasePct: 3.0 },
+      ],
+      cycleStage: {
+        currentStage: "Manager Review",
+        stages: [
+          { name: "Planning", status: "completed", completedPct: 100 },
+          { name: "Manager Review", status: "in_progress", completedPct: 72 },
+          { name: "VP Approval", status: "pending", completedPct: 0 },
+          { name: "Finalized", status: "pending", completedPct: 0 },
+        ],
+      },
+    },
+    exampleConfig: { currency: "$" },
+    documentation: `Comp Cycle Overview is a composite executive dashboard for monitoring an active compensation cycle.
+
+**Sub-visualizations:**
+1. **Budget Utilization Gauge** — Radial or linear gauge showing spent vs allocated budget. Color-coded: green (under 90%), amber (90-100%), red (over 100%).
+2. **Average Increase by Tier** — Grouped bar chart comparing actual average increase % to matrix target % for each performance tier.
+3. **Compa-Ratio Buckets** — Side-by-side histogram showing headcount distribution across compa-ratio ranges before and after the cycle.
+4. **Merit Cost by Business Unit** — Horizontal bar chart of total merit cost by BU, sortable by cost or headcount.
+5. **Cycle Stage Indicator** — Step progress indicator showing cycle phase (Planning → Manager Review → VP Approval → Finalized).
+
+**Required Data Sources:**
+- **Calculus**: Budget totals, per-employee increase calculations, compa-ratio computations
+- **Conductor**: Performance tier assignments, business unit mapping
+- **MetaFactory**: Cycle stage configuration and status
+
+**Hub SDK Integration:**
+Spoke apps push data via POST /api/ingest/metric-engine or POST /api/ingest/conductor with the required fields. Cards auto-populate when data arrives.`,
+    infrastructureNotes: "Composite dashboard bundle. Frontend renders 5 sub-charts in a grid layout. Budget gauge uses radial arc or linear bar. Grouped bar and histogram use D3.js. Stage indicator is pure CSS/SVG.",
+  },
+
+  {
+    key: "merit_matrix_heatmap",
+    chartType: "merit_matrix_heatmap",
+    displayName: "Merit Matrix Heatmap",
+    description: "6×5 heatmap showing actual average increases versus merit matrix targets, with population count overlay per cell and variance highlighting where manager overrides diverged from policy.",
+    version: 1,
+    category: "Compensation Cycle",
+    tags: ["compensation", "merit-matrix", "heatmap", "performance", "compa-ratio", "manager-override", "variance"],
+    dataSchema: {
+      type: "object",
+      required: ["cells", "rowLabels", "colLabels"],
+      properties: {
+        rowLabels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Performance tier labels for rows (e.g., ['Far Exceeds', 'Exceeds', 'Meets', 'Developing', 'Below'])",
+        },
+        colLabels: {
+          type: "array",
+          items: { type: "string" },
+          description: "Compa-ratio zone labels for columns (e.g., ['<0.85', '0.85-0.95', '0.95-1.05', '1.05-1.15', '1.15-1.25', '>1.25'])",
+        },
+        cells: {
+          type: "array",
+          description: "2D array [row][col] of cell data",
+          items: {
+            type: "array",
+            items: {
+              type: "object",
+              required: ["targetPct", "actualPct", "population"],
+              properties: {
+                targetPct: { type: "number", description: "Matrix-prescribed increase percentage" },
+                actualPct: { type: "number", description: "Actual average increase delivered" },
+                population: { type: "number", description: "Number of employees in this cell" },
+                variancePct: { type: "number", description: "Actual minus target (positive = over-delivered)" },
+                overrideCount: { type: "number", description: "Number of manager overrides in this cell" },
+                employeeIds: { type: "array", items: { type: "string" }, description: "Employee IDs for drill-down" },
+              },
+            },
+          },
+        },
+        cycleName: { type: "string", description: "Compensation cycle identifier (e.g., '2026 Annual Merit')" },
+        asOfDate: { type: "string", description: "ISO date of data snapshot" },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        colorScale: {
+          type: "object",
+          properties: {
+            belowTarget: { type: "string", description: "Color for actual < target (under-delivered)" },
+            onTarget: { type: "string", description: "Color for actual ≈ target" },
+            aboveTarget: { type: "string", description: "Color for actual > target (over-delivered)" },
+          },
+        },
+        varianceThreshold: { type: "number", description: "Percentage points of variance before flagging (default 0.5)" },
+        showPopulation: { type: "boolean", description: "Show population count overlay in each cell" },
+        showVariance: { type: "boolean", description: "Show variance indicator in each cell" },
+        enableDrillDown: { type: "boolean", description: "Enable click-to-drill to employee list" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Drill-down event emitted when a cell is clicked.",
+      properties: {
+        selectedCell: {
+          type: "object",
+          properties: {
+            row: { type: "number" },
+            col: { type: "number" },
+            performanceTier: { type: "string" },
+            compaRatioZone: { type: "string" },
+            employeeIds: { type: "array", items: { type: "string" } },
+          },
+        },
+      },
+    },
+    defaults: {
+      colorScale: { belowTarget: "#3b82f6", onTarget: "#e5e7eb", aboveTarget: "#ef4444" },
+      varianceThreshold: 0.5,
+      showPopulation: true,
+      showVariance: true,
+      enableDrillDown: true,
+    },
+    exampleData: {
+      rowLabels: ["Far Exceeds", "Exceeds", "Meets", "Developing", "Below"],
+      colLabels: ["<0.85", "0.85-0.95", "0.95-1.05", "1.05-1.15", "1.15-1.25", ">1.25"],
+      cells: [
+        [
+          { targetPct: 7.0, actualPct: 7.2, population: 5, variancePct: 0.2, overrideCount: 1 },
+          { targetPct: 6.5, actualPct: 6.8, population: 12, variancePct: 0.3, overrideCount: 2 },
+          { targetPct: 6.0, actualPct: 5.9, population: 18, variancePct: -0.1, overrideCount: 0 },
+          { targetPct: 5.0, actualPct: 5.0, population: 10, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 4.0, actualPct: 4.5, population: 3, variancePct: 0.5, overrideCount: 1 },
+          { targetPct: 3.0, actualPct: 3.0, population: 2, variancePct: 0.0, overrideCount: 0 },
+        ],
+        [
+          { targetPct: 5.5, actualPct: 5.8, population: 8, variancePct: 0.3, overrideCount: 1 },
+          { targetPct: 5.0, actualPct: 5.1, population: 25, variancePct: 0.1, overrideCount: 0 },
+          { targetPct: 4.5, actualPct: 4.4, population: 45, variancePct: -0.1, overrideCount: 0 },
+          { targetPct: 3.5, actualPct: 3.6, population: 30, variancePct: 0.1, overrideCount: 1 },
+          { targetPct: 3.0, actualPct: 3.2, population: 12, variancePct: 0.2, overrideCount: 1 },
+          { targetPct: 2.0, actualPct: 2.0, population: 5, variancePct: 0.0, overrideCount: 0 },
+        ],
+        [
+          { targetPct: 4.0, actualPct: 4.0, population: 10, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 3.5, actualPct: 3.5, population: 40, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 3.0, actualPct: 3.1, population: 180, variancePct: 0.1, overrideCount: 3 },
+          { targetPct: 2.5, actualPct: 2.5, population: 120, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 2.0, actualPct: 2.3, population: 35, variancePct: 0.3, overrideCount: 2 },
+          { targetPct: 1.5, actualPct: 1.5, population: 15, variancePct: 0.0, overrideCount: 0 },
+        ],
+        [
+          { targetPct: 2.0, actualPct: 2.5, population: 3, variancePct: 0.5, overrideCount: 1 },
+          { targetPct: 1.5, actualPct: 1.5, population: 15, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 1.0, actualPct: 1.2, population: 45, variancePct: 0.2, overrideCount: 2 },
+          { targetPct: 0.5, actualPct: 0.5, population: 38, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.0, population: 20, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.0, population: 8, variancePct: 0.0, overrideCount: 0 },
+        ],
+        [
+          { targetPct: 0.0, actualPct: 0.0, population: 1, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.0, population: 5, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.5, population: 20, variancePct: 0.5, overrideCount: 3 },
+          { targetPct: 0.0, actualPct: 0.0, population: 18, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.0, population: 10, variancePct: 0.0, overrideCount: 0 },
+          { targetPct: 0.0, actualPct: 0.0, population: 5, variancePct: 0.0, overrideCount: 0 },
+        ],
+      ],
+      cycleName: "2026 Annual Merit",
+      asOfDate: "2026-02-15",
+    },
+    exampleConfig: { varianceThreshold: 0.5, showPopulation: true },
+    documentation: `Merit Matrix Heatmap displays actual compensation outcomes vs matrix policy targets.
+
+**Layout:**
+- Rows = Performance tiers (Far Exceeds → Below)
+- Columns = Compa-ratio zones (<0.85 → >1.25)
+- Each cell shows: actual avg increase %, target %, population count, variance
+
+**Color Coding:**
+- Blue: actual below target (under-delivered, possible savings)
+- Grey/neutral: on target (within threshold)
+- Red: actual above target (over-delivered, manager overrides)
+
+**Drill-Down:**
+Click any cell to view the list of employees in that performance-tier × compa-ratio-zone intersection, with their individual increases and any override flags.
+
+**Key Metrics per Cell:**
+- targetPct: The matrix-prescribed increase for this cell
+- actualPct: What managers actually awarded (average)
+- variancePct: actualPct - targetPct (positive means over-awarded)
+- overrideCount: How many managers deviated from the matrix recommendation
+- population: Employee count in this cell
+
+**Required Data Sources:**
+- **Calculus**: Per-employee increase calculations, compa-ratio computations
+- **Conductor**: Performance ratings, merit matrix policy targets
+- **MetaFactory**: Cycle configuration, employee-to-cell mapping`,
+    infrastructureNotes: "D3.js heatmap with SVG text overlays for population counts. Click handler emits drill-down events with employee IDs. Variance threshold is configurable to control sensitivity of color coding.",
+  },
+
+  {
+    key: "pay_equity_dashboard",
+    chartType: "pay_equity_dashboard",
+    displayName: "Pay Equity Dashboard",
+    description: "Composite dashboard for pay equity analysis: gender pay gap by peer group (lollipop chart), compa-ratio distribution by demographic (box plot), equity flags by category (stacked bar), and before vs after equity metrics comparison.",
+    version: 1,
+    category: "Compensation Cycle",
+    tags: ["pay-equity", "gender", "demographic", "compa-ratio", "compliance", "deia", "dashboard", "compensation"],
+    dataSchema: {
+      type: "object",
+      required: ["gapByPeerGroup", "compaRatioByDemographic", "equityFlags"],
+      properties: {
+        gapByPeerGroup: {
+          type: "array",
+          description: "Gender pay gap by peer group as lollipop/dot plot data",
+          items: {
+            type: "object",
+            required: ["peerGroup", "gapPct"],
+            properties: {
+              peerGroup: { type: "string", description: "Peer group name (e.g., 'Eng IC L4', 'Sales Mgr')" },
+              gapPct: { type: "number", description: "Pay gap as percentage (positive = male paid more, negative = female paid more)" },
+              femaleAvg: { type: "number", description: "Average female compensation in this peer group" },
+              maleAvg: { type: "number", description: "Average male compensation in this peer group" },
+              headcount: { type: "number", description: "Total headcount in peer group" },
+              significant: { type: "boolean", description: "Whether gap is statistically significant" },
+            },
+          },
+        },
+        compaRatioByDemographic: {
+          type: "array",
+          description: "Compa-ratio distribution by demographic category (rendered as box plots)",
+          items: {
+            type: "object",
+            required: ["category", "min", "q1", "median", "q3", "max"],
+            properties: {
+              category: { type: "string", description: "Demographic category label (e.g., 'Female', 'Male', 'Non-Binary')" },
+              min: { type: "number", description: "Minimum compa-ratio" },
+              q1: { type: "number", description: "25th percentile compa-ratio" },
+              median: { type: "number", description: "Median compa-ratio" },
+              q3: { type: "number", description: "75th percentile compa-ratio" },
+              max: { type: "number", description: "Maximum compa-ratio" },
+              mean: { type: "number", description: "Mean compa-ratio for this demographic" },
+              count: { type: "number", description: "Headcount in this category" },
+            },
+          },
+        },
+        equityFlags: {
+          type: "object",
+          required: ["categories", "critical", "warning", "info"],
+          description: "Equity flag counts by category and severity (stacked bar)",
+          properties: {
+            categories: {
+              type: "array",
+              items: { type: "string" },
+              description: "Flag categories (e.g., ['Gender', 'Ethnicity', 'Age', 'Disability', 'Veteran'])",
+            },
+            critical: {
+              type: "array",
+              items: { type: "number" },
+              description: "Critical flag counts per category",
+            },
+            warning: {
+              type: "array",
+              items: { type: "number" },
+              description: "Warning flag counts per category",
+            },
+            info: {
+              type: "array",
+              items: { type: "number" },
+              description: "Informational flag counts per category",
+            },
+          },
+        },
+        beforeAfterMetrics: {
+          type: "object",
+          description: "Before vs after equity metrics comparison",
+          properties: {
+            metrics: {
+              type: "array",
+              items: {
+                type: "object",
+                required: ["name", "before", "after"],
+                properties: {
+                  name: { type: "string", description: "Metric name (e.g., 'Adjusted Gender Gap', 'Median CR Ratio F/M')" },
+                  before: { type: "number", description: "Value before the compensation cycle" },
+                  after: { type: "number", description: "Value after the compensation cycle" },
+                  unit: { type: "string", description: "Unit ('%', 'ratio', '$')" },
+                  direction: { type: "string", description: "Desired direction: 'lower' or 'higher' or 'neutral'" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        gapThreshold: { type: "number", description: "Gap percentage threshold for highlighting (default 3.0)" },
+        flagColors: {
+          type: "object",
+          properties: {
+            critical: { type: "string" },
+            warning: { type: "string" },
+            info: { type: "string" },
+          },
+        },
+        showSignificance: { type: "boolean", description: "Show statistical significance markers on gap chart" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Read-only equity dashboard; no output signals.",
+      properties: {},
+    },
+    defaults: {
+      gapThreshold: 3.0,
+      flagColors: { critical: "#ef4444", warning: "#f59e0b", info: "#3b82f6" },
+      showSignificance: true,
+    },
+    exampleData: {
+      gapByPeerGroup: [
+        { peerGroup: "Eng IC L3-L4", gapPct: 2.1, femaleAvg: 142000, maleAvg: 145000, headcount: 85, significant: false },
+        { peerGroup: "Eng IC L5-L6", gapPct: 4.8, femaleAvg: 188000, maleAvg: 197000, headcount: 42, significant: true },
+        { peerGroup: "Eng Mgr", gapPct: 1.2, femaleAvg: 205000, maleAvg: 207500, headcount: 28, significant: false },
+        { peerGroup: "Sales IC", gapPct: -0.5, femaleAvg: 125000, maleAvg: 124400, headcount: 60, significant: false },
+        { peerGroup: "Sales Mgr", gapPct: 5.3, femaleAvg: 168000, maleAvg: 177000, headcount: 18, significant: true },
+        { peerGroup: "Ops IC", gapPct: 0.8, femaleAvg: 95000, maleAvg: 95800, headcount: 110, significant: false },
+      ],
+      compaRatioByDemographic: [
+        { category: "Female", min: 0.72, q1: 0.88, median: 0.98, q3: 1.08, max: 1.32, mean: 0.97, count: 420 },
+        { category: "Male", min: 0.75, q1: 0.90, median: 1.02, q3: 1.12, max: 1.35, mean: 1.01, count: 480 },
+        { category: "Non-Binary", min: 0.80, q1: 0.92, median: 1.00, q3: 1.10, max: 1.25, mean: 1.00, count: 25 },
+      ],
+      equityFlags: {
+        categories: ["Gender", "Ethnicity", "Age", "Disability", "Veteran"],
+        critical: [3, 5, 1, 0, 0],
+        warning: [8, 12, 4, 2, 1],
+        info: [15, 18, 8, 3, 2],
+      },
+      beforeAfterMetrics: {
+        metrics: [
+          { name: "Adjusted Gender Gap", before: 3.8, after: 2.4, unit: "%", direction: "lower" },
+          { name: "Median CR Ratio F/M", before: 0.96, after: 0.98, unit: "ratio", direction: "higher" },
+          { name: "Critical Flags", before: 12, after: 9, unit: "count", direction: "lower" },
+          { name: "Equity Index Score", before: 78, after: 84, unit: "score", direction: "higher" },
+        ],
+      },
+    },
+    exampleConfig: { gapThreshold: 3.0, showSignificance: true },
+    documentation: `Pay Equity Dashboard is a composite visualization for monitoring and reporting on pay equity during compensation cycles.
+
+**Sub-visualizations:**
+1. **Gender Pay Gap by Peer Group** — Lollipop/dot chart showing the gap percentage per peer group. Dots marked as "significant" are highlighted. Peer groups are job-function × level intersections for valid statistical comparison.
+2. **Compa-Ratio by Demographic** — Box-and-whisker plots showing distribution spread per demographic category. Enables quick visual comparison of median positioning and spread.
+3. **Equity Flags** — Stacked horizontal bars showing flag counts by category (Gender, Ethnicity, Age, etc.) with severity breakdown (Critical/Warning/Info).
+4. **Before vs After Metrics** — Delta comparison cards showing key equity metrics pre- and post-cycle with directional indicators.
+
+**Required Data Sources:**
+- **Calculus**: Compa-ratio calculations, statistical gap analysis, significance testing
+- **Conductor**: Demographic data, peer group definitions, equity flag rules
+- **MetaFactory**: Protected category definitions, compliance thresholds
+
+**Statistical Notes:**
+- Pay gaps should be calculated as (maleAvg - femaleAvg) / maleAvg × 100
+- Statistical significance is typically assessed via regression controlling for job level, tenure, location, and performance
+- Peer groups must have sufficient population (typically n ≥ 10) for valid comparison`,
+    infrastructureNotes: "Composite dashboard. Lollipop chart and box plots use D3.js. Stacked bars use D3.js. Before/after cards are pure CSS with delta arrows. Requires careful demographic data handling — ensure no PII in drill-down payloads.",
+  },
+
+  {
+    key: "governance_flags",
+    chartType: "governance_flags",
+    displayName: "Governance Flags",
+    description: "Compensation governance dashboard showing flag counts by category with severity color-coding, flag resolution rate over time, top flagged departments/managers table, and drill-down to individual flagged employees.",
+    version: 1,
+    category: "Compensation Cycle",
+    tags: ["governance", "compliance", "flags", "risk", "manager", "department", "resolution", "audit"],
+    dataSchema: {
+      type: "object",
+      required: ["flagsByCategory", "resolutionOverTime"],
+      properties: {
+        flagsByCategory: {
+          type: "array",
+          description: "Flag counts by category, color-coded by severity (horizontal bar chart)",
+          items: {
+            type: "object",
+            required: ["category", "severity", "count"],
+            properties: {
+              category: { type: "string", description: "Flag category (e.g., 'Over Matrix', 'Under Matrix', 'Range Violation', 'Equity Gap', 'Budget Exceeded')" },
+              severity: { type: "string", description: "Severity level: critical | warning | info" },
+              count: { type: "number", description: "Number of flags in this category" },
+              resolvedCount: { type: "number", description: "Number already resolved" },
+            },
+          },
+        },
+        resolutionOverTime: {
+          type: "object",
+          required: ["dates", "opened", "resolved"],
+          description: "Flag resolution rate tracked over time (line chart)",
+          properties: {
+            dates: { type: "array", items: { type: "string" }, description: "ISO date labels for x-axis" },
+            opened: { type: "array", items: { type: "number" }, description: "Cumulative flags opened by date" },
+            resolved: { type: "array", items: { type: "number" }, description: "Cumulative flags resolved by date" },
+          },
+        },
+        topFlaggedEntities: {
+          type: "array",
+          description: "Top flagged departments or managers table",
+          items: {
+            type: "object",
+            required: ["name", "type", "flagCount"],
+            properties: {
+              name: { type: "string", description: "Department or manager name" },
+              type: { type: "string", description: "'department' or 'manager'" },
+              flagCount: { type: "number", description: "Total flags" },
+              criticalCount: { type: "number", description: "Critical severity flags" },
+              warningCount: { type: "number", description: "Warning severity flags" },
+              resolutionPct: { type: "number", description: "Percentage of flags resolved (0-100)" },
+            },
+          },
+        },
+        flagDetails: {
+          type: "array",
+          description: "Individual flag records for drill-down",
+          items: {
+            type: "object",
+            required: ["flagId", "category", "severity"],
+            properties: {
+              flagId: { type: "string", description: "Unique flag identifier" },
+              category: { type: "string" },
+              severity: { type: "string" },
+              employeeId: { type: "string", description: "Affected employee ID" },
+              managerId: { type: "string", description: "Responsible manager ID" },
+              department: { type: "string" },
+              description: { type: "string", description: "Flag description" },
+              status: { type: "string", description: "open | resolved | waived" },
+              createdAt: { type: "string", description: "ISO date flag was created" },
+              resolvedAt: { type: "string", description: "ISO date flag was resolved (if applicable)" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        severityColors: {
+          type: "object",
+          properties: {
+            critical: { type: "string" },
+            warning: { type: "string" },
+            info: { type: "string" },
+          },
+        },
+        topN: { type: "number", description: "Number of top flagged entities to show (default 10)" },
+        enableDrillDown: { type: "boolean", description: "Enable click-through to individual flag details" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Drill-down event when a flag row or entity is clicked.",
+      properties: {
+        selectedFlag: {
+          type: "object",
+          properties: {
+            flagId: { type: "string" },
+            employeeId: { type: "string" },
+            category: { type: "string" },
+          },
+        },
+      },
+    },
+    defaults: {
+      severityColors: { critical: "#ef4444", warning: "#f59e0b", info: "#3b82f6" },
+      topN: 10,
+      enableDrillDown: true,
+    },
+    exampleData: {
+      flagsByCategory: [
+        { category: "Over Matrix (+2%)", severity: "warning", count: 45, resolvedCount: 12 },
+        { category: "Over Matrix (+5%)", severity: "critical", count: 8, resolvedCount: 3 },
+        { category: "Under Matrix", severity: "info", count: 22, resolvedCount: 18 },
+        { category: "Range Max Violation", severity: "critical", count: 12, resolvedCount: 5 },
+        { category: "Range Min Violation", severity: "warning", count: 6, resolvedCount: 4 },
+        { category: "Equity Gap >5%", severity: "critical", count: 5, resolvedCount: 2 },
+        { category: "Budget Exceeded", severity: "warning", count: 15, resolvedCount: 8 },
+        { category: "Missing Performance Rating", severity: "info", count: 30, resolvedCount: 25 },
+      ],
+      resolutionOverTime: {
+        dates: ["2026-01-15", "2026-01-22", "2026-01-29", "2026-02-05", "2026-02-12", "2026-02-19"],
+        opened: [25, 58, 92, 118, 135, 143],
+        resolved: [5, 18, 35, 52, 68, 77],
+      },
+      topFlaggedEntities: [
+        { name: "J. Smith (Sales Dir)", type: "manager", flagCount: 12, criticalCount: 3, warningCount: 5, resolutionPct: 25 },
+        { name: "Engineering - Platform", type: "department", flagCount: 10, criticalCount: 2, warningCount: 4, resolutionPct: 40 },
+        { name: "K. Chen (Eng VP)", type: "manager", flagCount: 8, criticalCount: 1, warningCount: 3, resolutionPct: 50 },
+        { name: "Sales - Enterprise", type: "department", flagCount: 7, criticalCount: 2, warningCount: 3, resolutionPct: 29 },
+        { name: "Operations - Global", type: "department", flagCount: 6, criticalCount: 0, warningCount: 4, resolutionPct: 67 },
+      ],
+      flagDetails: [
+        { flagId: "FLG-001", category: "Over Matrix (+5%)", severity: "critical", employeeId: "EMP-1234", managerId: "MGR-045", department: "Sales", description: "Manager awarded 8.5% vs 3.5% matrix target", status: "open", createdAt: "2026-02-01" },
+        { flagId: "FLG-002", category: "Range Max Violation", severity: "critical", employeeId: "EMP-2345", managerId: "MGR-012", department: "Engineering", description: "Proposed salary exceeds range max by $12,000", status: "resolved", createdAt: "2026-01-28", resolvedAt: "2026-02-10" },
+      ],
+    },
+    exampleConfig: { topN: 10, enableDrillDown: true },
+    documentation: `Governance Flags dashboard tracks compliance and risk during compensation cycles.
+
+**Sub-visualizations:**
+1. **Flag Count by Category** — Horizontal bar chart, sorted by count descending, color-coded by severity (critical=red, warning=amber, info=blue). Shows resolved vs total for each category.
+2. **Resolution Rate Over Time** — Dual line chart showing cumulative flags opened vs resolved over the cycle timeline. Gap between lines = outstanding flags.
+3. **Top Flagged Entities** — Table showing departments and managers with highest flag counts, broken down by severity, with resolution percentage.
+4. **Flag Details (Drill-Down)** — Expandable detail view for individual flags showing employee, manager, description, and status.
+
+**Flag Categories:**
+- Over Matrix: Manager awarded more than matrix-prescribed percentage
+- Under Matrix: Manager awarded less than matrix (potential retention risk)
+- Range Violations: Proposed salary above max or below min of pay range
+- Equity Gaps: Pay gap exceeds threshold for a peer group
+- Budget Exceeded: Department or manager exceeded allocated merit budget
+- Missing Data: Incomplete performance ratings or other required data
+
+**Required Data Sources:**
+- **Conductor**: Governance rules, flag definitions, threshold configurations
+- **Calculus**: Per-employee calculations that trigger flags (range checks, matrix variance, equity analysis)
+- **MetaFactory**: Organizational hierarchy for department/manager roll-ups`,
+    infrastructureNotes: "Composite dashboard. Horizontal bars and dual-line chart use D3.js. Table component is pure HTML/CSS with sort capability. Drill-down panel loads on click. Flag data should be pushed via POST /api/ingest/conductor.",
+  },
+
+  {
+    key: "geo_compensation",
+    chartType: "geo_compensation",
+    displayName: "Geo Compensation",
+    description: "Geographic compensation analysis dashboard: average increase by country, inflation overlay vs merit allocation, FX-normalized cost comparison across geos, and compa-ratio distribution by geo zone.",
+    version: 1,
+    category: "Compensation Cycle",
+    tags: ["geographic", "compensation", "international", "inflation", "fx", "currency", "compa-ratio", "country"],
+    dataSchema: {
+      type: "object",
+      required: ["increaseByCountry"],
+      properties: {
+        increaseByCountry: {
+          type: "array",
+          description: "Average merit increase by country (bar chart or map)",
+          items: {
+            type: "object",
+            required: ["country", "countryCode", "avgIncreasePct"],
+            properties: {
+              country: { type: "string", description: "Country name" },
+              countryCode: { type: "string", description: "ISO 3166-1 alpha-2 country code" },
+              avgIncreasePct: { type: "number", description: "Average merit increase percentage" },
+              headcount: { type: "number", description: "Employee count in this country" },
+              budgetAllocated: { type: "number", description: "Merit budget allocated (local currency)" },
+              budgetSpent: { type: "number", description: "Merit budget spent (local currency)" },
+              localCurrency: { type: "string", description: "ISO 4217 currency code (e.g., USD, EUR, GBP)" },
+            },
+          },
+        },
+        inflationOverlay: {
+          type: "array",
+          description: "Inflation rate vs merit allocation by country for comparison",
+          items: {
+            type: "object",
+            required: ["country", "inflationPct", "meritPct"],
+            properties: {
+              country: { type: "string" },
+              countryCode: { type: "string" },
+              inflationPct: { type: "number", description: "Current CPI inflation rate" },
+              meritPct: { type: "number", description: "Average merit increase percentage" },
+              realIncreasePct: { type: "number", description: "Merit minus inflation (real increase)" },
+            },
+          },
+        },
+        fxNormalizedCost: {
+          type: "array",
+          description: "FX-normalized merit cost comparison across geos (all converted to base currency)",
+          items: {
+            type: "object",
+            required: ["country", "localCost", "normalizedCost"],
+            properties: {
+              country: { type: "string" },
+              countryCode: { type: "string" },
+              localCost: { type: "number", description: "Total merit cost in local currency" },
+              localCurrency: { type: "string" },
+              fxRate: { type: "number", description: "Exchange rate to base currency" },
+              normalizedCost: { type: "number", description: "Merit cost converted to base currency" },
+              baseCurrency: { type: "string", description: "Base currency code (e.g., USD)" },
+              headcount: { type: "number" },
+              costPerHead: { type: "number", description: "Normalized cost per employee" },
+            },
+          },
+        },
+        compaRatioByGeo: {
+          type: "array",
+          description: "Compa-ratio distribution by geographic zone (box plot data)",
+          items: {
+            type: "object",
+            required: ["geoZone", "min", "q1", "median", "q3", "max"],
+            properties: {
+              geoZone: { type: "string", description: "Geographic zone (e.g., 'Americas', 'EMEA', 'APAC')" },
+              min: { type: "number" },
+              q1: { type: "number" },
+              median: { type: "number" },
+              q3: { type: "number" },
+              max: { type: "number" },
+              mean: { type: "number" },
+              headcount: { type: "number" },
+            },
+          },
+        },
+      },
+    },
+    configSchema: {
+      type: "object",
+      properties: {
+        baseCurrency: { type: "string", description: "Base currency for FX normalization (default USD)" },
+        inflationSource: { type: "string", description: "Source label for inflation data (e.g., 'IMF WEO Oct 2025')" },
+        barOrientation: { type: "string", description: "'horizontal' or 'vertical' for country bars" },
+        highlightThreshold: { type: "number", description: "Highlight countries where merit < inflation" },
+        geoZoneColors: { type: "object", additionalProperties: { type: "string" }, description: "Map of geo zone to color" },
+        width: { type: "number" },
+        height: { type: "number" },
+      },
+    },
+    outputSchema: {
+      type: "object",
+      description: "Read-only geographic dashboard; no output signals.",
+      properties: {},
+    },
+    defaults: {
+      baseCurrency: "USD",
+      barOrientation: "horizontal",
+      highlightThreshold: 0,
+    },
+    exampleData: {
+      increaseByCountry: [
+        { country: "United States", countryCode: "US", avgIncreasePct: 3.5, headcount: 420, budgetAllocated: 3200000, budgetSpent: 2880000, localCurrency: "USD" },
+        { country: "United Kingdom", countryCode: "GB", avgIncreasePct: 3.8, headcount: 85, budgetAllocated: 520000, budgetSpent: 495000, localCurrency: "GBP" },
+        { country: "Germany", countryCode: "DE", avgIncreasePct: 4.2, headcount: 60, budgetAllocated: 380000, budgetSpent: 365000, localCurrency: "EUR" },
+        { country: "India", countryCode: "IN", avgIncreasePct: 9.5, headcount: 200, budgetAllocated: 45000000, budgetSpent: 42500000, localCurrency: "INR" },
+        { country: "Singapore", countryCode: "SG", avgIncreasePct: 4.0, headcount: 45, budgetAllocated: 280000, budgetSpent: 268000, localCurrency: "SGD" },
+        { country: "Brazil", countryCode: "BR", avgIncreasePct: 7.2, headcount: 30, budgetAllocated: 1800000, budgetSpent: 1720000, localCurrency: "BRL" },
+      ],
+      inflationOverlay: [
+        { country: "United States", countryCode: "US", inflationPct: 2.8, meritPct: 3.5, realIncreasePct: 0.7 },
+        { country: "United Kingdom", countryCode: "GB", inflationPct: 3.2, meritPct: 3.8, realIncreasePct: 0.6 },
+        { country: "Germany", countryCode: "DE", inflationPct: 2.5, meritPct: 4.2, realIncreasePct: 1.7 },
+        { country: "India", countryCode: "IN", inflationPct: 5.5, meritPct: 9.5, realIncreasePct: 4.0 },
+        { country: "Singapore", countryCode: "SG", inflationPct: 3.0, meritPct: 4.0, realIncreasePct: 1.0 },
+        { country: "Brazil", countryCode: "BR", inflationPct: 4.8, meritPct: 7.2, realIncreasePct: 2.4 },
+      ],
+      fxNormalizedCost: [
+        { country: "United States", countryCode: "US", localCost: 2880000, localCurrency: "USD", fxRate: 1.0, normalizedCost: 2880000, baseCurrency: "USD", headcount: 420, costPerHead: 6857 },
+        { country: "United Kingdom", countryCode: "GB", localCost: 495000, localCurrency: "GBP", fxRate: 1.27, normalizedCost: 628650, baseCurrency: "USD", headcount: 85, costPerHead: 7396 },
+        { country: "Germany", countryCode: "DE", localCost: 365000, localCurrency: "EUR", fxRate: 1.08, normalizedCost: 394200, baseCurrency: "USD", headcount: 60, costPerHead: 6570 },
+        { country: "India", countryCode: "IN", localCost: 42500000, localCurrency: "INR", fxRate: 0.012, normalizedCost: 510000, baseCurrency: "USD", headcount: 200, costPerHead: 2550 },
+        { country: "Singapore", countryCode: "SG", localCost: 268000, localCurrency: "SGD", fxRate: 0.74, normalizedCost: 198320, baseCurrency: "USD", headcount: 45, costPerHead: 4407 },
+        { country: "Brazil", countryCode: "BR", localCost: 1720000, localCurrency: "BRL", fxRate: 0.20, normalizedCost: 344000, baseCurrency: "USD", headcount: 30, costPerHead: 11467 },
+      ],
+      compaRatioByGeo: [
+        { geoZone: "Americas", min: 0.70, q1: 0.88, median: 1.00, q3: 1.12, max: 1.40, mean: 1.00, headcount: 450 },
+        { geoZone: "EMEA", min: 0.75, q1: 0.90, median: 1.02, q3: 1.14, max: 1.35, mean: 1.02, headcount: 145 },
+        { geoZone: "APAC", min: 0.72, q1: 0.85, median: 0.96, q3: 1.08, max: 1.30, mean: 0.96, headcount: 245 },
+      ],
+    },
+    exampleConfig: { baseCurrency: "USD", barOrientation: "horizontal" },
+    documentation: `Geo Compensation dashboard provides geographic analysis for multi-country compensation cycles.
+
+**Sub-visualizations:**
+1. **Average Increase by Country** — Horizontal bar chart showing merit increase % per country, sorted by headcount or percentage. Optionally rendered as a tile cartogram for geographic context.
+2. **Inflation Overlay** — Grouped bar or lollipop chart comparing CPI inflation rate vs merit allocation per country. Countries where merit < inflation are highlighted (negative real increase).
+3. **FX-Normalized Cost** — Bar chart comparing total merit cost across geos after currency normalization. Enables apples-to-apples cost comparison. Shows cost-per-head to account for headcount differences.
+4. **Compa-Ratio by Geo Zone** — Box-and-whisker plots showing compa-ratio distribution per geographic zone (Americas, EMEA, APAC). Highlights whether zones are systematically above or below market.
+
+**Required Data Sources:**
+- **Calculus**: Per-employee increase calculations, compa-ratio computations
+- **Conductor**: Country-level budget allocations, inflation data, FX rates
+- **MetaFactory**: Country-to-geo-zone mapping, currency configurations, organizational hierarchy
+
+**FX Normalization:**
+All costs are converted to a base currency (default USD) using the fxRate provided. The fxRate should represent the conversion factor: localAmount × fxRate = baseCurrencyAmount. FX rates should be snapshotted at cycle open to avoid mid-cycle volatility.
+
+**Inflation Sources:**
+Common sources: IMF World Economic Outlook, national CPI indices, Mercer/WTW country guides. The inflationSource config field documents the data provenance.`,
+    infrastructureNotes: "Composite dashboard. Bar charts and box plots use D3.js. FX normalization is applied at data ingestion or display time. Country codes follow ISO 3166-1 alpha-2. Inflation data typically pushed from Conductor via POST /api/ingest/conductor.",
+  },
 ];

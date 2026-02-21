@@ -43,6 +43,11 @@ export const CHART_TYPES = [
   "interactive_range_strip",
   "range_target_bullet",
   "range_dot_plot",
+  "comp_cycle_overview",
+  "merit_matrix_heatmap",
+  "pay_equity_dashboard",
+  "governance_flags",
+  "geo_compensation",
 ] as const;
 
 export type ChartType = (typeof CHART_TYPES)[number];
