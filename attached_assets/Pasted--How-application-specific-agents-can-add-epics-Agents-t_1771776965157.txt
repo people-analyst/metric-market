@@ -1,0 +1,75 @@
+# How application-specific agents can add epics
+
+Agents that run in a **spoke app** (e.g. Cursor in the Conductor repo) or any environment with HTTP access to Kanbai can create epics and assign cards by calling the Kanbai API.
+
+---
+
+## What the agent needs
+
+- **Kanbai base URL** — e.g. `https://your-kanbai.replit.app` or the `KANBAI_URL` env var the app already uses for pull/claim.
+- **Auth** — Epic endpoints (`GET/POST/PATCH/DELETE /api/kanban/epics`) are currently **unauthenticated**. If you later protect them with `Authorization: Bearer <DEPLOY_SECRET_KEY>`, give the agent the same deploy key.
+
+---
+
+## API usage
+
+### List existing epics
+
+```http
+GET {KANBAI_URL}/api/kanban/epics
+```
+
+Returns all epics. The agent can match by `name` to get an `id` before assigning cards.
+
+### Create an epic
+
+```http
+POST {KANBAI_URL}/api/kanban/epics
+Content-Type: application/json
+
+{
+  "name": "Sync Reliability",
+  "description": "Optional short description.",
+  "status": "not_started"
+}
+```
+
+- **name** (required): string, max 255 chars.
+- **description** (optional): string.
+- **status** (optional): default `"not_started"`.
+
+Response: `201` with the new epic object, including `id`. Use that `id` as `epicId` when assigning cards.
+
+### Assign a card to an epic
+
+```http
+PATCH {KANBAI_URL}/api/kanban/cards/{cardId}
+Content-Type: application/json
+
+{ "epicId": 3 }
+```
+
+- **cardId** — From the manifest (e.g. card `#123` → path `/api/kanban/cards/123`).
+- **epicId** — The epic’s `id` from GET or POST. Use `null` to remove the card from an epic.
+
+### Update or delete an epic
+
+- `PATCH {KANBAI_URL}/api/kanban/epics/:id` — Update name, description, status.
+- `DELETE {KANBAI_URL}/api/kanban/epics/:id` — Delete epic (card `epic_id` is typically set to null).
+
+---
+
+## Typical flow for an app agent
+
+1. **Read** `.kanbai/KANBAN.md` in the repo to get this app’s cards and their #ids.
+2. **List epics** — `GET /api/kanban/epics` to see existing epics.
+3. **Create epic (if needed)** — If the agent is grouping work under a theme (e.g. “Conductor API parity”), `POST /api/kanban/epics` with `name` (and optional `description`).
+4. **Assign cards** — For each card it’s working on or grouping, `PATCH /api/kanban/cards/:id` with `epicId: <id>`.
+
+Example (pseudocode): after creating epic "Conductor sync", get its `id` from the response, then for each card #101, #102 in the manifest, call `PATCH .../cards/101` and `PATCH .../cards/102` with `{ "epicId": <new_epic_id> }`.
+
+---
+
+## Relation to EPIC-AGENTS-VISION.md
+
+The vision doc describes **inference** (reading vision/plans/logs to suggest epics and card→epic mappings). This doc describes **how to perform the writes** from any agent: same APIs, whether the agent is an “epic steward” in Kanbai or an application-specific agent in Cursor.
