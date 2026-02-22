@@ -55,6 +55,8 @@ metric-market/
 | `shared/schema.ts` | Database schema | Drizzle ORM schema |
 | `client/src/App.tsx` | Frontend routing | Wouter-based routing |
 | `package.json` | Dependencies | Includes @anthropic-ai/sdk |
+| `docs/KANBAI_METRIC_MARKET_STATUS.md` | Kanbai status | Completed/open cards, verification, handoff |
+| `docs/REPORT_BACK_PROMPT.md` | Report-back prompt | Prompt for status report / local agent |
 
 ---
 
@@ -226,6 +228,11 @@ Optional (SDK):
 4. **API Development** - Backend routes
 5. **SDK Integration** - AI automation
 
+### Kanbai Card Work (Metric Market)
+
+- **Status:** See `docs/KANBAI_METRIC_MARKET_STATUS.md` for completed cards, open items, and verification checklist.
+- **Report back:** Use the prompt in `docs/REPORT_BACK_PROMPT.md` to generate a status report for handoff or standup.
+
 ---
 
 ## ✅ Acceptance Criteria Standards
@@ -241,6 +248,6 @@ When implementing features, ensure:
 
 ---
 
-**Context Version:** 1.0  
-**Last Updated:** 2026-02-21  
+**Context Version:** 1.1  
+**Last Updated:** 2026-02-22  
 **SDK Version:** 1.1.0
