@@ -187,6 +187,29 @@ Metric Market operates as **Application #13** in the People Analytics Toolbox ec
 | `POST` | `/api/ingest/product-kanban` | Receive velocity, burndown, and app health data from Product Kanban; creates multi_line, heatmap, and stacked_area cards |
 | `GET` | `/api/ingest/status` | Ingestion status: card counts by source, endpoint readiness |
 
+### Kanbai Integration (Product Kanban)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/pull/board/:slug` | Pull kanban board grouped into 5 columns (backlog, todo, in_progress, in_review, done). Auth: `Bearer DEPLOY_SECRET_KEY`. Slug `all` returns all cards, otherwise filters by appTarget |
+| `POST` | `/api/receive-cards` | Webhook to receive cards from Kanbai. Upserts by sourceCardId or title. Auth: `Bearer DEPLOY_SECRET_KEY` |
+| `GET` | `/api/kanban/cards` | List local kanban cards. Filters: `?app=`, `?status=` |
+| `GET` | `/api/kanban/cards/:id` | Get single kanban card |
+| `POST` | `/api/kanban/cards` | Create kanban card |
+| `PATCH` | `/api/kanban/cards/:id` | Update kanban card (supports `epicId` for epic assignment) |
+| `DELETE` | `/api/kanban/cards/:id` | Delete kanban card |
+| `POST` | `/api/kanban/import` | Bulk import cards from external source |
+| `GET` | `/api/kanban/export` | Export all local kanban cards |
+
+### GitHub Sync (Spoke GitHub Sync Standard v2.0)
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/api/github/status` | Git branch, uncommitted changes, last commit, IDE detection |
+| `GET` | `/api/github/sync-status` | Full sync metadata (push/pull history, auto-sync state) |
+| `POST` | `/api/github/pull` | Pull latest from GitHub (stash-safe). Body: `{branch?, source?, trigger?}` |
+| `POST` | `/api/github/push` | Push local changes to GitHub with IDE tagging. Body: `{branch?, ide?, message?}` |
+| `POST` | `/api/github/auto-sync/start` | Enable periodic auto-push (every 300s) |
+| `POST` | `/api/github/auto-sync/stop` | Disable periodic auto-push |
+
 ### System
 | Method | Endpoint | Description |
 |---|---|---|
@@ -894,16 +917,19 @@ Performance metrics are pushed to the Hub on the same periodic cycle (every 300s
 ### Current System Status
 | Component | Status | Details |
 |---|---|---|
-| **Application Server** | Operational | Express.js 4 serving on port 5000, 35+ API endpoints active |
+| **Application Server** | Operational | Express.js 4 serving on port 5000, 50+ API endpoints active |
 | **Database** | Operational | PostgreSQL 16 (Neon) with 7 tables, all migrations applied |
 | **Hub Connection** | Active | SDK v2.3.0 connected to People Analytics Hub as App #13, metric intent + capability assessment active |
 | **Frontend** | Operational | React 18 + Vite 5 SPA with 13 routes, all rendering correctly |
-| **Documentation Score** | Met | Current score: 98/100, all 9 sections at 80+ |
+| **Kanbai Integration** | Active | Board pull + receive-cards webhook, epic management client, Bearer auth |
+| **GitHub Sync** | Active | Bidirectional sync with `people-analyst/metric-market`, auto-pull on boot, auto-push every 300s |
+| **Refresh Scheduler** | Active | Background cadence parser advances `nextRefreshAt` for stale card detection |
+| **Documentation Score** | Met | All 9 sections present, scoring criteria satisfied |
 
 ### Readiness Metrics
 | Metric | Value | Target | Status |
 |---|---|---|---|
-| API endpoints operational | 35+ | 30+ | Met |
+| API endpoints operational | 50+ | 30+ | Met |
 | Chart types implemented | 24+5 dashboards | 20+ | Met |
 | Control types implemented | 1 | 1 | Met |
 | Bundle definitions loaded | 31 | 23+ | Met |
@@ -912,22 +938,35 @@ Performance metrics are pushed to the Hub on the same periodic cycle (every 300s
 | Documentation sections | 9/9 | 9/9 | Met |
 | Frontend routes | 13 | 10+ | Met |
 | Database tables | 7 | 6+ | Met |
+| Kanbai endpoints | 11 | — | Active |
+| GitHub sync endpoints | 6 | — | Active |
+
+### Recent Additions (February 2026)
+- **Kanbai Board Pull API** (`GET /api/pull/board/:slug`): Returns kanban cards grouped into 5 columns with Bearer auth. Supports `slug=all` for unfiltered board or app-specific filtering.
+- **Receive-Cards Webhook** (`POST /api/receive-cards`): Accepts card pushes from Kanbai with upsert logic (matches by sourceCardId or title to prevent duplicates).
+- **Epic Management Client**: 6 functions for managing epics on central Kanbai — `listKanbaiEpics`, `createKanbaiEpic`, `updateKanbaiEpic`, `deleteKanbaiEpic`, `assignCardToEpic`, `findOrCreateEpic`. Enables grouping related cards under thematic epics.
+- **GitHub Sync v2.0**: Bidirectional git-based sync with IDE detection (Replit, Cursor, Windsurf, Claude Agent). Auto-pull on boot, periodic auto-push, stash-safe operations.
+- **Background Refresh Scheduler**: Parses refresh cadences (e.g., `every 6 hours`, `daily`, `weekly`) and advances `nextRefreshAt` timestamps for stale card detection and auto-refresh triggers.
+- **5 Compensation Cycle D3 Renderers**: CompCycleOverview, MeritMatrixHeatmap, PayEquityDashboard, GovernanceFlagsChart, GeoCompensationChart — all wired into CardWrapper.
+- **Range Builder Conductor Overlay**: Live market data overlay from Conductor using `SuperFunction:LevelType:Level` keys with fallback to simulated data.
+- **Performance Metric Mappings**: Unit-to-chart type mappings (test_result→heatmap, z_score→strip_dot, scorecard→sparkline_rows, correlation→bubble_scatter).
 
 ### Known Issues & Limitations
-- **Ingestion endpoints use sample data:** 9 card instances exist from integration testing but contain sample payloads. Live data flow depends on Conductor, Metric Engine, AnyComp, and PeopleAnalyst coming online with their push integrations.
-- **Range Builder uses simulated data:** Market data (P50/P75 percentiles, BLS OES wages) is not yet flowing from Conductor's live BigQuery pipeline. Range Builder renders with simulated data for demonstration.
-- **AnyComp event emission not yet wired:** `RangeBuilderChangeEvent` webhook delivery to AnyComp is defined in the integration spec but not yet implemented in production code. Awaiting AnyComp's `POST /api/range-events` endpoint.
-- **No scheduled refresh:** Refresh policies are defined in the schema but no cron-based refresh automation is implemented yet.
+- **Ingestion endpoints use sample data:** Card instances exist from integration testing but contain sample payloads. Live data flow depends on Conductor, Metric Engine, AnyComp, and PeopleAnalyst coming online with their push integrations.
+- **Range Builder Conductor overlay is conditional:** Market data overlay activates when Conductor pushes data; otherwise falls back to simulated JOB_STRUCTURE_DATA.
+- **AnyComp event emission not yet wired:** `RangeBuilderChangeEvent` webhook delivery to AnyComp is defined but awaiting AnyComp's `POST /api/range-events` endpoint.
+- **Kanbai epic endpoints pending:** Epic management client functions are implemented but Kanbai's `/api/kanban/epics` endpoints are not yet deployed. Client functions will activate automatically when available.
 
 ### Validation Warnings
 - Bundle key uniqueness constraint is enforced at the database level via `UNIQUE` on `card_bundles.key`
 - All JSON Schema contracts (`dataSchema`, `configSchema`, `outputSchema`) are stored as JSONB and validated at insert time
 - Card status transitions (draft -> active -> archived -> needs_refresh) are not enforced at the database level; application logic manages state
+- Receive-cards upsert matches by `sourceCardId` or `title`; cross-app collisions possible if titles overlap across apps
 
 ### Recommendations
 1. **Priority 1:** Wire Conductor to push live BigQuery market data to `POST /api/ingest/conductor` (endpoint ready, awaiting live data)
 2. **Priority 2:** Wire Metric Engine to push computed metrics to `POST /api/ingest/metric-engine` (endpoint ready, 23 metric definitions seeded)
 3. **Priority 3:** Implement `RangeBuilderChangeEvent` emission to AnyComp and wire AnyComp to push optimization results back to `POST /api/ingest/anycomp`
 4. **Priority 4:** Wire PeopleAnalyst to push Monte Carlo/VOI results to `POST /api/ingest/people-analyst` (endpoint ready)
-5. **Priority 5:** Implement scheduled refresh automation using the refresh_policy/refresh_cadence fields
+5. **Priority 5:** Tighten receive-cards upsert matching to include `appTarget` alongside title to prevent cross-app collisions
 6. **Priority 6:** Add Segmentation Studio dimension filtering across all card types
