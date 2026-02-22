@@ -24,6 +24,7 @@ import { registerKanbanRoutes } from "./kanban-routes";
 // @ts-ignore - JS module
 import { registerAgentRoutes } from "./kanbai-agent-runner.js";
 import { getSchedulerStatus } from "./refreshScheduler";
+import { handleDirective } from "./directiveHandler";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -310,6 +311,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { status, response } = req.body;
       const result = await hub.updateDirective(req.params.id, status, response);
       res.json(result);
+    } catch (e: any) {
+      res.status(502).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/hub/process-directives", async (_req, res) => {
+    try {
+      if (!hub.isConfigured()) {
+        return res.status(503).json({ error: "Hub not configured (HUB_URL, HUB_API_KEY)" });
+      }
+      const directives = await hub.fetchDirectives("pending");
+      const results: { id: number; title: string; status: string; response?: string }[] = [];
+      for (const d of directives || []) {
+        await hub.updateDirective(String(d.id), "acknowledged");
+        try {
+          const response = await handleDirective(d as any);
+          if (response != null) {
+            await hub.updateDirective(String(d.id), "completed", response);
+            results.push({ id: d.id, title: d.title, status: "completed", response });
+          } else {
+            results.push({ id: d.id, title: d.title, status: "acknowledged" });
+          }
+        } catch (err: any) {
+          await hub.updateDirective(String(d.id), "completed", "Error: " + err.message).catch(() => {});
+          results.push({ id: d.id, title: d.title, status: "completed", response: "Error: " + err.message });
+        }
+      }
+      res.json({ processed: results.length, directives: results });
     } catch (e: any) {
       res.status(502).json({ error: e.message });
     }
