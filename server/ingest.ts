@@ -589,6 +589,66 @@ export function registerIngestRoutes(app: Express) {
     }
   });
 
+  // Card #181: Decision Wizard — decision summaries as dashboard tracking cards
+  app.post("/api/ingest/decision-wizard", async (req, res) => {
+    try {
+      const parsed = z.object({
+        payload: z.object({
+          decisionId: z.string().optional(),
+          decisionTitle: z.string().optional(),
+          summary: z.string().optional(),
+          status: z.string().optional(),
+          options: z.array(z.object({
+            label: z.string().optional(),
+            selected: z.boolean().optional(),
+            value: z.unknown().optional(),
+          })).optional(),
+          outcome: z.unknown().optional(),
+          createdAt: z.string().optional(),
+        }),
+        periodLabel: z.string().optional(),
+        effectiveAt: z.string().optional(),
+      }).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Invalid payload", details: parsed.error.flatten() });
+      const { payload, periodLabel, effectiveAt } = parsed.data;
+
+      const card = await findOrCreateCard({
+        bundleKey: "bullet_bar",
+        title: payload.decisionTitle || `Decision — ${payload.decisionId || "tracking"}`,
+        subtitle: payload.summary ? payload.summary.slice(0, 120) + (payload.summary.length > 120 ? "…" : "") : "Decision Wizard",
+        source: "Decision Wizard",
+        refreshPolicy: "on_demand",
+        tags: ["decision-wizard", "tracking", "decision"],
+      });
+      if (!card) return res.status(404).json({ error: "No bundle found for bullet_bar" });
+
+      const data = await storage.pushCardData({
+        cardId: card.id,
+        payload: {
+          decisionId: payload.decisionId,
+          decisionTitle: payload.decisionTitle,
+          summary: payload.summary,
+          status: payload.status,
+          options: payload.options,
+          outcome: payload.outcome,
+          createdAt: payload.createdAt,
+        },
+        periodLabel: periodLabel || `Decision ${payload.decisionId || new Date().toISOString().slice(0, 10)}`,
+        effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+      });
+      await storage.updateCard(card.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+
+      res.status(201).json({
+        source: "decision-wizard",
+        cardId: card.id,
+        cardTitle: card.title,
+        dataId: data.id,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get("/api/ingest/status", async (_req, res) => {
     const allCards = await storage.listCards();
     const bySource: Record<string, number> = {};
@@ -606,6 +666,7 @@ export function registerIngestRoutes(app: Express) {
         { path: "/api/ingest/people-analyst", method: "POST", status: "ready" },
         { path: "/api/ingest/voi-calculator", method: "POST", status: "ready" },
         { path: "/api/ingest/product-kanban", method: "POST", status: "ready" },
+        { path: "/api/ingest/decision-wizard", method: "POST", status: "ready" },
       ],
     });
   });

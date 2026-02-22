@@ -71,6 +71,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(204).end();
   });
 
+  // Card #92: Visualization specs for Metric Engine (Hub webhook or pull)
+  app.get("/api/specifications/visualization", async (_req, res) => {
+    try {
+      const bundles = await storage.listCardBundles();
+      const chartTypeToBundles: Record<string, string[]> = {};
+      for (const b of bundles) {
+        const ct = b.chartType || "unknown";
+        if (!chartTypeToBundles[ct]) chartTypeToBundles[ct] = [];
+        chartTypeToBundles[ct].push(b.key);
+      }
+      res.json({
+        chartTypes: [...new Set(bundles.map((b) => b.chartType))],
+        chartTypeToBundleKeys: chartTypeToBundles,
+        bundleKeys: bundles.map((b) => b.key),
+        schemas: bundles.map((b) => ({ key: b.key, chartType: b.chartType, dataSchema: b.dataSchema, configSchema: b.configSchema })),
+      });
+    } catch (e: unknown) {
+      res.status(500).json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
   app.get("/api/metric-definitions", async (_req, res) => {
     const metrics = await storage.listMetricDefinitions();
     res.json(metrics);
@@ -379,6 +399,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (e: any) {
       res.status(500).json({ error: e.message });
     }
+  });
+
+  // Card #62: RangeBuilderChangeEvent publisher for AnyComp (historical events queryable)
+  const rangeBuilderEvents: Array<{
+    job_family_id: string;
+    grade: string;
+    range_min: number;
+    range_mid: number;
+    range_max: number;
+    spread: number;
+    midpoint_progression?: number;
+    effective_date: string;
+    change_reason: string;
+    emitted_at: string;
+  }> = [];
+  const RANGE_BUILDER_EVENTS_MAX = 500;
+
+  app.post("/api/range-builder/events", (req, res) => {
+    try {
+      const body = Array.isArray(req.body) ? req.body : [req.body];
+      const emitted_at = new Date().toISOString();
+      for (const item of body) {
+        const job_family_id = item.job_family_id ?? item.jobFamilyId ?? "";
+        const grade = item.grade ?? item.label ?? "";
+        const range_min = Number(item.range_min ?? item.rangeMin ?? 0);
+        const range_max = Number(item.range_max ?? item.rangeMax ?? 0);
+        const range_mid = Number(item.range_mid ?? item.rangeMid ?? (range_min + range_max) / 2);
+        const spread = Number(item.spread ?? (range_min > 0 ? ((range_max - range_min) / range_min) * 100 : 0));
+        rangeBuilderEvents.push({
+          job_family_id,
+          grade,
+          range_min,
+          range_mid,
+          range_max,
+          spread,
+          midpoint_progression: item.midpoint_progression ?? item.midpointProgression,
+          effective_date: item.effective_date ?? item.effectiveDate ?? emitted_at.slice(0, 10),
+          change_reason: item.change_reason ?? item.changeReason ?? "user_adjustment",
+          emitted_at,
+        });
+      }
+      while (rangeBuilderEvents.length > RANGE_BUILDER_EVENTS_MAX) rangeBuilderEvents.shift();
+      res.status(201).json({ accepted: body.length, total: rangeBuilderEvents.length });
+    } catch (e: unknown) {
+      res.status(500).json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
+  });
+
+  app.get("/api/range-builder/events", (req, res) => {
+    const limit = Math.min(parseInt(String(req.query.limit), 10) || 50, 200);
+    res.json(rangeBuilderEvents.slice(-limit).reverse());
   });
 
   // --- GitHub Sync API (Spoke GitHub Sync Standard v2.0) ---

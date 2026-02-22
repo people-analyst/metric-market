@@ -451,7 +451,32 @@ export function RangeBuilderPage() {
 
   const handleChange = useCallback((event: RangeBuilderChangeEvent) => {
     setLastEvent(event);
-  }, []);
+    // Card #62: Publish RangeBuilderChangeEvent for AnyComp (scenario snapshots)
+    const effective_date = new Date().toISOString().slice(0, 10);
+    const payload = event.activeRanges.map((ar) => {
+      const min = ar.min;
+      const max = ar.max;
+      const mid = (min + max) / 2;
+      const spread = min > 0 ? ((max - min) / min) * 100 : 0;
+      return {
+        job_family_id: superFn,
+        grade: ar.label,
+        range_min: min,
+        range_mid: mid,
+        range_max: max,
+        spread,
+        effective_date,
+        change_reason: "user_adjustment",
+      };
+    });
+    if (payload.length > 0) {
+      fetch("/api/range-builder/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }).catch(() => {});
+    }
+  }, [superFn]);
 
   const bulletRows: BulletRangeRow[] = useMemo(() => {
     return rows.map((row, i) => {
