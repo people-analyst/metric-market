@@ -1,6 +1,6 @@
 # metric-market — Kanban Manifest
 
-**Generated:** 2026-02-22T15:47:55.105Z
+**Generated:** 2026-02-22T18:09:47.428Z
 **Source:** Kanbai
 
 ---
@@ -637,4 +637,4 @@ Metric Market (Range Builder) must publish RangeBuilderChangeEvent payloads when
 ---
 
 *This file is auto-generated from the Kanbai board. Do not edit it directly.*
-*Generated at 2026-02-22T15:47:55.105Z.*
+*Generated at 2026-02-22T18:09:47.428Z.*
