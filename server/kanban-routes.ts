@@ -172,4 +172,110 @@ export function registerKanbanRoutes(app: Express) {
       res.status(502).json({ error: "Could not reach Kanbai hub for config", details: err.message });
     }
   });
+
+  const BOARD_COLUMNS = ["backlog", "todo", "in_progress", "in_review", "done"] as const;
+
+  function authorizeBearerKey(req: any, res: any): boolean {
+    const key = process.env.DEPLOY_SECRET_KEY;
+    if (!key) { res.status(500).json({ error: "DEPLOY_SECRET_KEY not configured" }); return false; }
+    const auth = req.headers.authorization;
+    if (!auth || auth !== `Bearer ${key}`) {
+      res.status(401).json({ error: "Unauthorized" });
+      return false;
+    }
+    return true;
+  }
+
+  app.get("/api/pull/board/:slug", async (req, res) => {
+    if (!authorizeBearerKey(req, res)) return;
+    try {
+      const slug = req.params.slug;
+      const cards = await kanbanStorage.getCards(
+        slug === "all" ? undefined : { appTarget: slug }
+      );
+      const columns: Record<string, Array<{
+        id: number;
+        title: string;
+        status: string;
+        priority: string;
+        sourceCardId: number | null;
+        tags: string[] | null;
+        type: string;
+        assignedTo: string | null;
+        updatedAt: Date | null;
+      }>> = {};
+      for (const col of BOARD_COLUMNS) columns[col] = [];
+      for (const card of cards) {
+        const col = BOARD_COLUMNS.includes(card.status as any) ? card.status : "backlog";
+        columns[col].push({
+          id: card.id,
+          title: card.title,
+          status: card.status,
+          priority: card.priority,
+          sourceCardId: card.sourceCardId,
+          tags: card.tags,
+          type: card.type,
+          assignedTo: card.assignedTo,
+          updatedAt: card.updatedAt,
+        });
+      }
+      res.json({
+        slug,
+        columns,
+        totalCards: cards.length,
+        generatedAt: new Date().toISOString(),
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  app.post("/api/receive-cards", async (req, res) => {
+    if (!authorizeBearerKey(req, res)) return;
+    try {
+      const body = req.body;
+      const incoming = Array.isArray(body.cards) ? body.cards : Array.isArray(body) ? body : [body];
+      const results: Array<{ id: number; title: string; action: string }> = [];
+      for (const c of incoming) {
+        const title = c.title?.trim();
+        if (!title) continue;
+        const existing = (await kanbanStorage.getCards()).find(
+          (e) => e.sourceCardId === c.id || e.title === title
+        );
+        if (existing) {
+          const updates: Record<string, unknown> = {};
+          if (c.status && c.status !== existing.status) updates.status = c.status;
+          if (c.priority && c.priority !== existing.priority) updates.priority = c.priority;
+          if (c.description && c.description !== existing.description) updates.description = c.description;
+          if (c.assignedTo !== undefined) updates.assignedTo = c.assignedTo;
+          if (Object.keys(updates).length > 0) {
+            await kanbanStorage.updateCard(existing.id, updates as any);
+            results.push({ id: existing.id, title, action: "updated" });
+          } else {
+            results.push({ id: existing.id, title, action: "unchanged" });
+          }
+        } else {
+          const created = await kanbanStorage.createCard({
+            title,
+            type: c.type || "task",
+            appTarget: c.appTarget || c.app_target || "metric-market",
+            status: c.status || "backlog",
+            priority: c.priority || "medium",
+            description: c.description || null,
+            tags: c.tags || null,
+            sourceApp: c.sourceApp || c.source || "kanbai",
+            sourceCardId: c.id || null,
+          });
+          results.push({ id: created.id, title, action: "created" });
+        }
+      }
+      res.status(201).json({
+        received: incoming.length,
+        processed: results.length,
+        results,
+      });
+    } catch (e: any) {
+      res.status(500).json({ error: e.message });
+    }
+  });
 }
