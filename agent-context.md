@@ -192,6 +192,32 @@ Optional (SDK):
 - `AGENT_MAX_ITERATIONS` - Tool-use budget
 - `AGENT_WINDDOWN_BUFFER` - Completion buffer
 
+Optional (Hub / directives):
+- `HUB_URL` - Hub base URL (required to fetch/complete directives)
+- `HUB_API_KEY` - This app’s API key from the Hub registry (or `HUB_APP_SLUG` to override slug, default `metric-market`)
+
+---
+
+## 📡 Directives (Hub contract)
+
+Metric Market is a spoke: it **fetches directives from the Hub** and **updates the Hub** after handling each one. Full contract and troubleshooting: **Hub repo → `docs/DIRECTIVES_SYSTEM.md`** (and `HANDOFF_DIRECTIVES_AND_CARDS.md` links to it). Summary:
+
+**Contract**
+- **Fetch:** Call the Hub (not our server): `GET {HUB_URL}/api/hub/app/{slug}/directives?status=pending` with header `X-API-Key: {HUB_API_KEY}`. Our slug: `metric-market` (or `HUB_APP_SLUG`).
+- **Complete:** After handling each directive: `PATCH {HUB_URL}/api/hub/app/{slug}/directives/{id}` with body `{ "status": "completed", "response": "..." }` (or POST `.../directives/{id}/complete` if the Hub supports it).
+- **Implementation:** Hub SDK polls every 5 min; we also expose `POST /api/hub/process-directives` to fetch from Hub, run `handleDirective` in `server/directiveHandler.ts`, then PATCH back.
+
+**Troubleshooting**
+
+| Situation | Meaning | Action |
+|-----------|--------|--------|
+| **502** when fetching directives | Hub was down or threw; proxy turned it into 502. Hub now returns 500 + JSON on errors. | Ensure Hub is up and `HUB_URL` is correct. Retry. If 500, check Hub logs. |
+| **503 / "Hub not configured"** | Spoke has no `HUB_URL` and/or `HUB_API_KEY`. | Set both in this app’s environment. Get API key from Hub Registry for this app. |
+| Fetches but never completes | Spoke didn’t call Hub to update directive after handling. | After `handleDirective(d)`, call Hub: PATCH with `status: "completed"` and optional `response`. |
+| 401 | Invalid or missing API key. | Use the app’s key from Hub Registry; header `X-API-Key`. |
+
+See **`docs/DIRECTIVES.md`** in this repo for a copy-paste block for agents; Hub repo has the single source of truth.
+
 ---
 
 ## 📝 Notes for AI Agent
