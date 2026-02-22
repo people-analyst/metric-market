@@ -1,5 +1,52 @@
 # Metric Market — Kanbai Notes
 
+## Board sync (2026-02-22)
+
+**.kanbai/KANBAN.md** is auto-generated from Kanbai and currently shows many cards as Backlog/Planned. **Implementation is ahead of the board:** 24 cards are already done in this repo. See **Completed card refs** below and `docs/KANBAI_METRIC_MARKET_STATUS.md` for the canonical list. Recommend marking those card refs as **Done** in Kanbai so the board matches reality.
+
+**Work assignment:** There are no Ready/In Progress cards that need implementation. All high/medium Backlog items in KANBAN.md that are implementable have been implemented. Remaining:
+- **#105** — Blocked (do not start until Segmentation Studio segment dimensions are available).
+- **#5** — Deferred (Yahoo Finance–style dashboard; 8-week project; keep in backlog unless prioritized).
+- **#45** — Planned (Range Builder → AnyComp); #62 is done; remaining work is AnyComp-side + coordination.
+- **#62** — Implemented (RangeBuilderChangeEvent publisher); should be marked Done when syncing board.
+
+When Kanbai moves **#45** to Ready: implement AnyComp consumption of RangeBuilderChangeEvent, pay structure config sharing, and 5 sub-index flow per `docs/KANBAI_METRIC_MARKET_STATUS.md` and card description.
+
+---
+
+## Completed card refs (for Kanbai pull)
+
+Use these to update board status. Each is implemented and verified in this repo.
+
+| card_ref | Title | Where |
+|----------|--------|--------|
+| #50 | Metric Market Dashboard Push (Dev Ops) | server/ingest.ts (product-kanban 6h, 4 cards) |
+| #62 | RangeBuilderChangeEvent Publisher | server/routes.ts (POST/GET /api/range-builder/events), RangeBuilderPage.tsx |
+| #72 | Forecast Card Bundle Registration | server/bundleDefinitions.ts (people_analyst_forecasts) |
+| #83 | Build Market Data Ingestion from Conductor | server/ingest.ts POST /api/ingest/conductor |
+| #85 | Wire Range Builder to Live Conductor Data | server/routes.ts GET /api/range-builder/market-data, RangeBuilderPage.tsx |
+| #86 | Create Initial Compensation Card Instances from Conductor | server/ingest.ts (range_strip, range_strip_aligned, range_target_bullet) |
+| #88 | Map Conductor Canonical Fields to Metric Market Schema | docs/CONDUCTOR_FIELD_MAPPING_TO_HUB.md |
+| #89 | Build Metric Push Ingestion from Metric Engine | server/ingest.ts POST /api/ingest/metric-engine |
+| #90 | Auto-Create Cards from Incoming Metrics | server/ingest.ts inferChartType + findOrCreateCard |
+| #91 | Bidirectional Metric Definition Sync | server/routes.ts GET /api/metric-definitions |
+| #92 | Push Visualization Specs to Metric Engine | server/routes.ts GET /api/specifications/visualization |
+| #101 | Build PeopleAnalyst Ingestion Endpoint | server/ingest.ts POST /api/ingest/people-analyst |
+| #102 | Create Forecast Dashboard Layout | client ForecastDashboardPage.tsx, /forecast-dashboard |
+| #103 | Wire VOI Analysis to Bubble Scatter | server/ingest.ts voiAnalysis → bubble_scatter |
+| #106 | Build Ecosystem Health Dashboard | client EcosystemHealthPage.tsx, /ecosystem-health |
+| #107 | Create ROI Analysis Cards | server/ingest.ts bullet_bar, confidence_band (VOI Calculator) |
+| #123 | Expose Card Bundle Discovery API | server/routes.ts GET /api/bundles |
+| #124 | Expose Card Data Push Endpoint | server/routes.ts POST /api/cards/:id/data |
+| #125 | Document Refresh Policy | docs/REFRESH_POLICY_FOR_SPOKE_INTEGRATIONS.md, docs/cards/... |
+| #137 | Expose Card Bundle Creation API from Metric Definitions | server/routes.ts POST /api/bundles/from-metric-definition |
+| #138 | Enable CORS for Conductor | server/index.ts CORS .replit.app / .replit.dev |
+| #139 | Expose Component Export API | server/routes.ts GET /api/components, /api/export/:key, docs/COMPONENT_EXPORT_API.md |
+| #181 | Accept Decision Tracking Cards via API | server/ingest.ts POST /api/ingest/decision-wizard |
+| #206 | Expose Card Bundle Creation API Schema | docs/BUNDLE_CREATION_API_SCHEMA.md |
+
+---
+
 ## Integration Status
 
 - Pull API (`GET /api/pull/board/:slug`) implemented and auth-protected
@@ -9,9 +56,16 @@
 
 ## Card Inventory
 
-- 54 done cards (24 from Kanbai agent work, 30 from earlier backlog)
-- 10 backlog cards (prioritized: 2 critical, 4 high, 3 medium, 1 low)
-- 3 open items: #105 (blocked on Segmentation Studio), #5 (deferred large project), #45 (planned cross-app)
+- 24 Kanbai cards completed (see Completed card refs above); KANBAN.md not yet synced to Done
+- 3 open items: #105 (blocked), #5 (deferred), #45 (planned)
+
+## Open / blocked refs (for Kanbai pull)
+
+| card_ref | Status | Note |
+|----------|--------|------|
+| #105 | blocked | Do not start until Segmentation Studio exposes population dimensions (department, location, tenure). |
+| #5 | deferred | Yahoo Finance–style dashboard; 8-week scope; keep in backlog unless prioritized. |
+| #45 | planned | Range Builder → AnyComp. #62 done. Remaining: AnyComp scenario snapshots, pay structure config, 5 sub-index flow, approval workflows. |
 
 ## Epic Management (Remote Kanbai API)
 
