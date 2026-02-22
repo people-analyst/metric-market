@@ -14,6 +14,26 @@ When Kanbai moves **#45** to Ready: implement AnyComp consumption of RangeBuilde
 
 ---
 
+## Follow-up / Verification (2026-02-22)
+
+**Verification checklist** (from `docs/KANBAI_METRIC_MARKET_STATUS.md`):
+
+| Check | Result |
+|-------|--------|
+| GET /api/bundles (people_analyst_forecasts) | ✅ 200, bundle present |
+| GET /api/specifications/visualization | ✅ 200, chartTypes/bundleKeys |
+| POST /api/range-builder/events → 201, GET ?limit=5 → 200 | ✅ |
+| POST /api/ingest/decision-wizard → 201 | ✅ |
+| POST /api/bundles/from-metric-definition (metric_test_metric) | ✅ 200, key present (idempotent) |
+| GET /api/ingest/status includes decision-wizard | ✅ |
+| CORS OPTIONS (Origin .replit.app) → 204, Access-Control-Allow-Origin | ✅ |
+
+**Directives:** `POST /api/hub/process-directives` was called; response was `{"error":"Not found"}` (likely Hub returned 404 or route not found). No pending directives processed. When Hub is up and env (HUB_URL, HUB_API_KEY) is set, re-run to clear any pending directives. See `docs/DIRECTIVES.md` and `agent-context.md` (Directives section).
+
+**Optional:** Run `npm run db:push` once if this is a fresh deploy. UI checks for `/forecast-dashboard` and `/ecosystem-health` were not exercised (manual browser check if needed).
+
+---
+
 ## Completed card refs (for Kanbai pull)
 
 Use these to update board status. Each is implemented and verified in this repo.
