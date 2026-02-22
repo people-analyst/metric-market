@@ -10,7 +10,7 @@ Build card templates for VOI Calculator's investment return analyses using bulle
 
 ## Acceptance Criteria
 
-- [ ] bullet_bar and stacked_area templates for ROI
+- [x] bullet_bar and stacked_area templates for ROI — POST /api/ingest/voi-calculator creates bullet_bar (scenarios/ROI) and confidence_band (timeSeriesProjection); stacked_area available via bundle
 
 **Tags:** metric-market, voi-calculator, roi, phase5
 

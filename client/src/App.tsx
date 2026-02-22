@@ -21,6 +21,7 @@ import { RangeBuilderPage } from "@/pages/RangeBuilderPage";
 import { ComponentExportPage } from "@/pages/ComponentExportPage";
 import { KanbanPage } from "@/pages/KanbanPage";
 import { ForecastDashboardPage } from "@/pages/ForecastDashboardPage";
+import { EcosystemHealthPage } from "@/pages/EcosystemHealthPage";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/chart-library" component={ChartLibraryPage} />
       <Route path="/workbench" component={WorkbenchPage} />
       <Route path="/forecast-dashboard" component={ForecastDashboardPage} />
+      <Route path="/ecosystem-health" component={EcosystemHealthPage} />
       <Route path="/range-builder" component={RangeBuilderPage} />
       <Route path="/export" component={ComponentExportPage} />
       <Route path="/kanban" component={KanbanPage} />

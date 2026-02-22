@@ -10,7 +10,7 @@ Create dashboard consuming Product Kanban's velocity and burndown data to displa
 
 ## Acceptance Criteria
 
-- [ ] Dashboard consuming Kanban velocity data
+- [x] Dashboard consuming Kanban velocity data — /ecosystem-health shows Product Kanban cards (velocity, burndown, app health, sprint health)
 
 **Tags:** metric-market, kanban, ecosystem, phase5
 

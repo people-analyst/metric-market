@@ -10,7 +10,7 @@ API returning embeddable chart widget packages (HTML/SVG/JS) for specific cards 
 
 ## Acceptance Criteria
 
-- [ ] Embeddable chart widget API
+- [x] Embeddable chart widget API — GET /api/components, GET /api/components/:key, GET /api/export/:key (see docs/COMPONENT_EXPORT_API.md)
 
 **Tags:** metric-market, conductor, embed, phase3
 

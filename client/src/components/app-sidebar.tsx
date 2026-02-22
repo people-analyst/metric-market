@@ -81,6 +81,11 @@ const componentItems = [
     icon: TrendingUp,
   },
   {
+    title: "Ecosystem Health",
+    url: "/ecosystem-health",
+    icon: BarChart3,
+  },
+  {
     title: "Chart Library",
     url: "/chart-library",
     icon: BarChart,
