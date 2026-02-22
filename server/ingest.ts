@@ -92,7 +92,7 @@ const METRIC_TO_CHART_MAP: Record<string, string> = {
   correlation: "bubble_scatter",
 };
 
-function inferChartType(metricKey: string, unit?: string, category?: string): string {
+export function inferChartType(metricKey: string, unit?: string, category?: string): string {
   if (unit && METRIC_TO_CHART_MAP[unit]) return METRIC_TO_CHART_MAP[unit];
   if (category && METRIC_TO_CHART_MAP[category]) return METRIC_TO_CHART_MAP[category];
   if (unit === "%" || unit === "rate") return "multi_line";
@@ -354,7 +354,7 @@ export function registerIngestRoutes(app: Express) {
 
       if (payload.timeSeries || payload.results) {
         const forecastCard = await findOrCreateCard({
-          bundleKey: "confidence_band",
+          bundleKey: "people_analyst_forecasts",
           title: `${payload.forecastType?.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()) || "Forecast"} — ${payload.scenario || "Base Case"}`,
           subtitle: `Monte Carlo (${payload.simulations || "N/A"} simulations, ${payload.horizon || "12m"})`,
           source: "PeopleAnalyst",
@@ -369,7 +369,7 @@ export function registerIngestRoutes(app: Express) {
             effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
           });
           await storage.updateCard(forecastCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
-          results.push({ cardId: forecastCard.id, cardTitle: forecastCard.title, dataId: data.id, bundleKey: "confidence_band" });
+          results.push({ cardId: forecastCard.id, cardTitle: forecastCard.title, dataId: data.id, bundleKey: "people_analyst_forecasts" });
         }
       }
 

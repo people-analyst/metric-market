@@ -76,6 +76,11 @@ const componentItems = [
     icon: Ruler,
   },
   {
+    title: "Forecast Dashboard",
+    url: "/forecast-dashboard",
+    icon: TrendingUp,
+  },
+  {
     title: "Chart Library",
     url: "/chart-library",
     icon: BarChart,

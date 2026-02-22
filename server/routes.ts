@@ -16,7 +16,8 @@ import {
 import * as hub from "./hub-client";
 import { getComponentRegistry, getComponentDetail } from "./componentExport";
 import { getDesignSystemSpec, getDesignSystemComponent } from "./designSystemRegistry";
-import { registerIngestRoutes } from "./ingest";
+import { registerIngestRoutes, inferChartType } from "./ingest";
+import { BUNDLE_DEFINITIONS } from "./bundleDefinitions";
 import { pushToGitHub, pullFromGitHub, getSyncStatus, getGitStatus, startAutoSync, stopAutoSync, authorizeGitHubSync, detectIDE } from "./githubSync";
 import { processAgentInstruction } from "./aiAgent";
 import { registerKanbanRoutes } from "./kanban-routes";
@@ -69,6 +70,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const ok = await storage.deleteCardBundle(req.params.id);
     if (!ok) return res.status(404).json({ error: "Bundle not found" });
     res.status(204).end();
+  });
+
+  // Cards #137 / #206: Create card bundle from metric definition (external metric sources / survey data)
+  app.post("/api/bundles/from-metric-definition", async (req, res) => {
+    try {
+      const body = req.body as { key: string; name: string; category?: string; unit?: string; description?: string; source?: string };
+      const key = body.key?.trim();
+      const name = body.name?.trim();
+      if (!key || !name) return res.status(400).json({ error: "key and name are required" });
+      const chartType = inferChartType(key, body.unit, body.category);
+      if (!CHART_TYPES.includes(chartType as any)) return res.status(400).json({ error: `Inferred chart type '${chartType}' is not supported` });
+      const template = BUNDLE_DEFINITIONS.find((b) => b.chartType === chartType);
+      if (!template) return res.status(400).json({ error: `No bundle template for chart type '${chartType}'` });
+      const bundleKey = `metric_${key.replace(/\W/g, "_")}`;
+      const existing = await storage.getCardBundleByKey(bundleKey);
+      if (existing) return res.status(200).json(existing);
+      const insert = {
+        ...template,
+        key: bundleKey,
+        displayName: name,
+        description: body.description ?? template.description ?? `Auto-generated from metric: ${key}`,
+        category: body.category ?? template.category ?? "Metrics",
+        tags: [...(template.tags ?? []), "auto-generated", key],
+      };
+      const created = await storage.createCardBundle(insert);
+      res.status(201).json(created);
+    } catch (e: unknown) {
+      res.status(500).json({ error: e instanceof Error ? e.message : "Unknown error" });
+    }
   });
 
   // Card #92: Visualization specs for Metric Engine (Hub webhook or pull)
