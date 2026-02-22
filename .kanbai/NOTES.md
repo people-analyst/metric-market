@@ -1,5 +1,13 @@
 # Metric Market — Kanbai Notes
 
+## Tickets closed/updated (2026-02-22)
+
+- **Completed cards:** Run `node scripts/kanbai-close-completed.mjs` to mark the 24 completed card refs as **done** on the Kanbai board. Requires Kanbai reachable (KANBAI_URL).
+- **Blocker cards:** Run `node scripts/kanbai-create-blocker-cards.mjs` to create two Kanbai cards (creation may require Kanbai API auth):
+  1. **[Blocked] #105 — Segment dimension filtering** — Do not start until Segmentation Studio exposes population dimensions.
+  2. **Align directive handling to Hub contract (DIRECTIVES_SYSTEM.md)** — For spokes that saw 502 / "Hub not configured"; env, fetch, complete, optional process-directives. See `docs/DIRECTIVES.md`.
+- **2026-02-22 run:** 24 completed cards were marked **done** on Kanbai successfully. Blocker card creation was skipped (API may need auth). Doc republish to Hub failed (Hub unreachable 502); run `node scripts/republish-docs.mjs` when Hub is up.
+
 ## Board sync (2026-02-22)
 
 **.kanbai/KANBAN.md** is auto-generated from Kanbai and currently shows many cards as Backlog/Planned. **Implementation is ahead of the board:** 24 cards are already done in this repo. See **Completed card refs** below and `docs/KANBAI_METRIC_MARKET_STATUS.md` for the canonical list. Recommend marking those card refs as **Done** in Kanbai so the board matches reality.
@@ -31,6 +39,8 @@ When Kanbai moves **#45** to Ready: implement AnyComp consumption of RangeBuilde
 **Directives:** `POST /api/hub/process-directives` was called; response was `{"error":"Not found"}` (likely Hub returned 404 or route not found). No pending directives processed. When Hub is up and env (HUB_URL, HUB_API_KEY) is set, re-run to clear any pending directives. See `docs/DIRECTIVES.md` and `agent-context.md` (Directives section).
 
 **Optional:** Run `npm run db:push` once if this is a fresh deploy. UI checks for `/forecast-dashboard` and `/ecosystem-health` were not exercised (manual browser check if needed).
+
+**Republish docs to Hub:** Run `node scripts/republish-docs.mjs` (reads `hub-docs.md`, pushes to Hub). Requires `HUB_API_KEY`. If Hub is down (502), run when Hub is up. Then push to GitHub.
 
 ---
 

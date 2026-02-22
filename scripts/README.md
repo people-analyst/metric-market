@@ -1,6 +1,6 @@
-# Hub SDK v2.3.0 - Scripts Directory
+# Metric Market — Scripts Directory
 
-This directory contains automation scripts for managing and verifying the Hub SDK installation.
+Scripts for Hub SDK, Kanbai board sync, and documentation republish.
 
 ---
 
@@ -330,6 +330,31 @@ For more information, see:
 
 ---
 
+## Kanbai & docs
+
+### kanbai-close-completed.mjs
+Mark the 24 completed Metric Market cards as **done** on the Kanbai board.
+```bash
+node scripts/kanbai-close-completed.mjs
+```
+Env: `KANBAI_URL` (default: https://people-analytics-kanban.replit.app).
+
+### kanbai-create-blocker-cards.mjs
+Create blocker cards: **[Blocked] #105** (segment dimensions) and **Align directive handling to Hub contract**.
+```bash
+node scripts/kanbai-create-blocker-cards.mjs
+```
+Env: `KANBAI_URL`, `HUB_APP_SLUG` (default: metric-market).
+
+### republish-docs.mjs
+Push `hub-docs.md` to the Hub for documentation scoring.
+```bash
+node scripts/republish-docs.mjs
+```
+Env: `HUB_API_KEY` (required).
+
+---
+
 ## 🎯 Quick Reference
 
 | Task | Command |
@@ -337,10 +362,13 @@ For more information, see:
 | Verify installation | `node scripts/verify-hub-sdk.js` |
 | Test functionality | `node scripts/test-hub-sdk.js` |
 | Install/update SDK | `bash scripts/install-hub-sdk.sh` |
+| Close completed Kanbai cards | `node scripts/kanbai-close-completed.mjs` |
+| Create blocker cards | `node scripts/kanbai-create-blocker-cards.mjs` |
+| Republish docs to Hub | `node scripts/republish-docs.mjs` |
 | Make executable | `chmod +x scripts/install-hub-sdk.sh` |
 
 ---
 
-**Last Updated:** 2024  
+**Last Updated:** 2026-02-22  
 **SDK Version:** 2.3.0  
 **Scripts Version:** 1.0.0
