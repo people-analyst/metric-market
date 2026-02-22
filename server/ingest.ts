@@ -112,6 +112,7 @@ async function findOrCreateCard(opts: {
   subtitle?: string;
   source: string;
   refreshPolicy?: string;
+  refreshCadence?: string;
   tags?: string[];
 }) {
   const bundle = await storage.getCardBundleByKey(opts.bundleKey);
@@ -134,6 +135,7 @@ async function findOrCreateCard(opts: {
     subtitle: opts.subtitle,
     sourceAttribution: opts.source,
     refreshPolicy: opts.refreshPolicy || "on_demand",
+    refreshCadence: opts.refreshCadence ?? undefined,
     tags: opts.tags || [],
     status: "active",
     isPublished: true,
@@ -516,6 +518,10 @@ export function registerIngestRoutes(app: Express) {
 
       const results: any[] = [];
 
+      // Card #50: Development Ops bundle — 4 chart types, 6h refresh cadence
+      const devOpsTags = ["product-kanban", "development-ops", "dashboard"];
+      const sixHourCadence = "6h";
+
       if (payload.velocity) {
         const velCard = await findOrCreateCard({
           bundleKey: "multi_line",
@@ -523,7 +529,8 @@ export function registerIngestRoutes(app: Express) {
           subtitle: `Sprint: ${payload.sprintName || "current"}`,
           source: "Product Kanban",
           refreshPolicy: "scheduled",
-          tags: ["product-kanban", "velocity", "ecosystem-health"],
+          refreshCadence: sixHourCadence,
+          tags: [...devOpsTags, "velocity", "ecosystem-health"],
         });
         if (velCard) {
           const data = await storage.pushCardData({
@@ -544,7 +551,8 @@ export function registerIngestRoutes(app: Express) {
           subtitle: `${payload.appHealth.length} apps monitored`,
           source: "Product Kanban",
           refreshPolicy: "scheduled",
-          tags: ["product-kanban", "health", "ecosystem"],
+          refreshCadence: sixHourCadence,
+          tags: [...devOpsTags, "health", "ecosystem"],
         });
         if (healthCard) {
           const data = await storage.pushCardData({
@@ -565,7 +573,8 @@ export function registerIngestRoutes(app: Express) {
           subtitle: `Sprint: ${payload.sprintName || "current"}`,
           source: "Product Kanban",
           refreshPolicy: "scheduled",
-          tags: ["product-kanban", "burndown", "sprint"],
+          refreshCadence: sixHourCadence,
+          tags: [...devOpsTags, "burndown", "sprint"],
         });
         if (burnCard) {
           const data = await storage.pushCardData({
@@ -576,6 +585,38 @@ export function registerIngestRoutes(app: Express) {
           });
           await storage.updateCard(burnCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
           results.push({ cardId: burnCard.id, cardTitle: burnCard.title, dataId: data.id, bundleKey: "stacked_area" });
+        }
+      }
+
+      if (payload.summary) {
+        const total = payload.summary.totalCards ?? 0;
+        const completed = payload.summary.completed ?? 0;
+        const completionPct = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const gaugeCard = await findOrCreateCard({
+          bundleKey: "radial_bar",
+          title: "Sprint Health",
+          subtitle: `Sprint: ${payload.sprintName || "current"} — ${completed}/${total} done`,
+          source: "Product Kanban",
+          refreshPolicy: "scheduled",
+          refreshCadence: sixHourCadence,
+          tags: [...devOpsTags, "sprint-health", "gauge"],
+        });
+        if (gaugeCard) {
+          const data = await storage.pushCardData({
+            cardId: gaugeCard.id,
+            payload: {
+              summary: payload.summary,
+              completionPercent: completionPct,
+              totalCards: total,
+              completed,
+              inProgress: payload.summary.inProgress ?? 0,
+              blocked: payload.summary.blocked ?? 0,
+            },
+            periodLabel: periodLabel || `Sprint ${payload.sprintName || "current"}`,
+            effectiveAt: effectiveAt ? new Date(effectiveAt) : new Date(),
+          });
+          await storage.updateCard(gaugeCard.id, { lastRefreshedAt: new Date(), refreshStatus: "current" });
+          results.push({ cardId: gaugeCard.id, cardTitle: gaugeCard.title, dataId: data.id, bundleKey: "radial_bar" });
         }
       }
 

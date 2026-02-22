@@ -2434,4 +2434,31 @@ All costs are converted to a base currency (default USD) using the fxRate provid
 Common sources: IMF World Economic Outlook, national CPI indices, Mercer/WTW country guides. The inflationSource config field documents the data provenance.`,
     infrastructureNotes: "Composite dashboard. Bar charts and box plots use D3.js. FX normalization is applied at data ingestion or display time. Country codes follow ISO 3166-1 alpha-2. Inflation data typically pushed from Conductor via POST /api/ingest/conductor.",
   },
+  // Card #72: PeopleAnalyst Forecasts bundle — workbench-visible bundle for incoming forecast cards
+  {
+    key: "people_analyst_forecasts",
+    chartType: "confidence_band",
+    displayName: "PeopleAnalyst Forecasts",
+    description: "Forecast visualization cards from PeopleAnalyst (Monte Carlo, headcount projections, workforce planning). Accepts incoming cards via POST /api/ingest/people-analyst.",
+    version: 1,
+    category: "PeopleAnalyst Forecasts",
+    tags: ["people-analyst", "forecast", "monte-carlo", "workforce-planning"],
+    dataSchema: {
+      type: "object",
+      required: ["data"],
+      properties: {
+        data: { type: "array", items: { type: "object", required: ["x", "y"], properties: { x: { type: "number" }, y: { type: "number" }, lo1: { type: "number" }, hi1: { type: "number" }, lo2: { type: "number" }, hi2: { type: "number" } } } },
+        timeSeries: { type: "array", description: "Raw time series from PeopleAnalyst" },
+        results: { type: "object", description: "Forecast results" },
+        assumptions: { type: "object", description: "Scenario assumptions" },
+      },
+    },
+    configSchema: { type: "object", properties: { lineColor: { type: "string" }, bandColors: { type: "array", items: { type: "string" } }, xLabel: { type: "string" }, yLabel: { type: "string" }, scenario: { type: "string", description: "Scenario toggle (e.g. base, optimistic, pessimistic)" } } },
+    outputSchema: { type: "object", description: "Rendered forecast chart" },
+    defaults: { lineColor: "#5b636a", bandColors: ["#a3adb8", "#e0e4e9"] },
+    exampleData: { data: [{ x: 0, y: 100, lo1: 95, hi1: 105, lo2: 90, hi2: 110 }] },
+    exampleConfig: { xLabel: "Month", yLabel: "Headcount", scenario: "base" },
+    documentation: "PeopleAnalyst forecast cards. Use scenario config to toggle between base/optimistic/pessimistic. Data pushed via POST /api/ingest/people-analyst.",
+    infrastructureNotes: "Accepts incoming cards from PeopleAnalyst. Scenario toggle in dashboard for headcount and workforce planning views.",
+  },
 ];
