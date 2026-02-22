@@ -10,7 +10,7 @@ Enable CORS on Metric Market API for .replit.app and .replit.dev origins.
 
 ## Acceptance Criteria
 
-- [ ] CORS enabled for .replit.app/.replit.dev
+- [x] CORS enabled for .replit.app/.replit.dev (server/index.ts: origin check + Allow-Origin/Methods/Headers, OPTIONS)
 
 **Tags:** metric-market, conductor, cors, phase2
 

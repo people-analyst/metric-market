@@ -10,7 +10,7 @@ Document how spokes should configure on_push vs scheduled vs manual refresh cade
 
 ## Acceptance Criteria
 
-- [ ] Refresh policy documentation published
+- [x] Refresh policy documentation published — see [REFRESH_POLICY_FOR_SPOKE_INTEGRATIONS.md](../REFRESH_POLICY_FOR_SPOKE_INTEGRATIONS.md)
 
 **Tags:** metric-market, documentation, refresh, phase1
 

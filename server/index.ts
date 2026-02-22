@@ -15,6 +15,20 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// CORS for Conductor and other spokes on Replit (.replit.app, .replit.dev) — Card #138
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && (origin.endsWith(".replit.app") || origin.endsWith(".replit.dev"))) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, X-API-Key");
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
+
 const _require = createRequire(import.meta.url);
 const hubSdk = _require("../hub-sdk.cjs");
 hubSdk.init(app, {

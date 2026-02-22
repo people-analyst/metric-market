@@ -375,30 +375,43 @@ export function RangeBuilderPage() {
 
   const dataSource = marketDataResponse?.source === "conductor" ? "live" : "sample";
 
+  // Live Conductor overlay: by key (jobFunction:levelType:level) or by index/label for Conductor payload shape
   const conductorOverlay = useMemo(() => {
     if (marketDataResponse?.source !== "conductor" || !marketDataResponse.data?.marketData) return null;
-    const overlay: Record<string, { p50: number; p75: number; p10?: number; p25?: number; p90?: number }> = {};
-    for (const item of marketDataResponse.data.marketData) {
-      const key = `${item.jobFunction || ""}:${item.levelType || ""}:${item.level || ""}`;
+    const arr = marketDataResponse.data.marketData as Array<{ label?: string; jobFunction?: string; levelType?: string; level?: number; market?: { p50?: number; p75?: number; p10?: number; p25?: number; p90?: number }; p50?: number; p75?: number; p10?: number; p25?: number; p90?: number; employees?: number }>;
+    const byKey: Record<string, { p50: number; p75: number; p10?: number; p25?: number; p90?: number }> = {};
+    const byIndex: { p50: number; p75: number }[] = [];
+    for (let i = 0; i < arr.length; i++) {
+      const item = arr[i];
       const m = item.market || item;
-      if (m.p50 != null) {
-        overlay[key] = {
-          p10: m.p10,
-          p25: m.p25,
-          p50: m.p50,
-          p75: m.p75,
-          p90: m.p90,
-        };
+      if (m.p50 == null) continue;
+      const key = `${item.jobFunction ?? ""}:${item.levelType ?? ""}:${item.level ?? ""}`;
+      const entry = { p50: m.p50, p75: m.p75 ?? m.p50, p10: m.p10, p25: m.p25, p90: m.p90 };
+      if (key !== "::") byKey[key] = entry;
+      byIndex.push({ p50: m.p50, p75: m.p75 ?? m.p50 });
+    }
+    // Label parsing for Conductor format: "P6", "Professional 6", "M3", etc.
+    const labelToLevel: Record<string, number> = {};
+    for (const item of arr) {
+      const label = (item.label || "").trim().toUpperCase();
+      const m = item.market || item;
+      if (m.p50 == null) continue;
+      const match = label.match(/^(P|M|E|S|PROFESSIONAL|MANAGER|EXECUTIVE|SUPPORT)\s*(\d+)$/i) || label.match(/^(\d+)$/);
+      if (match) {
+        const lvl = parseInt(match[2] ?? match[1], 10);
+        const pre = (match[1] ?? "").toUpperCase();
+        const lt = pre === "P" || pre === "PROFESSIONAL" ? "P" : pre === "M" || pre === "MANAGER" ? "M" : pre === "E" || pre === "EXECUTIVE" ? "E" : pre === "S" || pre === "SUPPORT" ? "S" : "P";
+        labelToLevel[`${lt}:${lvl}`] = lvl;
       }
     }
-    return Object.keys(overlay).length > 0 ? overlay : null;
+    return { byKey: Object.keys(byKey).length > 0 ? byKey : null, byIndex: byIndex.length > 0 ? byIndex : null, labelToLevel };
   }, [marketDataResponse]);
 
   const standardCount = getStandardLevelCount(levelType);
 
   const { rows, marketData, actuals, jobCounts, scaleMin, scaleMax, isCustom } = useMemo(() => {
     const base = getLevelDataForSelection(superFn, levelType, levelStructure === "standard" ? undefined : levelStructure);
-    if (!conductorOverlay) return base;
+    if (!conductorOverlay || (!conductorOverlay.byKey && !conductorOverlay.byIndex)) return base;
 
     const fnMap: Record<string, string> = { "R&D": "R&D", "GTM": "GTM", "OPS": "OPS", "G&A": "G&A" };
     const ltMap: Record<string, string> = { Professional: "P", Manager: "M", Executive: "E", Support: "S" };
@@ -409,10 +422,10 @@ export function RangeBuilderPage() {
 
     const updatedMarketData = base.marketData.map((md, i) => {
       const lvl = levels[i];
-      if (lvl == null) return md;
-      const key = `${fnKey}:${ltKey}:${lvl}`;
-      const o = conductorOverlay[key];
-      if (o) return { p50: o.p50, p75: o.p75 };
+      const key = lvl != null ? `${fnKey}:${ltKey}:${lvl}` : null;
+      const byKeyVal = key && conductorOverlay.byKey ? conductorOverlay.byKey[key] : null;
+      if (byKeyVal) return { p50: byKeyVal.p50, p75: byKeyVal.p75 };
+      if (conductorOverlay.byIndex && conductorOverlay.byIndex[i] != null) return conductorOverlay.byIndex[i];
       return md;
     });
 
